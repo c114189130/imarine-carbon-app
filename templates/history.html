@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歷史記錄 - iMarine</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body onload="loadHistory()">
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始計算</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1>📊 碳排評估歷史記錄</h1>
+        
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+        
+        <div class="card">
+            <div style="overflow-x:auto">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>起點</th>
+                            <th>終點</th>
+                            <th>貨櫃數</th>
+                            <th>貨物類型</th>
+                            <th>距離</th>
+                            <th>海運碳排</th>
+                            <th>最佳方案</th>
+                            <th>減碳量</th>
+                            <th>減碳比例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <tr><td colspan="10">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div style="display:flex; justify-content:center; gap:1rem; margin-top:1rem">
+            <button class="btn btn-primary" onclick="window.location.href='/input'">🚢 新增評估</button>
+            <button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button>
+        </div>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+    "road": {
+        "value": 0.12,
+        "unit": "kg CO2e/TEU-km",
+        "source": "環保署公告溫室氣體排放係數管理表(2023)",
+        "standard": "CNS 14064-1",
+        "description": "柴油貨運車輛碳排放係數",
+        "uncertainty": "±5%"
+    },
+    "sea": {
+        "value": 0.04,
+        "unit": "kg CO2e/TEU-km",
+        "source": "IMO 國際海事組織第四期溫室氣體研究報告",
+        "standard": "CNS 14064-1",
+        "description": "貨櫃船舶平均碳排放係數",
+        "uncertainty": "±8%"
+    },
+    "reference": {
+        "cns_14064_1": "組織層級溫室氣體排放與移除之量化及報告",
+        "cns_14064_2": "專案層級溫室氣體排放減量或移除增量之量化",
+        "cns_14064_3": "溫室氣體主張之確證與查證",
+        "cns_14067": "產品碳足跡量化之要求事項與指導綱要",
+        "last_updated": "2024-01-01"
+    }
+}
