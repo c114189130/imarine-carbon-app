@@ -13,13 +13,14 @@
             <a href="/">🏠 首頁</a>
             <a href="/input">🚢 開始計算</a>
             <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
     
     <div class="container">
         <div class="card" style="max-width:700px; margin:0 auto">
             <h2>🚢 運輸路線評估</h2>
-            <p style="color:var(--french-blue)">請填寫以下資訊，AI 將為您分析最佳運輸方案</p>
+            <p style="color:var(--french-blue)">請填寫以下資訊，AI 將為您分析最佳運輸方案（單位：FEU）</p>
             
             <div class="form-group">
                 <label>📍 起點港口</label>
@@ -44,8 +45,11 @@
             </div>
             
             <div class="form-group">
-                <label>📦 貨櫃數量 (TEU)</label>
-                <input type="number" id="containers" placeholder="請輸入貨櫃數量" min="1" value="1">
+                <label>📦 貨櫃數量 (FEU)</label>
+                <input type="number" id="containers" placeholder="請輸入貨櫃數量（40呎櫃）" min="1" value="1">
+                <p style="font-size:0.8rem; color:var(--french-blue); margin-top:0.3rem">
+                    ※ 1 FEU = 1 個 40 呎貨櫃 = 2 TEU
+                </p>
             </div>
             
             <div class="form-group">
@@ -96,12 +100,14 @@
         </div>
         
         <div class="card" style="margin-top:1rem">
-            <h3>📌 計算說明</h3>
+            <h3>📌 計算說明（FEU 單位）</h3>
             <ul style="margin-left:1.5rem; line-height:1.8">
+                <li><strong>單位：</strong> FEU（40呎貨櫃），1 FEU = 2 TEU</li>
                 <li>碳排放係數依據 CNS 14064-1 國家標準</li>
                 <li>社會成本包含：空氣污染、噪音、肇事成本、溫室效應</li>
                 <li>VSL（統計生命價值）依據台北科技大學研究：NT$5,000萬元</li>
                 <li>時間成本依據貨物類型自動調整敏感度</li>
+                <li>碳排係數會根據貨物類型（車輛、裝載率、路況）動態調整</li>
                 <li>AI 會根據您設定的權重和貨物類型，推薦最佳運輸方案</li>
             </ul>
         </div>
