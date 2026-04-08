@@ -10,14 +10,41 @@
 <body onload="loadHistory()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
-        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始計算</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始計算</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
     </nav>
+    
     <div class="container">
         <h1>📊 碳排評估歷史記錄</h1>
-        <div class="chart-container"><canvas id="historyChart"></canvas></div>
-        <div class="card"><div style="overflow-x:auto"><table class="history-table"><thead><tr><th>時間</th><th>起點</th><th>終點</th><th>貨櫃數</th><th>單位</th><th>貨物類型</th><th>距離</th><th>海運碳排</th><th>最佳方案</th><th>減碳量</th><th>減碳比例</th></tr></thead><tbody id="history-body"><tr><td colspan="11">載入中...</td></tr></tbody></table></div></div>
-        <button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button>
+        
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+        
+        <div class="card">
+            <div style="overflow-x:auto">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th><th>起點</th><th>終點</th><th>貨櫃數</th>
+                            <th>貨物類型</th><th>距離</th><th>海運碳排</th>
+                            <th>最佳方案</th><th>減碳量</th><th>減碳比例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="10">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>
