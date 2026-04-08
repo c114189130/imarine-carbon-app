@@ -10,85 +10,20 @@
 <body onload="calculate()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始計算</a>
-            <a href="/history_page">📊 歷史記錄</a>
-            <a href="/dashboard">📈 Dashboard</a>
-        </div>
+        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始計算</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
     </nav>
-    
     <div class="container">
         <div id="result"></div>
-        
-        <!-- 成本比較圖表 -->
-        <div class="chart-container">
-            <h3>💰 成本結構比較</h3>
-            <canvas id="comparisonChart"></canvas>
-            <p class="chart-note">※ 公路運費較高，但時間成本較低；海運運費低，但時間成本高</p>
-        </div>
-        
-        <!-- 社會成本分析 -->
-        <div class="chart-container">
-            <h3>🏛️ 社會成本分析（外部成本）</h3>
-            <canvas id="socialCostChart"></canvas>
-            <p class="chart-note">⚠️ 包含：空氣污染、噪音、肇事成本、溫室效應。公路貨運因事故率高、污染嚴重，社會成本顯著較高。</p>
-        </div>
-        
-        <!-- VSL 人命風險成本 -->
-        <div class="chart-container">
-            <h3>⚠️ 人命統計價值 (VSL) 風險成本</h3>
-            <canvas id="vslChart"></canvas>
-            <p class="chart-note">🚸 VSL統計生命價值：NT$5,000萬元。公路事故發生率 (1.36e-8) 遠高於海運 (1.8e-9)，因此風險成本較高。</p>
-        </div>
-        
-        <!-- 時間成本分析 -->
-        <div class="chart-container">
-            <h3>⏳ 時間成本分析（貨物資金佔用）</h3>
-            <canvas id="timeCostChart"></canvas>
-            <p class="chart-note">⏱️ 公路運輸時間短，資金佔用成本低；海運時間長，適合低時間敏感度貨物。</p>
-        </div>
-        
-        <!-- 碳排放比較 -->
-        <div class="chart-container">
-            <h3>🌍 碳排放比較</h3>
-            <canvas id="carbonChart"></canvas>
-            <p class="chart-note">🌱 海運碳排放強度較低，是低碳運輸首選。碳排係數會根據貨物類型動態調整。</p>
-        </div>
-        
-        <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
-            <button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button>
-            <button class="btn btn-outline" onclick="window.location.href='/input'">🔄 重新計算</button>
-        </div>
+        <div class="card"><h3>🚦 即時運輸狀態</h3><div style="display:flex; gap:2rem; flex-wrap:wrap"><div style="flex:1"><p>🚛 <strong>公路狀態</strong></p><p id="roadStatus" style="font-size:1.2rem">-</p><p id="roadSpeed" style="font-size:0.9rem">-</p></div><div style="flex:1"><p>🚢 <strong>船舶狀態</strong></p><p id="shipStatus" style="font-size:1.2rem">-</p><p id="shipCapacity" style="font-size:0.9rem">-</p></div></div></div>
+        <div class="card" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white"><h3>🧠 AI 貨櫃調度建議</h3><div id="dispatchResult">分析中...</div></div>
+        <div class="chart-container"><h3>💰 成本結構比較</h3><canvas id="comparisonChart"></canvas></div>
+        <div class="chart-container"><h3>🏛️ 社會成本分析</h3><canvas id="socialCostChart"></canvas></div>
+        <div class="chart-container"><h3>⚠️ VSL 人命風險成本</h3><canvas id="vslChart"></canvas></div>
+        <div class="chart-container"><h3>⏳ 時間成本分析</h3><canvas id="timeCostChart"></canvas></div>
+        <div class="chart-container"><h3>🌍 碳排放比較</h3><canvas id="carbonChart"></canvas></div>
+        <div style="display:flex; gap:1rem; justify-content:center"><button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button><button class="btn btn-outline" onclick="window.location.href='/input'">🔄 重新計算</button></div>
     </div>
-    
-    <style>
-        .chart-note {
-            font-size: 0.85rem;
-            color: var(--french-blue);
-            margin-top: 0.8rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--frosted-blue-2);
-            text-align: center;
-        }
-        .劣勢 {
-            color: #e74c3c;
-            font-weight: bold;
-        }
-        .優勢 {
-            color: #27ae60;
-            font-weight: bold;
-        }
-        .emission-badge {
-            display: inline-block;
-            background: var(--light-cyan);
-            padding: 0.2rem 0.5rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-        }
-    </style>
-    
+    <style>.chart-note{font-size:0.85rem;color:var(--french-blue);margin-top:0.8rem;padding-top:0.5rem;border-top:1px solid var(--frosted-blue-2);text-align:center}.劣势{color:#e74c3c;font-weight:bold}.优势{color:#27ae60;font-weight:bold}</style>
     <script src="/static/app.js"></script>
 </body>
 </html>

@@ -16,103 +16,25 @@
             <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
-    
     <div class="container">
         <div class="card" style="max-width:700px; margin:0 auto">
             <h2>🚢 運輸路線評估</h2>
             <p style="color:var(--french-blue)">請填寫以下資訊，AI 將為您分析最佳運輸方案（單位：FEU）</p>
-            
-            <div class="form-group">
-                <label>📍 起點港口</label>
-                <select id="start">
-                    <option value="kaohsiung">高雄港</option>
-                    <option value="taichung">台中港</option>
-                    <option value="keelung">基隆港</option>
-                    <option value="taipei">台北港</option>
-                    <option value="hualien">花蓮港</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>📍 終點港口</label>
-                <select id="end">
-                    <option value="taichung">台中港</option>
-                    <option value="kaohsiung">高雄港</option>
-                    <option value="keelung">基隆港</option>
-                    <option value="taipei">台北港</option>
-                    <option value="hualien">花蓮港</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>📦 貨櫃數量 (FEU)</label>
-                <input type="number" id="containers" placeholder="請輸入貨櫃數量（40呎櫃）" min="1" value="1">
-                <p style="font-size:0.8rem; color:var(--french-blue); margin-top:0.3rem">
-                    ※ 1 FEU = 1 個 40 呎貨櫃 = 2 TEU
-                </p>
-            </div>
-            
-            <div class="form-group">
-                <label>📦 貨物類型</label>
-                <select id="cargoType">
-                    <option value="general">📦 一般貨物（可接受海運）</option>
-                    <option value="high_value">💎 高價值電子產品（建議公路）</option>
-                    <option value="perishable">🍎 生鮮/冷鏈貨物（必須公路）</option>
-                    <option value="bulk">⛰️ 大宗原物料（適合海運）</option>
-                    <option value="just_in_time">⚙️ JIT 即時生產（建議公路）</option>
-                </select>
-                <p style="font-size:0.8rem; color:var(--french-blue); margin-top:0.3rem">
-                    ※ 不同貨物類型的時間成本與急迫性不同，會影響 AI 推薦結果
-                </p>
-            </div>
-            
+            <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option><option value="keelung">基隆港</option><option value="taipei">台北港</option><option value="hualien">花蓮港</option></select></div>
+            <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option><option value="keelung">基隆港</option><option value="taipei">台北港</option><option value="hualien">花蓮港</option></select></div>
+            <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" placeholder="請輸入貨櫃數量（40呎櫃）" min="1" value="1"><p style="font-size:0.8rem; color:var(--french-blue); margin-top:0.3rem">※ 1 FEU = 1 個 40 呎貨櫃 = 2 TEU</p></div>
+            <div class="form-group"><label>📦 貨物類型</label><select id="cargoType"><option value="general">📦 一般貨物（可接受海運）</option><option value="high_value">💎 高價值電子產品（建議公路）</option><option value="perishable">🍎 生鮮/冷鏈貨物（必須公路）</option><option value="bulk">⛰️ 大宗原物料（適合海運）</option><option value="just_in_time">⚙️ JIT 即時生產（建議公路）</option></select></div>
             <div style="margin:1.5rem 0">
                 <h3>🤖 AI 決策權重設定</h3>
-                
-                <div class="form-group">
-                    <label>💰 成本權重 <span id="costValue" class="weight-value">40%</span></label>
-                    <input type="range" id="costSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.4">
-                </div>
-                
-                <div class="form-group">
-                    <label>🌱 碳排權重 <span id="carbonValue" class="weight-value">40%</span></label>
-                    <input type="range" id="carbonSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.4">
-                </div>
-                
-                <div class="form-group">
-                    <label>⚠️ 風險權重 <span id="riskValue" class="weight-value">20%</span></label>
-                    <input type="range" id="riskSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.2">
-                </div>
-                
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem">
-                    <button type="button" id="preset-balanced" class="btn btn-outline">⚖️ 平衡型</button>
-                    <button type="button" id="preset-cost" class="btn btn-outline">💰 成本優先</button>
-                    <button type="button" id="preset-green" class="btn btn-outline">🌱 環保優先</button>
-                    <button type="button" id="preset-safe" class="btn btn-outline">🛡️ 安全優先</button>
-                </div>
-                <p style="font-size:0.8rem; color:var(--french-blue); margin-top:0.5rem">※ 權重總和會自動正規化為 100%</p>
+                <div class="form-group"><label>💰 成本權重 <span id="costValue" class="weight-value">40%</span></label><input type="range" id="costSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.4"></div>
+                <div class="form-group"><label>🌱 碳排權重 <span id="carbonValue" class="weight-value">40%</span></label><input type="range" id="carbonSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.4"></div>
+                <div class="form-group"><label>⚠️ 風險權重 <span id="riskValue" class="weight-value">20%</span></label><input type="range" id="riskSlider" class="weight-slider" min="0" max="1" step="0.01" value="0.2"></div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap"><button type="button" id="preset-balanced" class="btn btn-outline">⚖️ 平衡型</button><button type="button" id="preset-cost" class="btn btn-outline">💰 成本優先</button><button type="button" id="preset-green" class="btn btn-outline">🌱 環保優先</button><button type="button" id="preset-safe" class="btn btn-outline">🛡️ 安全優先</button></div>
             </div>
-            
-            <div style="display:flex; gap:1rem; margin-top:1rem">
-                <button class="btn btn-primary" onclick="goToResult()">📊 開始分析</button>
-                <button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button>
-            </div>
+            <div style="display:flex; gap:1rem"><button class="btn btn-primary" onclick="goToResult()">📊 開始分析</button><button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button></div>
         </div>
-        
-        <div class="card" style="margin-top:1rem">
-            <h3>📌 計算說明（FEU 單位）</h3>
-            <ul style="margin-left:1.5rem; line-height:1.8">
-                <li><strong>單位：</strong> FEU（40呎貨櫃），1 FEU = 2 TEU</li>
-                <li>碳排放係數依據 CNS 14064-1 國家標準</li>
-                <li>社會成本包含：空氣污染、噪音、肇事成本、溫室效應</li>
-                <li>VSL（統計生命價值）依據台北科技大學研究：NT$5,000萬元</li>
-                <li>時間成本依據貨物類型自動調整敏感度</li>
-                <li>碳排係數會根據貨物類型（車輛、裝載率、路況）動態調整</li>
-                <li>AI 會根據您設定的權重和貨物類型，推薦最佳運輸方案</li>
-            </ul>
-        </div>
+        <div class="card"><h3>📌 計算說明（FEU 單位）</h3><ul><li>碳排放係數依據 CNS 14064-1 國家標準</li><li>社會成本包含：空氣污染、噪音、肇事成本、溫室效應</li><li>VSL 統計生命價值：NT$5,000萬元</li><li>碳排係數會根據貨物類型動態調整</li><li>AI 會根據權重、貨物類型、即時路況與船期推薦最佳方案</li></ul></div>
     </div>
-    
     <script src="/static/app.js"></script>
 </body>
 </html>

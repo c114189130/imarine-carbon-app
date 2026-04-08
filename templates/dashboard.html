@@ -10,50 +10,15 @@
 <body onload="loadDashboard()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始計算</a>
-            <a href="/history_page">📊 歷史記錄</a>
-            <a href="/dashboard">📈 Dashboard</a>
-        </div>
+        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始計算</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
     </nav>
-    
     <div class="container">
         <h1>📈 碳排放儀表板</h1>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3 id="totalReduction">-</h3>
-                <p>總減碳量 (kg)</p>
-            </div>
-            <div class="stat-card">
-                <h3 id="avgReduction">-</h3>
-                <p>平均減碳比例</p>
-            </div>
-            <div class="stat-card">
-                <h3 id="totalCalculations">-</h3>
-                <p>總評估次數</p>
-            </div>
-            <div class="stat-card">
-                <h3 id="bestModeRate">-</h3>
-                <p>海運推薦率</p>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="modeChart"></canvas>
-        </div>
-        
-        <div style="display:flex; justify-content:center; gap:1rem; margin-top:1rem">
-            <button class="btn btn-primary" onclick="window.location.href='/input'">🚢 新增評估</button>
-            <button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button>
-        </div>
+        <div class="stats-grid"><div class="stat-card"><h3 id="totalReduction">-</h3><p>總減碳量 (kg)</p></div><div class="stat-card"><h3 id="avgReduction">-</h3><p>平均減碳比例</p></div><div class="stat-card"><h3 id="totalCalculations">-</h3><p>總評估次數</p></div><div class="stat-card"><h3 id="bestModeRate">-</h3><p>海運推薦率</p></div></div>
+        <div class="chart-container"><canvas id="trendChart"></canvas></div>
+        <div class="chart-container"><canvas id="modeChart"></canvas></div>
+        <button class="btn btn-outline" onclick="window.location.href='/'">🏠 返回首頁</button>
     </div>
-    
     <script src="/static/app.js"></script>
 </body>
 </html>
