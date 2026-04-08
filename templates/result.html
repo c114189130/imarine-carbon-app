@@ -53,7 +53,7 @@
         <div class="chart-container">
             <h3>🌍 碳排放比較</h3>
             <canvas id="carbonChart"></canvas>
-            <p class="chart-note">🌱 海運碳排放強度 (0.04 kg/TEU-km) 僅為公路 (0.12) 的1/3，是低碳運輸首選。</p>
+            <p class="chart-note">🌱 海運碳排放強度較低，是低碳運輸首選。碳排係數會根據貨物類型動態調整。</p>
         </div>
         
         <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
@@ -70,6 +70,22 @@
             padding-top: 0.5rem;
             border-top: 1px solid var(--frosted-blue-2);
             text-align: center;
+        }
+        .劣勢 {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .優勢 {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .emission-badge {
+            display: inline-block;
+            background: var(--light-cyan);
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
         }
     </style>
     

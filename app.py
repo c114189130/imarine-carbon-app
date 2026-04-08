@@ -23,38 +23,95 @@ def load_emission_standards():
             return json.load(f)
     except:
         return {
-            "road": {"value": 0.12, "unit": "kg CO2e/TEU-km", "source": "環保署公告(2023)", "standard": "CNS 14064-1"},
-            "sea": {"value": 0.04, "unit": "kg CO2e/TEU-km", "source": "IMO 國際海事組織", "standard": "CNS 14064-1"}
+            "road": {"value": 0.06, "unit": "kg CO2e/FEU-km", "source": "環保署公告(2023) / 2 (TEU→FEU)", "standard": "CNS 14064-1"},
+            "sea": {"value": 0.02, "unit": "kg CO2e/FEU-km", "source": "IMO 國際海事組織 / 2 (TEU→FEU)", "standard": "CNS 14064-1"}
         }
 
 EMISSION_STANDARDS = load_emission_standards()
 
-# ================= 參數設定 =================
-EMISSION_FACTORS = {
-    "road": EMISSION_STANDARDS["road"]["value"],
-    "sea": EMISSION_STANDARDS["sea"]["value"]
+# ================= 參數設定（FEU 單位） =================
+# 基礎碳排係數 (kg CO2e/FEU-km)
+BASE_EMISSION_FACTORS = {
+    "road": 0.06,
+    "sea": 0.02
 }
 
+# 運費單價 (NTD/FEU-km)
 COST_RATES = {
-    "road": 30,
-    "sea": 12
+    "road": 60,      # 公路運費（FEU 約為 TEU 的 2 倍）
+    "sea": 24        # 海運運費（FEU 約為 TEU 的 2 倍）
 }
 
 VSL_RATES = {
-    "road": 0.68,
-    "sea": 0.09
+    "road": 1.36,    # VSL風險成本 (元/FEU-km) (TEU的2倍)
+    "sea": 0.18
 }
 
 SOCIAL_COST_RATES = {
-    "road": 1.85,
-    "sea": 0.32
+    "road": 3.70,    # 社會外部成本 (元/FEU-km) (TEU的2倍)
+    "sea": 0.64
 }
 
 # 碳的社會成本 (NTD/kg CO2e)
 SOCIAL_COST_OF_CARBON = 10.0
 
-# 港口固定碳排 (kg/TEU)
-FIXED_PORT_EMISSION = 50
+# 港口固定碳排 (kg/FEU)
+FIXED_PORT_EMISSION = 100  # FEU 約為 TEU 的 2 倍
+
+# ================= 動態碳排係數調整函數（新增！） =================
+def get_dynamic_road_emission(vehicle_type="heavy", load_factor=0.8, road_type="highway"):
+    """
+    動態計算公路碳排係數 (kg CO2e/FEU-km)
+    
+    參數:
+        vehicle_type: "light"(3.5t), "medium"(12t), "heavy"(35t)
+        load_factor: 裝載率 0-1
+        road_type: "city"(市區), "highway"(高速), "mixed"(混合)
+    """
+    base_factors = {
+        "light": 0.18,    # 小貨車碳排較高 (kg CO2e/FEU-km)
+        "medium": 0.10,
+        "heavy": 0.06
+    }
+    
+    road_multipliers = {
+        "city": 1.4,      # 市區走走停停，油耗增加40%
+        "highway": 1.0,   # 高速公路最省油
+        "mixed": 1.2      # 混合路況
+    }
+    
+    factor = base_factors.get(vehicle_type, 0.06)
+    factor = factor * road_multipliers.get(road_type, 1.0)
+    
+    # 裝載率影響：裝載率越高，每 FEU 碳排越低
+    # 空車回頭時 load_factor 可能低於 0.5
+    adjusted_factor = factor / max(load_factor, 0.3)
+    
+    return round(adjusted_factor, 4)
+
+def get_dynamic_sea_emission(route_type="short_sea", ship_size="medium"):
+    """
+    動態計算海運碳排係數 (kg CO2e/FEU-km)
+    
+    參數:
+        route_type: "short_sea"(短程), "deep_sea"(遠洋)
+        ship_size: "small"(小), "medium"(中), "large"(大)
+    """
+    base_factors = {
+        "short_sea": 0.03,
+        "deep_sea": 0.02
+    }
+    
+    size_multipliers = {
+        "small": 1.3,     # 小型船效率較差
+        "medium": 1.0,
+        "large": 0.8      # 大型船規模經濟
+    }
+    
+    factor = base_factors.get(route_type, 0.02)
+    factor = factor * size_multipliers.get(ship_size, 1.0)
+    
+    return round(factor, 4)
 
 # ================= 貨物類型參數 =================
 CARGO_TYPES = {
@@ -64,7 +121,10 @@ CARGO_TYPES = {
         "value_density": 0.3,
         "urgent_multiplier": 1.0,
         "description": "無特殊時效要求，可接受海運",
-        "icon": "📦"
+        "icon": "📦",
+        "vehicle_type": "heavy",
+        "load_factor": 0.8,
+        "road_type": "highway"
     },
     "high_value": {
         "name": "高價值電子產品",
@@ -72,7 +132,10 @@ CARGO_TYPES = {
         "value_density": 0.9,
         "urgent_multiplier": 1.5,
         "description": "時間成本極高，建議公路運輸",
-        "icon": "💎"
+        "icon": "💎",
+        "vehicle_type": "medium",
+        "load_factor": 0.9,
+        "road_type": "highway"
     },
     "perishable": {
         "name": "生鮮/冷鏈貨物",
@@ -80,7 +143,10 @@ CARGO_TYPES = {
         "value_density": 0.7,
         "urgent_multiplier": 2.0,
         "description": "時效要求極高，必須公路運輸",
-        "icon": "🍎"
+        "icon": "🍎",
+        "vehicle_type": "medium",
+        "load_factor": 0.85,
+        "road_type": "mixed"
     },
     "bulk": {
         "name": "大宗原物料",
@@ -88,7 +154,10 @@ CARGO_TYPES = {
         "value_density": 0.1,
         "urgent_multiplier": 0.8,
         "description": "適合海運，成本效益最高",
-        "icon": "⛰️"
+        "icon": "⛰️",
+        "vehicle_type": "heavy",
+        "load_factor": 0.95,
+        "road_type": "highway"
     },
     "just_in_time": {
         "name": "JIT 即時生產",
@@ -96,7 +165,10 @@ CARGO_TYPES = {
         "value_density": 0.6,
         "urgent_multiplier": 1.8,
         "description": "生產線等待成本高，建議公路",
-        "icon": "⚙️"
+        "icon": "⚙️",
+        "vehicle_type": "light",
+        "load_factor": 0.7,
+        "road_type": "highway"
     }
 }
 
@@ -116,8 +188,8 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def calculate_time_cost(distance_km, mode, containers, time_sensitivity=0.3):
-    CARGO_VALUE = 5000000
+def calculate_time_cost(distance_km, mode, containers_feu, time_sensitivity=0.3):
+    CARGO_VALUE = 10000000  # FEU 貨物價值約為 TEU 的 2 倍
     INTEREST_RATE = 0.05
     
     if mode == "road":
@@ -127,7 +199,7 @@ def calculate_time_cost(distance_km, mode, containers, time_sensitivity=0.3):
     
     sensitivity_multiplier = 1 + time_sensitivity * 2
     value_per_hour = (CARGO_VALUE * INTEREST_RATE) / (365 * 24)
-    return value_per_hour * hours * containers * sensitivity_multiplier
+    return value_per_hour * hours * containers_feu * sensitivity_multiplier
 
 HISTORY_FILE = "history.json"
 
@@ -202,19 +274,25 @@ def logout():
     session.clear()
     return jsonify({"status": "ok"})
 
-# ================= 主要計算路由（修正版） =================
+# ================= 主要計算路由（動態碳排版） =================
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.json
     start = data['start']
     end = data['end']
-    containers = int(data['containers'])
+    containers_feu = int(data['containers'])  # 現在單位是 FEU
     cargo_type = data.get('cargo_type', 'general')
     weights = data.get('weights', {"cost": 0.4, "carbon": 0.4, "risk": 0.2})
 
     cargo = CARGO_TYPES.get(cargo_type, CARGO_TYPES["general"])
     time_sensitivity = cargo["time_sensitivity"]
     urgency_multiplier = cargo["urgent_multiplier"]
+    
+    # 獲取動態碳排參數
+    vehicle_type = cargo.get("vehicle_type", "heavy")
+    load_factor = cargo.get("load_factor", 0.8)
+    road_type = cargo.get("road_type", "highway")
+    
     p1, p2 = ports[start], ports[end]
     dist = haversine_distance(p1['lat'], p1['lon'], p2['lat'], p2['lon'])
 
@@ -222,25 +300,39 @@ def calculate():
     sea_api = get_sea_route(start, end)
     road_api = get_road_data(start, end)
 
+    # ================= 動態碳排係數計算 =================
+    # 根據貨物類型動態調整公路碳排係數
+    road_emission_factor = get_dynamic_road_emission(
+        vehicle_type=vehicle_type,
+        load_factor=load_factor,
+        road_type=road_type
+    )
+    
+    # 根據距離動態調整海運碳排係數（短程 vs 遠洋）
+    if dist < 300:
+        sea_emission_factor = get_dynamic_sea_emission(route_type="short_sea", ship_size="medium")
+    else:
+        sea_emission_factor = get_dynamic_sea_emission(route_type="deep_sea", ship_size="large")
+
     # --- 核心碳排放計算（加入港口固定碳排）---
-    base_road_carbon = EMISSION_FACTORS["road"] * dist * containers
-    base_sea_carbon = EMISSION_FACTORS["sea"] * dist * containers
+    base_road_carbon = road_emission_factor * dist * containers_feu
+    base_sea_carbon = sea_emission_factor * dist * containers_feu
     
     road_carbon = base_road_carbon
-    sea_carbon = base_sea_carbon + (FIXED_PORT_EMISSION * 2 * containers)
+    sea_carbon = base_sea_carbon + (FIXED_PORT_EMISSION * 2 * containers_feu)
 
     # --- 貨幣成本計算 ---
-    road_freight = COST_RATES["road"] * dist * containers
-    sea_freight = COST_RATES["sea"] * dist * containers * urgency_multiplier
+    road_freight = COST_RATES["road"] * dist * containers_feu
+    sea_freight = COST_RATES["sea"] * dist * containers_feu * urgency_multiplier
 
-    road_time_cost = calculate_time_cost(dist, "road", containers, time_sensitivity)
-    sea_time_cost = calculate_time_cost(dist, "sea", containers, time_sensitivity)
+    road_time_cost = calculate_time_cost(dist, "road", containers_feu, time_sensitivity)
+    sea_time_cost = calculate_time_cost(dist, "sea", containers_feu, time_sensitivity)
 
-    road_social = SOCIAL_COST_RATES["road"] * dist * containers
-    sea_social = SOCIAL_COST_RATES["sea"] * dist * containers
+    road_social = SOCIAL_COST_RATES["road"] * dist * containers_feu
+    sea_social = SOCIAL_COST_RATES["sea"] * dist * containers_feu
 
-    road_vsl = VSL_RATES["road"] * dist * containers
-    sea_vsl = VSL_RATES["sea"] * dist * containers
+    road_vsl = VSL_RATES["road"] * dist * containers_feu
+    sea_vsl = VSL_RATES["sea"] * dist * containers_feu
 
     road_total_cost = road_freight + road_time_cost + road_social + road_vsl
     sea_total_cost = sea_freight + sea_time_cost + sea_social + sea_vsl
@@ -262,14 +354,15 @@ def calculate():
     dynamic_reduction_pct = (carbon_saved / road_carbon) * 100 if road_carbon > 0 else 0
     social_savings = road_total_cost - sea_total_cost
 
-    # --- AI 推薦理由 ---
+    # --- 封裝結果 ---
     road_result = {
         "freight": round(road_freight),
         "time": round(road_time_cost),
         "social": round(road_social),
         "vsl": round(road_vsl),
         "carbon": round(road_carbon, 2),
-        "total": round(road_total_cost)
+        "total": round(road_total_cost),
+        "emission_factor": road_emission_factor
     }
     
     sea_result = {
@@ -278,11 +371,13 @@ def calculate():
         "social": round(sea_social),
         "vsl": round(sea_vsl),
         "carbon": round(sea_carbon, 2),
-        "total": round(sea_total_cost)
+        "total": round(sea_total_cost),
+        "emission_factor": sea_emission_factor
     }
     
     best_mode_ai, best_score, all_scores = recommend_v2(road_result, sea_result, weights)
     
+    # --- AI 推薦理由 ---
     if best_mode == "海運":
         recommendation_reason = f"經AI評估，選擇海運不僅能減少 {carbon_saved:.0f} kg 碳排放 ({dynamic_reduction_pct:.1f}%)，更能為社會節省總成本 NT$ {total_social_savings:,.0f} 元。"
     else:
@@ -294,11 +389,14 @@ def calculate():
         "date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         "start": ports[start]['name'],
         "end": ports[end]['name'],
-        "containers": containers,
+        "containers": containers_feu,
+        "unit": "FEU",
         "cargo_type": cargo['name'],
         "distance": round(dist, 2),
         "road_carbon": round(road_carbon, 2),
         "sea_carbon": round(sea_carbon, 2),
+        "road_emission_factor": road_emission_factor,
+        "sea_emission_factor": sea_emission_factor,
         "carbon_saved": round(carbon_saved, 2),
         "carbon_reduction_pct": round(dynamic_reduction_pct, 1),
         "social_savings": round(social_savings),
@@ -309,7 +407,8 @@ def calculate():
 
     return jsonify({
         "distance": round(dist, 2),
-        "containers": containers,
+        "containers": containers_feu,
+        "unit": "FEU",
         "start_name": ports[start]['name'],
         "end_name": ports[end]['name'],
         "start_code": ports[start]['code'],
@@ -328,6 +427,8 @@ def calculate():
         "cargo_icon": cargo['icon'],
         "recommendation_reason": recommendation_reason,
         "time_sensitivity": time_sensitivity,
+        "road_emission_factor": road_emission_factor,
+        "sea_emission_factor": sea_emission_factor,
         "api_data": {"sea_route": sea_api, "road_data": road_api}
     })
 
@@ -422,7 +523,7 @@ def esg_report():
 ╠══════════════════════════════════════════════════════════════╣
 ║ 📊 環境保護 (Environmental)
 ║   • 本次運輸碳排放減少量：{carbon_saved:,.2f} kg CO2e
-║   • 相當於種樹：{int(carbon_saved / 22)} 棵
+║   • 相當於種樹：{int(carbon_saved / 44)} 棵（FEU單位）
 ║
 ║ 🤝 社會責任 (Social)
 ║   • 採用 CNS 14064-1 國家標準

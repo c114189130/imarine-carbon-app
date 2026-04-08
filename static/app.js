@@ -14,7 +14,7 @@ function goToResult() {
     const cargoType = document.getElementById("cargoType").value;
     
     if (!containers || containers <= 0) {
-        alert("請輸入貨櫃數量（至少 1 TEU）");
+        alert("請輸入貨櫃數量（至少 1 FEU）");
         return;
     }
     
@@ -172,8 +172,11 @@ function displayResults(data) {
             <h3>📊 AI 多目標決策分析報告</h3>
             <p>🚢 起點：${data.start_name} → 🏁 終點：${data.end_name}</p>
             <p>📏 距離：<span class="result-value">${data.distance.toLocaleString()}</span> 公里</p>
-            <p>📦 貨櫃數量：<span class="result-value">${data.containers.toLocaleString()}</span> TEU</p>
+            <p>📦 貨櫃數量：<span class="result-value">${data.containers.toLocaleString()}</span> FEU</p>
             <p>${data.cargo_icon || '📦'} 貨物類型：<strong>${data.cargo_type}</strong></p>
+            <div style="margin-top:0.5rem; font-size:0.9rem">
+                🌱 碳排係數：公路 ${data.road_emission_factor || data.road?.emission_factor || '0.06'} / 海運 ${data.sea_emission_factor || data.sea?.emission_factor || '0.02'} kg CO2e/FEU-km
+            </div>
             <div style="margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.2); border-radius:10px">
                 🤖 <strong>AI 推薦方案：${data.best_mode}</strong><br>
                 綜合評分：公路 ${data.all_scores?.road || 'N/A'} / 海運 ${data.all_scores?.sea || 'N/A'}
@@ -181,7 +184,7 @@ function displayResults(data) {
         </div>
         
         <div class="card">
-            <h3>💰 總體社會成本分析</h3>
+            <h3>💰 總體社會成本分析（FEU 單位）</h3>
             <table class="cost-table">
                 <thead><tr><th>成本項目</th><th>🚛 公路運輸</th><th>🚢 海運運輸</th><th>節省金額</th></tr></thead>
                 <tbody>
@@ -208,6 +211,7 @@ function displayResults(data) {
             <p>📌 貨物類型：${data.cargo_type}</p>
             <p>${data.recommendation_reason || '請查看上方圖表分析'}</p>
             <p style="margin-top:0.5rem; font-size:0.9rem">💡 時間敏感度：${Math.round(data.time_sensitivity * 100)}%</p>
+            <p style="margin-top:0.5rem; font-size:0.85rem">🌱 本次使用碳排係數：公路 ${data.road_emission_factor || '0.06'} / 海運 ${data.sea_emission_factor || '0.02'} kg CO2e/FEU-km</p>
         </div>
         
         <div class="card">
@@ -219,7 +223,7 @@ function displayResults(data) {
                     <tr><td>⏱️ 運輸時間</td><td class="优势">快 (4-6小時) ✅</td><td class="劣势">慢 (18-24小時) ⚠️</td></tr>
                     <tr><td>🏛️ 社會成本</td><td class="劣势">高 (事故/空污) ❌</td><td class="优势">低 ✅</td></tr>
                     <tr><td>⚠️ VSL人命風險</td><td class="劣势">高 (事故率高) ❌</td><td class="优势">低 ✅</td></tr>
-                    <tr><td>🌱 碳排放</td><td class="劣势">高 (0.12 kg/TEU-km) ❌</td><td class="优势">低 (0.04 kg/TEU-km) ✅</td></tr>
+                    <tr><td>🌱 碳排放</td><td class="劣势">高 ❌</td><td class="优势">低 ✅</td></tr>
                     <tr><td>🚪 門到門服務</td><td class="优势">可直達 ✅</td><td class="劣势">需轉運 ⚠️</td></tr>
                 </tbody>
             </table>
@@ -237,7 +241,7 @@ function formatCurrency(value) {
     return `NT$ ${value.toLocaleString()}`;
 }
 
-// 成本比較圖表（運費 + 社會成本 + VSL + 時間成本）
+// 成本比較圖表
 function drawComparisonChart(data) {
     const ctx = document.getElementById("comparisonChart");
     if (!ctx) return;
@@ -374,7 +378,7 @@ function drawTimeCostChart(data) {
                             if (isRoad) {
                                 return [
                                     '公路優勢：運輸時間短，資金佔用成本低',
-                                    '貨物價值：NT$500萬/TEU',
+                                    '貨物價值：NT$1,000萬/FEU',
                                     '年利率：5%'
                                 ];
                             } else {
@@ -393,12 +397,14 @@ function drawTimeCostChart(data) {
     });
 }
 
-// 碳排放圖表
+// 碳排放圖表（動態顯示係數）
 function drawCarbonChart(data) {
     const ctx = document.getElementById("carbonChart");
     if (!ctx) return;
     
     const carbonRatio = (data.road.carbon / data.sea.carbon).toFixed(1);
+    const roadFactor = data.road_emission_factor || data.road?.emission_factor || 0.06;
+    const seaFactor = data.sea_emission_factor || data.sea?.emission_factor || 0.02;
     
     new Chart(ctx, {
         type: 'bar',
@@ -424,8 +430,8 @@ function drawCarbonChart(data) {
                             const saved = data.carbon_saved;
                             const pct = data.carbon_reduction_pct;
                             return [
-                                `公路碳排放強度：0.12 kg/TEU-km`,
-                                `海運碳排放強度：0.04 kg/TEU-km`,
+                                `公路碳排係數：${roadFactor} kg CO2e/FEU-km`,
+                                `海運碳排係數：${seaFactor} kg CO2e/FEU-km`,
                                 `→ 公路碳排約為海運的 ${carbonRatio} 倍`,
                                 `選擇海運可減少 ${saved.toLocaleString()} kg (${pct}%)`
                             ];
@@ -534,7 +540,7 @@ function loadHistory() {
             if (!tbody) return;
             tbody.innerHTML = "";
             if (data.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄</td></tr>'; 
+                tbody.innerHTML = '<tr><td colspan="11">暫無歷史記錄</td></tr>'; 
                 return; 
             }
             
@@ -544,6 +550,7 @@ function loadHistory() {
                     <td>${record.start}</td>
                     <td>${record.end}</td>
                     <td>${record.containers}</td>
+                    <td>${record.unit || 'FEU'}</td>
                     <td>${record.cargo_type || '-'}</td>
                     <td>${record.distance} km</td>
                     <td>${record.sea_carbon?.toLocaleString() || '-'} kg</td>
