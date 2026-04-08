@@ -610,3 +610,39 @@ document.addEventListener('DOMContentLoaded', function() {
         initWeightControls();
     }
 });
+// ================= 動畫效果函數 =================
+
+// 數字跳動動畫
+function animateValue(element, start, end, duration = 800) {
+    if (!element) return;
+    const startTime = performance.now();
+    const updateValue = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const current = Math.floor(start + (end - start) * progress);
+        element.innerText = current.toLocaleString();
+        if (progress < 1) {
+            requestAnimationFrame(updateValue);
+        }
+    };
+    requestAnimationFrame(updateValue);
+}
+
+// 更新比例條
+function updateRatioBars(seaRatio, roadRatio) {
+    const seaBar = document.getElementById("seaRatioBar");
+    const roadBar = document.getElementById("roadRatioBar");
+    const seaPercent = document.getElementById("seaPercent");
+    const roadPercent = document.getElementById("roadPercent");
+    
+    if (seaBar) {
+        seaBar.style.width = seaRatio + "%";
+        seaBar.innerText = seaRatio >= 15 ? `🚢 ${seaRatio}%` : "";
+    }
+    if (roadBar) {
+        roadBar.style.width = roadRatio + "%";
+        roadBar.innerText = roadRatio >= 15 ? `🚛 ${roadRatio}%` : "";
+    }
+    if (seaPercent) seaPercent.innerText = seaRatio + "%";
+    if (roadPercent) roadPercent.innerText = roadRatio + "%";
+}
