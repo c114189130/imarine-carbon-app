@@ -21,48 +21,48 @@
     <div class="container" id="content" style="display:none">
         <div id="result"></div>
         
-        <div class="card">
+        <div class="card fade-in">
             <h3>🚦 即時運輸狀態</h3>
             <div style="display:flex; gap:2rem; flex-wrap:wrap">
                 <div style="flex:1">
-                    <p>🚛 <strong>公路狀態</strong></p>
+                    <p>🚛 <strong>公路狀態</strong> <span id="roadSource" style="font-size:0.8rem"></span></p>
                     <p id="roadStatus" style="font-size:1.2rem">-</p>
                     <p id="roadSpeed" style="font-size:0.9rem">-</p>
                 </div>
                 <div style="flex:1">
-                    <p>🚢 <strong>船舶狀態</strong></p>
+                    <p>🚢 <strong>船舶狀態</strong> <span style="font-size:0.8rem">(iMarine 模擬)</span></p>
                     <p id="shipStatus" style="font-size:1.2rem">-</p>
                     <p id="shipInfo" style="font-size:0.9rem">-</p>
                 </div>
             </div>
         </div>
         
-        <div class="card" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white">
+        <div class="card fade-in" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white">
             <h3>🧠 AI 貨櫃調度建議</h3>
             <div id="dispatchResult">分析中...</div>
         </div>
         
-        <div class="chart-container">
+        <div class="chart-container fade-in">
             <h3>💰 成本結構比較</h3>
             <canvas id="costChart"></canvas>
         </div>
         
-        <div class="chart-container">
+        <div class="chart-container fade-in">
             <h3>🏛️ 社會成本分析</h3>
             <canvas id="socialChart"></canvas>
         </div>
         
-        <div class="chart-container">
+        <div class="chart-container fade-in">
             <h3>⚠️ VSL 人命風險成本</h3>
             <canvas id="vslChart"></canvas>
         </div>
         
-        <div class="chart-container">
+        <div class="chart-container fade-in">
             <h3>⏳ 時間成本分析</h3>
             <canvas id="timeChart"></canvas>
         </div>
         
-        <div class="chart-container">
+        <div class="chart-container fade-in">
             <h3>🌍 碳排放比較</h3>
             <canvas id="carbonChart"></canvas>
         </div>
@@ -81,7 +81,6 @@
     
     <script src="/static/app.js"></script>
     <script>
-        // 頁面載入時執行計算
         calculate();
     </script>
 </body>

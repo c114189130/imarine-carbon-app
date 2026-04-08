@@ -101,6 +101,37 @@ function initWeightControls() {
     if (s) s.onclick = () => setPreset('safe');
 }
 
+// 動畫函數
+function animateValue(element, start, end, duration = 800) {
+    if (!element) return;
+    const range = end - start;
+    const increment = range / (duration / 16);
+    let current = start;
+    const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+            current = end;
+            clearInterval(timer);
+        }
+        element.textContent = Math.round(current);
+    }, 16);
+}
+
+function updateRatioBar(seaPercent, roadPercent) {
+    const seaBar = document.getElementById("ratioBarSea");
+    const roadBar = document.getElementById("ratioBarRoad");
+    
+    if (seaBar) {
+        seaBar.style.width = `${seaPercent}%`;
+        seaBar.style.setProperty('--target-width', `${seaPercent}%`);
+        seaBar.classList.add('progress-bar-animate');
+        setTimeout(() => seaBar.classList.remove('progress-bar-animate'), 1000);
+    }
+    if (roadBar) {
+        roadBar.style.width = `${roadPercent}%`;
+    }
+}
+
 // 主要計算函數
 function calculate() {
     const start = localStorage.getItem("start");
@@ -125,6 +156,13 @@ function calculate() {
         currentResult = data;
         displayResults(data);
         drawCharts(data);
+        
+        // 數字跳動動畫 - 貨櫃數量
+        const containerElem = document.querySelector(".result-value");
+        if (containerElem) {
+            animateValue(containerElem, 0, data.containers, 800);
+        }
+        
         document.getElementById("loading").style.display = "none";
         document.getElementById("content").style.display = "block";
     })
@@ -144,7 +182,7 @@ function displayResults(data) {
     
     let html = `
         <div class="result-card">
-            <h3>📊 AI 多目標決策分析報告</h3>
+            <h3>📊 AI 多因子決策分析報告</h3>
             <p>🚢 起點：${data.start_name} → 🏁 終點：${data.end_name}</p>
             <p>📏 距離：<span class="result-value">${data.distance.toLocaleString()}</span> 公里</p>
             <p>📦 貨櫃數量：<span class="result-value">${data.containers.toLocaleString()}</span> FEU</p>
@@ -190,8 +228,10 @@ function displayResults(data) {
     if (data.road_condition) {
         const rs = document.getElementById("roadStatus");
         const rsp = document.getElementById("roadSpeed");
+        const rsrc = document.getElementById("roadSource");
         if (rs) rs.innerHTML = data.road_condition.level_text;
         if (rsp) rsp.innerHTML = `平均時速 ${data.road_condition.avg_speed} km/h | 延遲倍數 ${data.road_condition.delay_factor}x`;
+        if (rsrc) rsrc.innerHTML = `(${data.road_condition.source})`;
     }
     
     // 船期
@@ -209,19 +249,33 @@ function displayResults(data) {
             de.innerHTML = `
                 <div style="display:flex; gap:2rem; flex-wrap:wrap">
                     <div style="flex:1">
-                        <div class="score-card"><div class="score-number score-sea">${data.dispatch.score_sea}</div><div>🚢 海運分數</div></div>
-                        <div class="score-card" style="margin-top:0.5rem"><div class="score-number score-road">${data.dispatch.score_road}</div><div>🚛 公路分數</div></div>
+                        <div class="score-card"><div class="score-number score-sea" id="scoreSea">0</div><div>🚢 海運分數</div></div>
+                        <div class="score-card" style="margin-top:0.5rem"><div class="score-number score-road" id="scoreRoad">0</div><div>🚛 公路分數</div></div>
                     </div>
                     <div style="flex:2">
                         <div style="display:flex; gap:1rem; text-align:center; margin-bottom:1rem">
-                            <div style="flex:1"><span style="font-size:2rem">🚢</span><br><strong>${data.dispatch.to_sea}</strong> FEU</div>
-                            <div style="flex:1"><span style="font-size:2rem">🚛</span><br><strong>${data.dispatch.to_road}</strong> FEU</div>
+                            <div style="flex:1"><span style="font-size:2rem">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> FEU</div>
+                            <div style="flex:1"><span style="font-size:2rem">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> FEU</div>
                         </div>
-                        <div class="ratio-bar-container"><div class="ratio-bar-sea" style="width:${data.dispatch.ratio}%">🚢 ${data.dispatch.ratio}%</div></div>
+                        <div class="ratio-bar-container"><div class="ratio-bar-sea" id="ratioBarSea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div>
+                        <div class="ratio-bar-container"><div class="ratio-bar-road" id="ratioBarRoad" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div>
                         <p><strong>📌 決策原因：</strong><br>${data.dispatch.reason}</p>
                     </div>
                 </div>
             `;
+            
+            // 觸發動畫
+            setTimeout(() => {
+                animateValue(document.getElementById("scoreSea"), 0, data.dispatch.score_sea, 600);
+                animateValue(document.getElementById("scoreRoad"), 0, data.dispatch.score_road, 600);
+                animateValue(document.getElementById("seaCount"), 0, data.dispatch.to_sea, 600);
+                animateValue(document.getElementById("roadCount"), 0, data.dispatch.to_road, 600);
+                updateRatioBar(data.dispatch.ratio, 100 - data.dispatch.ratio);
+                const sp = document.getElementById("seaPercent");
+                const rp = document.getElementById("roadPercent");
+                if (sp) sp.innerText = data.dispatch.ratio;
+                if (rp) rp.innerText = (100 - data.dispatch.ratio).toFixed(1);
+            }, 100);
         }
     }
 }
@@ -239,7 +293,7 @@ function drawCharts(data) {
                 { label: 'VSL風險', data: [data.road.vsl, data.sea.vsl], backgroundColor: 'rgba(144,224,239,0.7)' }
             ]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: '成本 (NTD)' } } } }
     });
     
     // 社會成本圖表
@@ -247,9 +301,9 @@ function drawCharts(data) {
         type: 'bar',
         data: {
             labels: ['公路運輸', '海運運輸'],
-            datasets: [{ label: '社會外部成本', data: [data.road.social, data.sea.social], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
+            datasets: [{ label: '社會外部成本 (NTD)', data: [data.road.social, data.sea.social], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: '成本 (NTD)' } } } }
     });
     
     // VSL 圖表
@@ -257,9 +311,9 @@ function drawCharts(data) {
         type: 'bar',
         data: {
             labels: ['公路運輸', '海運運輸'],
-            datasets: [{ label: 'VSL 人命風險成本', data: [data.road.vsl, data.sea.vsl], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
+            datasets: [{ label: 'VSL 人命風險成本 (NTD)', data: [data.road.vsl, data.sea.vsl], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: '成本 (NTD)' } } } }
     });
     
     // 時間成本圖表
@@ -267,9 +321,9 @@ function drawCharts(data) {
         type: 'bar',
         data: {
             labels: ['公路運輸', '海運運輸'],
-            datasets: [{ label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: ['rgba(52,152,219,0.7)', 'rgba(241,196,15,0.7)'] }]
+            datasets: [{ label: '時間成本 (NTD)', data: [data.road.time, data.sea.time], backgroundColor: ['rgba(52,152,219,0.7)', 'rgba(241,196,15,0.7)'] }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: '成本 (NTD)' } } } }
     });
     
     // 碳排放圖表
@@ -279,7 +333,7 @@ function drawCharts(data) {
             labels: ['公路運輸', '海運運輸'],
             datasets: [{ label: '碳排放量 (kg CO2e)', data: [data.road.carbon, data.sea.carbon], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+        options: { responsive: true, scales: { y: { beginAtZero: true, title: { display: true, text: 'kg CO2e' } } } }
     });
 }
 
@@ -362,77 +416,15 @@ function loadHistory() {
             if (!tbody) return;
             tbody.innerHTML = "";
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄</tr>';
+                tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄</td></tr>';
                 return;
             }
             
             data.reverse().forEach(r => {
                 tbody.innerHTML += `<tr>
-                    <td>${r.date}</td><td>${r.start}</td><td>${r.end}</td>
-                    <td>${r.containers}</td><td>${r.cargo_type || '-'}</td>
-                    <td>${r.distance} km</td><td>${r.sea_carbon?.toLocaleString() || '-'} kg</td>
-                    <td>${r.best_mode}</td><td>${r.carbon_saved?.toLocaleString() || '-'} kg</td>
-                    <td>${r.reduction_pct || 0}%</td>
-                </tr>`;
-            });
-            
-            drawHistoryChart(data);
-        });
-}
-
-function drawHistoryChart(history) {
-    const ctx = document.getElementById("historyChart");
-    if (!ctx) return;
-    const last7 = history.slice(-7);
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: last7.map(h => h.date?.split(' ')[0]),
-            datasets: [
-                { label: '公路碳排', data: last7.map(h => h.road_carbon || 0), borderColor: '#e74c3c', fill: true },
-                { label: '海運碳排', data: last7.map(h => h.sea_carbon || 0), borderColor: '#0077b6', fill: true }
-            ]
-        }
-    });
-}
-
-// Dashboard
-function loadDashboard() {
-    fetch("/get_history").then(res => res.json()).then(data => {
-        if (data.length === 0) {
-            document.getElementById("totalReduction").innerText = "0";
-            document.getElementById("avgReduction").innerText = "0%";
-            document.getElementById("totalCount").innerText = "0";
-            document.getElementById("seaRate").innerText = "0%";
-            return;
-        }
-        const totalCarbon = data.reduce((s,d) => s + (d.carbon_saved || 0), 0);
-        const avgPct = data.reduce((s,d) => s + (d.reduction_pct || 0), 0) / data.length;
-        const seaCount = data.filter(d => d.best_mode === "海運").length;
-        
-        document.getElementById("totalReduction").innerText = Math.round(totalCarbon).toLocaleString();
-        document.getElementById("avgReduction").innerText = avgPct.toFixed(1) + "%";
-        document.getElementById("totalCount").innerText = data.length;
-        document.getElementById("seaRate").innerText = Math.round(seaCount / data.length * 100) + "%";
-        
-        new Chart(document.getElementById("trendChart"), {
-            type: 'line',
-            data: {
-                labels: data.slice(-14).map(d => d.date?.split(' ')[0]),
-                datasets: [{ label: "減碳量 (kg)", data: data.slice(-14).map(d => d.carbon_saved), borderColor: "#0077b6", fill: true }]
-            }
-        });
-        
-        new Chart(document.getElementById("modeChart"), {
-            type: 'doughnut',
-            data: { labels: ["海運推薦", "公路推薦"], datasets: [{ data: [seaCount, data.length - seaCount], backgroundColor: ["#00b4d8", "#48cae4"] }] }
-        });
-    });
-}
-
-// 初始化
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById("costSlider")) {
-        initWeightControls();
-    }
-});
+                    <td>${r.date}</td>
+                    <td>${r.start}</td>
+                    <td>${r.end}</td>
+                    <td>${r.containers}</td>
+                    <td>${r.cargo_type || '-'}</td>
+                    <td>${r.distance} km</td>

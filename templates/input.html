@@ -18,7 +18,7 @@
     </nav>
     
     <div class="container">
-        <div class="card" style="max-width:600px; margin:0 auto">
+        <div class="card fade-in" style="max-width:600px; margin:0 auto">
             <h2>🚢 運輸路線評估</h2>
             <p style="color:var(--french-blue)">請填寫以下資訊，AI 將為您分析最佳運輸方案</p>
             
@@ -87,14 +87,15 @@
             <button class="btn btn-outline" onclick="location.href='/'" style="width:100%; margin-top:0.5rem">🏠 返回首頁</button>
         </div>
         
-        <div class="card">
+        <div class="card fade-in">
             <h3>📌 計算說明</h3>
             <ul>
                 <li>碳排放係數依據 CNS 14064-1 國家標準</li>
                 <li>社會成本包含：空氣污染、噪音、肇事成本</li>
                 <li>VSL 統計生命價值：NT$5,000萬元</li>
                 <li>時間成本依據貨物價值與利率計算</li>
-                <li>AI 會根據即時路況與船期動態調整</li>
+                <li>AI 多因子評分模型：綜合評估成本、碳排、風險、時效</li>
+                <li>即時路況：串接交通部 TDX API</li>
             </ul>
         </div>
     </div>
