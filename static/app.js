@@ -610,39 +610,57 @@ document.addEventListener('DOMContentLoaded', function() {
         initWeightControls();
     }
 });
-// ================= 動畫效果函數 =================
+// ================= 動畫效果 =================
 
 // 數字跳動動畫
 function animateValue(element, start, end, duration = 800) {
     if (!element) return;
-    const startTime = performance.now();
-    const updateValue = (currentTime) => {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const current = Math.floor(start + (end - start) * progress);
-        element.innerText = current.toLocaleString();
-        if (progress < 1) {
-            requestAnimationFrame(updateValue);
+    const range = end - start;
+    const increment = range / (duration / 16);
+    let current = start;
+    const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+            current = end;
+            clearInterval(timer);
         }
-    };
-    requestAnimationFrame(updateValue);
+        element.textContent = formatNumber(Math.round(current));
+    }, 16);
+}
+
+function formatNumber(num) {
+    return num.toLocaleString();
 }
 
 // 更新比例條
-function updateRatioBars(seaRatio, roadRatio) {
-    const seaBar = document.getElementById("seaRatioBar");
-    const roadBar = document.getElementById("roadRatioBar");
-    const seaPercent = document.getElementById("seaPercent");
-    const roadPercent = document.getElementById("roadPercent");
+function updateRatioBar(seaPercent, roadPercent) {
+    const seaBar = document.getElementById("ratioBarSea");
+    const roadBar = document.getElementById("ratioBarRoad");
+    const seaPercentSpan = document.getElementById("seaPercent");
+    const roadPercentSpan = document.getElementById("roadPercent");
     
     if (seaBar) {
-        seaBar.style.width = seaRatio + "%";
-        seaBar.innerText = seaRatio >= 15 ? `🚢 ${seaRatio}%` : "";
+        seaBar.style.width = `${seaPercent}%`;
+        seaBar.style.setProperty('--target-width', `${seaPercent}%`);
+        seaBar.classList.add('progress-bar-animate');
     }
     if (roadBar) {
-        roadBar.style.width = roadRatio + "%";
-        roadBar.innerText = roadRatio >= 15 ? `🚛 ${roadRatio}%` : "";
+        roadBar.style.width = `${roadPercent}%`;
+        roadBar.style.setProperty('--target-width', `${roadPercent}%`);
     }
-    if (seaPercent) seaPercent.innerText = seaRatio + "%";
-    if (roadPercent) roadPercent.innerText = roadRatio + "%";
+    if (seaPercentSpan) seaPercentSpan.innerText = `${seaPercent}%`;
+    if (roadPercentSpan) roadPercentSpan.innerText = `${roadPercent}%`;
+}
+
+// 更新分數顯示
+function updateScores(scoreSea, scoreRoad) {
+    const seaScoreElem = document.getElementById("scoreSea");
+    const roadScoreElem = document.getElementById("scoreRoad");
+    
+    if (seaScoreElem) {
+        animateValue(seaScoreElem, 0, scoreSea, 600);
+    }
+    if (roadScoreElem) {
+        animateValue(roadScoreElem, 0, scoreRoad, 600);
+    }
 }

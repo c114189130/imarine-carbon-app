@@ -357,6 +357,8 @@ input:focus, select:focus {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .cost-table { font-size: 0.8rem; }
 }
+/* ================= 動畫效果 ================= */
+
 /* 數字跳動動畫 */
 @keyframes countUp {
     from {
@@ -369,11 +371,11 @@ input:focus, select:focus {
     }
 }
 
-.count-animation {
+.count-up {
     animation: countUp 0.6s ease-out;
 }
 
-/* 卡片淡入動畫 */
+/* 卡片淡入 */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -385,8 +387,8 @@ input:focus, select:focus {
     }
 }
 
-.card {
-    animation: fadeIn 0.5s ease-out;
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
 }
 
 /* 比例條動畫 */
@@ -399,46 +401,79 @@ input:focus, select:focus {
     }
 }
 
-.progress-bar-animated {
-    animation: growBar 0.8s ease-out forwards;
+.progress-bar-animate {
+    animation: growBar 0.8s ease-out;
+}
+
+/* 閃爍效果（用於警示） */
+@keyframes pulse-red {
+    0%, 100% {
+        background-color: rgba(231, 76, 60, 0.1);
+        border-left-color: #e74c3c;
+    }
+    50% {
+        background-color: rgba(231, 76, 60, 0.3);
+        border-left-color: #c0392b;
+    }
+}
+
+.pulse-warning {
+    animation: pulse-red 1s ease-in-out infinite;
 }
 
 /* 比例條容器 */
 .ratio-bar-container {
-    background: var(--frosted-blue-2);
+    background-color: var(--frosted-blue-2);
     border-radius: 20px;
+    height: 30px;
     overflow: hidden;
-    margin: 0.5rem 0;
+    margin: 1rem 0;
 }
 
 .ratio-bar-sea {
-    background: linear-gradient(90deg, var(--bright-teal-blue), var(--turquoise-surf));
-    color: white;
-    text-align: center;
-    font-size: 0.85rem;
-    padding: 0.4rem 0;
+    background: linear-gradient(135deg, var(--bright-teal-blue), var(--turquoise-surf));
+    height: 100%;
     border-radius: 20px;
-    width: 0%;
-    transition: width 0.8s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
 }
 
 .ratio-bar-road {
-    background: linear-gradient(90deg, var(--deep-twilight), var(--french-blue));
-    color: white;
-    text-align: center;
-    font-size: 0.85rem;
-    padding: 0.4rem 0;
+    background: linear-gradient(135deg, var(--french-blue), var(--deep-twilight));
+    height: 100%;
     border-radius: 20px;
-    width: 0%;
-    transition: width 0.8s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 10px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
 }
 
-/* 閃爍提示 */
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+/* 分數卡片 */
+.score-card {
+    background: linear-gradient(135deg, var(--light-cyan), var(--white));
+    border-radius: 15px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow);
 }
 
-.pulse-animation {
-    animation: pulse 1.5s ease-in-out infinite;
+.score-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.score-sea {
+    color: var(--bright-teal-blue);
+}
+
+.score-road {
+    color: var(--deep-twilight);
 }
