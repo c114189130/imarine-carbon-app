@@ -8,19 +8,11 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-# 在 app.py 開頭加入 import
-from tdx_api import get_live_network_traffic
 
-# 新增 API 路由（放在其他路由旁邊）
-@app.route('/api/traffic')
-def api_traffic():
-    """即時路網車流 API"""
-    roads = get_live_network_traffic()
-    return jsonify(roads)
-    
 # 導入 TDX API
-from tdx_api import get_road_congestion
+from tdx_api import get_road_congestion, get_live_network_traffic
 
+# ================= 建立 Flask 應用 =================
 app = Flask(__name__)
 
 # ================= 載入長榮海運船期 =================
@@ -92,7 +84,6 @@ def get_ship_schedule(port_code):
     port_data = EVERGREEN_SCHEDULE.get(port_code, {"ships": []})
     if port_data["ships"]:
         return port_data["ships"][0]
-    # 如果沒有找到，回傳預設的長榮 TBS 航線資料
     return {
         "name": "Evergreen TBS",
         "eta_hours": 48,
@@ -199,7 +190,8 @@ def load_history():
             return json.load(f)
     return []
 
-# ================= 路由 =================
+# ================= 路由（API 端點） =================
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -228,6 +220,14 @@ def dashboard():
 def get_history():
     return jsonify(load_history())
 
+# ⭐ 即時路網 API（1968 等級）
+@app.route('/api/traffic')
+def api_traffic():
+    """即時路網車流 API"""
+    roads = get_live_network_traffic()
+    return jsonify(roads)
+
+# ⭐ 核心計算路由
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.json
@@ -392,6 +392,7 @@ def download_pdf():
     content.append(Paragraph("• 環保署公告溫室氣體排放係數（2023年版）", cert_style))
     content.append(Paragraph("• 交通部運研所《交通建設計畫經濟效益評估手冊》", cert_style))
     content.append(Paragraph("• 長榮海運 TBS/TBS2 藍色公路航線", cert_style))
+    content.append(Paragraph("• 交通部 TDX 即時路況 API", cert_style))
     
     content.append(Spacer(1, 30))
     content.append(Paragraph("特此證明", cert_style))
@@ -419,6 +420,7 @@ def esg_report():
 ║   • 採用 CNS 14064-1 國家標準
 ║   • 納入 VSL 統計生命價值評估（NT$5,000萬元）
 ║   • 採用長榮海運 TBS/TBS2 藍色公路航線
+║   • 整合交通部 TDX 即時路況
 ║
 ║ 🏛️ 公司治理 (Governance)
 ║   • 碳排放數據可追溯
@@ -428,5 +430,6 @@ def esg_report():
 """
     return jsonify({"report": report})
 
+# ================= 啟動應用 =================
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
