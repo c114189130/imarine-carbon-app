@@ -19,7 +19,14 @@ def load_evergreen_schedule():
     try:
         with open('evergreen_schedule.json', 'r', encoding='utf-8') as f:
             return json.load(f)
-    except:
+    except FileNotFoundError:
+        print("錯誤：找不到 evergreen_schedule.json 檔案")
+        return {
+            "KHH": {"port_name": "高雄港", "ships": []},
+            "TXG": {"port_name": "台中港", "ships": []}
+        }
+    except json.JSONDecodeError as e:
+        print(f"錯誤：evergreen_schedule.json 格式錯誤 - {e}")
         return {
             "KHH": {"port_name": "高雄港", "ships": []},
             "TXG": {"port_name": "台中港", "ships": []}
