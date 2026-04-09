@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>分析結果 - iMarine</title>
+    <title>指派結果 - iMarine</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -12,7 +14,7 @@
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
         <div class="navbar-links">
             <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始計算</a>
+            <a href="/input">🚢 開始指派</a>
             <a href="/history_page">📊 歷史記錄</a>
             <a href="/dashboard">📈 Dashboard</a>
         </div>
@@ -21,47 +23,62 @@
     <div class="container" id="content" style="display:none">
         <div id="result"></div>
         
+        <!-- 即時路況卡片 -->
         <div class="card fade-in">
-            <h3>🚦 即時運輸狀態</h3>
+            <h3>🚦 即時路況（國道一號）</h3>
             <div style="display:flex; gap:2rem; flex-wrap:wrap">
                 <div style="flex:1">
-                    <p>🚛 <strong>公路狀態</strong> <span id="roadSource" style="font-size:0.8rem"></span></p>
-                    <p id="roadStatus" style="font-size:1.2rem">-</p>
-                    <p id="roadSpeed" style="font-size:0.9rem">-</p>
+                    <p id="roadStatus" style="font-size:1.5rem">-</p>
+                    <p id="roadSpeed" style="font-size:1rem">-</p>
+                    <p id="roadSource" style="font-size:0.8rem; color:gray">-</p>
                 </div>
-                <div style="flex:1">
-                    <p>🚢 <strong>船舶狀態</strong> <span style="font-size:0.8rem">(iMarine 模擬)</span></p>
-                    <p id="shipStatus" style="font-size:1.2rem">-</p>
-                    <p id="shipInfo" style="font-size:0.9rem">-</p>
+                <div style="flex:2">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="congestionBar" style="width:0%"></div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="card fade-in" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white">
-            <h3>🧠 AI 貨櫃調度建議</h3>
-            <div id="dispatchResult">分析中...</div>
+       <!-- 長榮海運船期卡片 -->
+<div class="card fade-in" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white">
+    <h3>🚢 長榮海運「藍色公路」航線 (TBS/TBS2)</h3>
+    <div style="display:flex; gap:2rem; flex-wrap:wrap">
+        <div style="flex:1">
+            <p>🚢 航線：<strong id="shipName">-</strong></p>
+            <p>📍 目的地：<strong id="shipDest">-</strong></p>
+            <p>⏰ 每週定期航班：<strong id="shipEta">-</strong></p>
+        </div>
+        <div style="flex:1">
+            <p>📦 可用艙位：<strong id="shipCapacity">-</strong> FEU</p>
+            <p>🚢 服務：<strong id="shipType">-</strong></p>
+        </div>
+    </div>
+    <p style="margin-top:1rem; font-size:0.9rem">✅ 本系統已整合長榮海運 TBS/TBS2 藍色公路航班資訊</p>
+</div>
+        
+        <!-- AI 指派建議卡片（Uber 風格） -->
+        <div class="card fade-in" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:white">
+            <h3>🧠 AI 智慧指派建議</h3>
+            <div id="dispatchResult">
+                <div class="animate-pulse">分析中...</div>
+            </div>
         </div>
         
+        <!-- 地圖 -->
+        <div class="card fade-in">
+            <h3>🗺️ 運輸路線地圖</h3>
+            <div id="map" style="height:400px; border-radius:15px"></div>
+            <p style="margin-top:0.5rem; font-size:0.8rem; color:gray">※ 路線為兩港口間直線距離示意</p>
+        </div>
+        
+        <!-- 成本比較圖表 -->
         <div class="chart-container fade-in">
             <h3>💰 成本結構比較</h3>
             <canvas id="costChart"></canvas>
         </div>
         
-        <div class="chart-container fade-in">
-            <h3>🏛️ 社會成本分析</h3>
-            <canvas id="socialChart"></canvas>
-        </div>
-        
-        <div class="chart-container fade-in">
-            <h3>⚠️ VSL 人命風險成本</h3>
-            <canvas id="vslChart"></canvas>
-        </div>
-        
-        <div class="chart-container fade-in">
-            <h3>⏳ 時間成本分析</h3>
-            <canvas id="timeChart"></canvas>
-        </div>
-        
+        <!-- 碳排放圖表 -->
         <div class="chart-container fade-in">
             <h3>🌍 碳排放比較</h3>
             <canvas id="carbonChart"></canvas>
@@ -69,7 +86,7 @@
         
         <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
             <button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button>
-            <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button>
+            <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新指派</button>
         </div>
     </div>
     

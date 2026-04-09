@@ -14,7 +14,6 @@ class TDXAPI:
         self.token = None
 
     def get_token(self):
-        """取得存取令牌"""
         url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
@@ -32,7 +31,6 @@ class TDXAPI:
         return None
 
     def get_highway_traffic(self, highway_id="1"):
-        """取得高速公路即時車速"""
         if not self.token and not self.get_token():
             return self._get_mock_data()
 
@@ -52,7 +50,6 @@ class TDXAPI:
         return self._get_mock_data()
 
     def _calc_congestion(self, avg_speed, source):
-        """根據平均時速計算壅塞程度"""
         if avg_speed >= 60:
             level, text = "low", "🟢 順暢"
         elif avg_speed >= 35:
@@ -71,7 +68,6 @@ class TDXAPI:
         }
 
     def _get_mock_data(self):
-        """模擬資料（API 無法使用時的備案）"""
         current_hour = datetime.now().hour
         
         if 7 <= current_hour <= 9 or 17 <= current_hour <= 19:
@@ -94,19 +90,10 @@ class TDXAPI:
 
 
 def get_road_congestion(use_api=True, app_id=None, app_key=None):
-    """
-    取得公路壅塞資料
-    
-    參數:
-        use_api: 是否使用真實 API（預設 True）
-        app_id: TDX App ID（如需使用真實 API）
-        app_key: TDX App Key（如需使用真實 API）
-    """
     if use_api and app_id and app_key:
         api = TDXAPI(app_id, app_key)
         return api.get_highway_traffic("1")
     else:
-        # 使用模擬資料
         current_hour = datetime.now().hour
         
         if 7 <= current_hour <= 9 or 17 <= current_hour <= 19:

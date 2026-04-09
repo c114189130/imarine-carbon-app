@@ -1,0 +1,36 @@
+{
+    "KHH": {
+        "port_name": "高雄港",
+        "ships": [
+            {
+                "name": "Evergreen TBS2",
+                "voyage": "TBS2",
+                "route": "Taipei ← → Kaohsiung",
+                "eta": "FRI",
+                "eta_hours": 24,
+                "destination": "台北港",
+                "capacity": 850,
+                "available": 320,
+                "type": "貨櫃船",
+                "service": "Taiwan Strait Blue Way Service 2"
+            }
+        ]
+    },
+    "TXG": {
+        "port_name": "台中港",
+        "ships": [
+            {
+                "name": "Evergreen TBS",
+                "voyage": "TBS",
+                "route": "Taipei ← → Taichung ← → Kaohsiung",
+                "eta": "THU",
+                "eta_hours": 48,
+                "destination": "高雄港",
+                "capacity": 1200,
+                "available": 560,
+                "type": "貨櫃船",
+                "service": "Taiwan Strait Blue Way Service"
+            }
+        ]
+    }
+}
