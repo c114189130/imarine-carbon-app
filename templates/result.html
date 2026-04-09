@@ -71,6 +71,25 @@
             <div id="map" style="height:400px; border-radius:15px"></div>
             <p style="margin-top:0.5rem; font-size:0.8rem; color:gray">※ 路線為兩港口間直線距離示意</p>
         </div>
+        <!-- 地圖卡片 -->
+<div class="card fade-in">
+    <h3>🗺️ 即時路網地圖（國道即時車流）</h3>
+    <div id="trafficStats" class="traffic-stats" style="background:var(--light-cyan); border-radius:15px; padding:1rem; margin-bottom:1rem">
+        <div style="display:flex; gap:1rem; justify-content:space-around">
+            <div style="text-align:center">
+                <div class="animate-pulse" style="font-size:1rem">載入中...</div>
+            </div>
+        </div>
+    </div>
+    <div id="map" style="height:500px; border-radius:15px"></div>
+    <div style="display:flex; gap:1rem; justify-content:center; margin-top:0.5rem">
+        <span style="font-size:0.8rem"><span style="color:#27ae60">●</span> 順暢 (>60km/h)</span>
+        <span style="font-size:0.8rem"><span style="color:#f39c12">●</span> 車多 (35-60km/h)</span>
+        <span style="font-size:0.8rem"><span style="color:#e74c3c">●</span> 壅塞 (&lt;35km/h)</span>
+        <span style="font-size:0.8rem">🚗 動畫車輛</span>
+    </div>
+    <p style="margin-top:0.5rem; font-size:0.75rem; color:gray">※ 路況每 30 秒自動更新 | 資料來源：交通部 TDX API</p>
+</div>
         
         <!-- 成本比較圖表 -->
         <div class="chart-container fade-in">

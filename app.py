@@ -8,7 +8,16 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+# 在 app.py 開頭加入 import
+from tdx_api import get_live_network_traffic
 
+# 新增 API 路由（放在其他路由旁邊）
+@app.route('/api/traffic')
+def api_traffic():
+    """即時路網車流 API"""
+    roads = get_live_network_traffic()
+    return jsonify(roads)
+    
 # 導入 TDX API
 from tdx_api import get_road_congestion
 

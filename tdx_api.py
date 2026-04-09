@@ -1,6 +1,6 @@
 """
 交通部 TDX API 串接模組
-取得即時公路車速、壅塞資料
+取得即時公路車速、壅塞資料、路網幾何
 """
 
 import requests
@@ -49,6 +49,131 @@ class TDXAPI:
 
         return self._get_mock_data()
 
+    def get_live_network_traffic(self):
+        """取得即時路網車流資料（含路段幾何）"""
+        if not self.token and not self.get_token():
+            return self._get_mock_network_traffic()
+
+        # 即時車流 API
+        url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/Freeway"
+        headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/json"}
+
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                return self._parse_traffic_data(response.json())
+        except Exception as e:
+            print(f"取得即時路網資料錯誤: {e}")
+
+        return self._get_mock_network_traffic()
+
+    def _parse_traffic_data(self, data):
+        """解析 TDX 即時路網資料"""
+        roads = []
+        
+        for item in data.get("Roads", []):
+            try:
+                coords = []
+                for p in item.get("Geometry", {}).get("Coordinates", []):
+                    if "PositionLat" in p and "PositionLon" in p:
+                        coords.append([p["PositionLat"], p["PositionLon"]])
+                
+                if len(coords) >= 2:
+                    speed = item.get("Speed", 60)
+                    
+                    # 根據速度決定顏色
+                    if speed >= 60:
+                        color = "#27ae60"
+                        level = "順暢"
+                    elif speed >= 35:
+                        color = "#f39c12"
+                        level = "車多"
+                    else:
+                        color = "#e74c3c"
+                        level = "壅塞"
+                    
+                    roads.append({
+                        "coords": coords,
+                        "speed": speed,
+                        "color": color,
+                        "level": level,
+                        "name": item.get("Name", "未知路段")
+                    })
+            except Exception as e:
+                print(f"解析路段錯誤: {e}")
+                continue
+        
+        return roads
+
+    def _get_mock_network_traffic(self):
+        """模擬路網資料（API 無法使用時的備案）"""
+        # 模擬國道一號北中南路段
+        mock_roads = [
+            {
+                "coords": [[25.05, 121.52], [25.00, 121.45], [24.95, 121.38]],
+                "speed": random.randint(15, 35),
+                "name": "國道一號 汐止-台北"
+            },
+            {
+                "coords": [[24.90, 121.30], [24.85, 121.20], [24.80, 121.10]],
+                "speed": random.randint(40, 65),
+                "name": "國道一號 台北-桃園"
+            },
+            {
+                "coords": [[24.75, 121.00], [24.70, 120.90], [24.65, 120.80]],
+                "speed": random.randint(55, 80),
+                "name": "國道一號 桃園-新竹"
+            },
+            {
+                "coords": [[24.60, 120.70], [24.55, 120.65], [24.50, 120.60]],
+                "speed": random.randint(30, 55),
+                "name": "國道一號 新竹-苗栗"
+            },
+            {
+                "coords": [[24.45, 120.55], [24.35, 120.50], [24.25, 120.45]],
+                "speed": random.randint(60, 85),
+                "name": "國道一號 苗栗-台中"
+            },
+            {
+                "coords": [[24.15, 120.40], [24.05, 120.35], [23.95, 120.30]],
+                "speed": random.randint(20, 50),
+                "name": "國道一號 台中-彰化"
+            },
+            {
+                "coords": [[23.85, 120.25], [23.75, 120.20], [23.65, 120.15]],
+                "speed": random.randint(45, 70),
+                "name": "國道一號 彰化-雲林"
+            },
+            {
+                "coords": [[23.55, 120.10], [23.45, 120.10], [23.35, 120.15]],
+                "speed": random.randint(55, 80),
+                "name": "國道一號 雲林-嘉義"
+            },
+            {
+                "coords": [[23.25, 120.15], [23.10, 120.20], [22.95, 120.25]],
+                "speed": random.randint(35, 60),
+                "name": "國道一號 嘉義-台南"
+            },
+            {
+                "coords": [[22.85, 120.25], [22.75, 120.28], [22.65, 120.30]],
+                "speed": random.randint(25, 50),
+                "name": "國道一號 台南-高雄"
+            }
+        ]
+        
+        for road in mock_roads:
+            if road["speed"] >= 60:
+                road["color"] = "#27ae60"
+                road["level"] = "順暢"
+            elif road["speed"] >= 35:
+                road["color"] = "#f39c12"
+                road["level"] = "車多"
+            else:
+                road["color"] = "#e74c3c"
+                road["level"] = "壅塞"
+        
+        return mock_roads
+
     def _calc_congestion(self, avg_speed, source):
         if avg_speed >= 60:
             level, text = "low", "🟢 順暢"
@@ -89,6 +214,15 @@ class TDXAPI:
         }
 
 
+# 單例模式，方便呼叫
+_tdx_api = None
+
+def get_tdx_api():
+    global _tdx_api
+    if _tdx_api is None:
+        _tdx_api = TDXAPI()
+    return _tdx_api
+
 def get_road_congestion(use_api=True, app_id=None, app_key=None):
     if use_api and app_id and app_key:
         api = TDXAPI(app_id, app_key)
@@ -113,3 +247,8 @@ def get_road_congestion(use_api=True, app_id=None, app_key=None):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "source": "模擬資料 (時段模擬)"
         }
+
+def get_live_network_traffic():
+    """取得即時路網車流資料"""
+    api = get_tdx_api()
+    return api.get_live_network_traffic()

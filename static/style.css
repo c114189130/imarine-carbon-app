@@ -375,3 +375,53 @@ input:focus, select:focus {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .cost-table { font-size: 0.8rem; }
 }
+/* ================= 即時路網動畫 ================= */
+
+/* 車輛標記脈衝動畫 */
+.vehicle-marker {
+    animation: vehiclePulse 1s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+}
+
+@keyframes vehiclePulse {
+    0% {
+        r: 5px;
+        opacity: 1;
+    }
+    50% {
+        r: 8px;
+        opacity: 0.8;
+    }
+    100% {
+        r: 5px;
+        opacity: 1;
+    }
+}
+
+/* 路況統計面板 */
+.traffic-stats {
+    transition: all 0.3s ease;
+}
+
+.traffic-stats:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+/* 自訂圖標 */
+.custom-icon {
+    background: none;
+    border: none;
+    font-size: 24px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 路段 hover 效果 */
+.leaflet-interactive {
+    transition: stroke-width 0.2s ease;
+}
+
+.leaflet-interactive:hover {
+    stroke-width: 8 !important;
+    cursor: pointer;
+}
