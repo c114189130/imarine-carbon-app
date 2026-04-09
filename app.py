@@ -4,7 +4,7 @@ from datetime import datetime
 import math
 import json
 import os
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -34,23 +34,6 @@ def load_evergreen_schedule():
 
 EVERGREEN_SCHEDULE = load_evergreen_schedule()
 
-# 修改 get_ship_schedule 函數，改為讀取 EVERGREEN_SCHEDULE
-def get_ship_schedule(port_code):
-    port_data = EVERGREEN_SCHEDULE.get(port_code, {"ships": []})
-    if port_data["ships"]:
-        # 簡單模擬，直接回傳第一筆船班
-        ship = port_data["ships"][0]
-        return ship
-    # 如果沒有找到，回傳預設的長榮 TBS 航線資料
-    return {
-        "name": "Evergreen TBS",
-        "eta_hours": 48,
-        "available": 150,
-        "destination": "高雄港",
-        "type": "貨櫃船",
-        "service": "Taiwan Strait Blue Way Service"
-    }
-
 # ================= 參數設定 =================
 EMISSION_FACTORS = {"road": 0.06, "sea": 0.02}
 COST_RATES = {"road": 60, "sea": 24}
@@ -59,7 +42,7 @@ SOCIAL_COST_RATES = {"road": 3.70, "sea": 0.64}
 SOCIAL_COST_OF_CARBON = 10.0
 FIXED_PORT_EMISSION = 100
 
-# ================= 貨物類型（簡化） =================
+# ================= 貨物類型 =================
 CARGO_TYPES = {
     "general": {
         "name": "一般貨物",
@@ -96,53 +79,43 @@ def calculate_time_cost(distance_km, mode, containers, time_sensitivity):
     return value_per_hour * hours * containers * sensitivity_multiplier
 
 def get_ship_schedule(port_code):
-    """從陽明海運資料獲取船期"""
-    port_data = YANGMING_SCHEDULE.get(port_code, {"ships": []})
-    current_hour = datetime.now().hour + datetime.now().minute / 60
-    
-    for ship in port_data["ships"]:
-        if ship["eta_hours"] > 0:
-            return ship
-    
-    # 如果沒有找到，回傳預設
+    """從長榮海運資料獲取船期"""
+    port_data = EVERGREEN_SCHEDULE.get(port_code, {"ships": []})
+    if port_data["ships"]:
+        return port_data["ships"][0]
+    # 如果沒有找到，回傳預設的長榮 TBS 航線資料
     return {
-        "name": "YM Express",
-        "eta_hours": 12,
+        "name": "Evergreen TBS",
+        "eta_hours": 48,
         "available": 150,
-        "destination": "新加坡",
-        "type": "貨櫃船"
+        "destination": "高雄港",
+        "type": "貨櫃船",
+        "service": "Taiwan Strait Blue Way Service"
     }
 
 def calculate_ai_scores(road_data, ship_data, containers):
-    """AI 多因子評分模型"""
     score_sea = 0
     score_road = 0
     
-    # 公路壅塞
     congestion_scores = {"low": 0, "medium": 2, "high": 5}
     score_sea += congestion_scores.get(road_data.get("level", "low"), 0) * 0.6
     
-    # 船期緊急程度
     if ship_data.get("eta_hours", 24) <= 6:
         score_sea += 3
     elif ship_data.get("eta_hours", 24) <= 12:
         score_sea += 1.5
     
-    # 艙位充足度
     available = ship_data.get("available", 0)
     if available >= containers:
         score_sea += 2
     
-    # 基礎海運優勢
     score_sea += 3.5
-    
     score_sea = min(10, score_sea)
     score_road = min(10, 10 - score_sea + 2)
     
     return round(score_sea, 1), round(score_road, 1)
 
 def smart_dispatch(containers, road_data, ship_data):
-    """智慧貨櫃調度決策"""
     score_sea, score_road = calculate_ai_scores(road_data, ship_data, containers)
     
     total = score_sea + score_road
@@ -150,20 +123,16 @@ def smart_dispatch(containers, road_data, ship_data):
         ratio = 0.5
     else:
         ratio = score_sea / total
-    
     ratio = max(0.2, min(0.8, ratio))
     
     to_sea = int(containers * ratio)
     to_road = containers - to_sea
     
-    # 限制艙位容量
     if to_sea > ship_data.get("available", 999):
         to_sea = ship_data["available"]
         to_road = containers - to_sea
     
-    # 產生詳細原因
     reasons = []
-    
     if road_data.get("level") == "high":
         reasons.append(f"🚨 國道一號目前壅塞（時速 {road_data['avg_speed']} km/h），建議改走海運避開車潮")
     elif road_data.get("level") == "medium":
@@ -172,16 +141,16 @@ def smart_dispatch(containers, road_data, ship_data):
         reasons.append(f"✅ 國道一號目前順暢（時速 {road_data['avg_speed']} km/h）")
     
     if ship_data.get("eta_hours", 24) <= 6:
-        reasons.append(f"🚢 陽明海運 {ship_data['name']} 將於 {ship_data['eta_hours']} 小時後抵達 {ship_data.get('destination', '港口')}，尚有 {ship_data.get('available', 0)} FEU 艙位")
+        reasons.append(f"🚢 長榮海運 {ship_data['name']} 將於 {ship_data['eta_hours']} 小時後抵達 {ship_data.get('destination', '港口')}，尚有 {ship_data.get('available', 0)} FEU 艙位")
     elif ship_data.get("eta_hours", 24) <= 12:
-        reasons.append(f"⏳ 陽明海運 {ship_data['name']} 將於 {ship_data['eta_hours']} 小時後抵達，艙位充足")
+        reasons.append(f"⏳ 長榮海運 {ship_data['name']} 將於 {ship_data['eta_hours']} 小時後抵達，艙位充足")
     
     if containers > ship_data.get("available", 999):
         reasons.append(f"⚠️ 貨櫃數量超過可用艙位，建議部分仍走公路")
     
     if ratio > 0.6:
         action = "🌊 建議將大部分貨櫃轉為海運"
-        suggestion = f"將 {to_sea} FEU 指派給陽明海運 {ship_data['name']}，剩餘 {to_road} FEU 走公路"
+        suggestion = f"將 {to_sea} FEU 指派給長榮海運 {ship_data['name']}，剩餘 {to_road} FEU 走公路"
     elif ratio < 0.4:
         action = "🚛 建議維持公路運輸"
         suggestion = f"公路運輸較適合，僅 {to_sea} FEU 轉海運"
@@ -250,11 +219,6 @@ def dashboard():
 def get_history():
     return jsonify(load_history())
 
-@app.route('/get_ship_schedule/<port_code>')
-def get_ship_schedule_api(port_code):
-    ship = get_ship_schedule(port_code)
-    return jsonify(ship)
-
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.json
@@ -270,15 +234,12 @@ def calculate():
     p2 = ports[end]
     dist = haversine_distance(p1['lat'], p1['lon'], p2['lat'], p2['lon'])
     
-    # 獲取即時資料
     road_condition = get_road_congestion(use_api=False)
     ship_schedule = get_ship_schedule(p2['code'])
     
-    # 碳排放計算
     road_carbon = EMISSION_FACTORS["road"] * dist * containers
     sea_carbon = EMISSION_FACTORS["sea"] * dist * containers + (FIXED_PORT_EMISSION * 2 * containers)
     
-    # 成本計算
     road_freight = COST_RATES["road"] * dist * containers
     sea_freight = COST_RATES["sea"] * dist * containers * urgency_multiplier
     
@@ -294,7 +255,6 @@ def calculate():
     road_total = road_freight + road_time + road_social + road_vsl
     sea_total = sea_freight + sea_time + sea_social + sea_vsl
     
-    # 總體社會成本
     road_total_social = road_total + (road_carbon * SOCIAL_COST_OF_CARBON)
     sea_total_social = sea_total + (sea_carbon * SOCIAL_COST_OF_CARBON)
     
@@ -308,7 +268,6 @@ def calculate():
     carbon_saved = road_carbon - sea_carbon
     reduction_pct = (carbon_saved / road_carbon) * 100 if road_carbon > 0 else 0
     
-    # 智慧調度
     dispatch = smart_dispatch(containers, road_condition, ship_schedule)
     
     road_result = {
@@ -423,7 +382,7 @@ def download_pdf():
     content.append(Paragraph("• CNS 14064-1 組織層級溫室氣體排放盤查標準", cert_style))
     content.append(Paragraph("• 環保署公告溫室氣體排放係數（2023年版）", cert_style))
     content.append(Paragraph("• 交通部運研所《交通建設計畫經濟效益評估手冊》", cert_style))
-    content.append(Paragraph("• 陽明海運船期資料", cert_style))
+    content.append(Paragraph("• 長榮海運 TBS/TBS2 藍色公路航線", cert_style))
     
     content.append(Spacer(1, 30))
     content.append(Paragraph("特此證明", cert_style))
@@ -450,7 +409,7 @@ def esg_report():
 ║ 🤝 社會責任 (Social)
 ║   • 採用 CNS 14064-1 國家標準
 ║   • 納入 VSL 統計生命價值評估（NT$5,000萬元）
-║   • 採用陽明海運綠色航線
+║   • 採用長榮海運 TBS/TBS2 藍色公路航線
 ║
 ║ 🏛️ 公司治理 (Governance)
 ║   • 碳排放數據可追溯
