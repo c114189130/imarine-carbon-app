@@ -38,6 +38,28 @@ function updateRatioBar(seaPercent, roadPercent) {
     if (roadBar) roadBar.style.width = `${roadPercent}%`;
 }
 
+// 碳排減量分析（參考 PDF T4 模型）
+function calculateCarbonReduction(seaCarbon, roadCarbon, distance, speed) {
+    // CO₂ = k × V² × D，k=0.03
+    const k = 0.03;
+    const currentSpeed = speed || 18; // 目前航速 18 節
+    const suggestedSpeed = 12; // 建議航速 12 節（減速航行）
+    
+    const currentCarbon = k * Math.pow(currentSpeed, 2) * distance;
+    const suggestedCarbon = k * Math.pow(suggestedSpeed, 2) * distance;
+    const reduction = currentCarbon - suggestedCarbon;
+    const reductionPct = (reduction / currentCarbon) * 100;
+    
+    return {
+        currentSpeed,
+        suggestedSpeed,
+        currentCarbon: currentCarbon.toFixed(2),
+        suggestedCarbon: suggestedCarbon.toFixed(2),
+        reduction: reduction.toFixed(2),
+        reductionPct: reductionPct.toFixed(1)
+    };
+}
+
 function calculate() {
     const start = localStorage.getItem("start");
     const end = localStorage.getItem("end");
@@ -60,6 +82,32 @@ function calculate() {
         displayResults(data);
         drawCharts(data);
         drawMap(data);
+        loadTrafficNetwork();
+        startTrafficAutoUpdate();
+        
+        // 顯示碳排減量分析
+        const carbonAnalysis = calculateCarbonReduction(data.sea.carbon, data.road.carbon, data.distance, 18);
+        document.getElementById("carbonAnalysis").innerHTML = `
+            <div style="display:flex; gap:2rem; flex-wrap:wrap">
+                <div style="flex:1; text-align:center">
+                    <div style="font-size:1.2rem; color:var(--french-blue)">目前航速</div>
+                    <div style="font-size:2rem; font-weight:bold">${carbonAnalysis.currentSpeed} 節</div>
+                    <div>碳排：${parseFloat(carbonAnalysis.currentCarbon).toLocaleString()} kg</div>
+                </div>
+                <div style="flex:1; text-align:center; background:var(--light-cyan); border-radius:15px; padding:1rem">
+                    <div style="font-size:1.2rem; color:var(--success)">✅ 建議航速</div>
+                    <div style="font-size:2rem; font-weight:bold; color:var(--success)">${carbonAnalysis.suggestedSpeed} 節</div>
+                    <div>碳排：${parseFloat(carbonAnalysis.suggestedCarbon).toLocaleString()} kg</div>
+                </div>
+                <div style="flex:1; text-align:center">
+                    <div style="font-size:1.2rem; color:var(--bright-teal-blue)">🌱 減碳效益</div>
+                    <div style="font-size:2rem; font-weight:bold; color:var(--bright-teal-blue)">${parseFloat(carbonAnalysis.reduction).toLocaleString()} kg</div>
+                    <div>減少 ${carbonAnalysis.reductionPct}% 碳排放</div>
+                </div>
+            </div>
+            <p style="margin-top:1rem; font-size:0.85rem">💡 根據航速調控模型，降低航速可顯著減少碳排放（CO₂ ∝ V²）</p>
+        `;
+        
         document.getElementById("loading").style.display = "none";
         document.getElementById("content").style.display = "block";
     })
@@ -121,18 +169,21 @@ function displayResults(data) {
         }
     }
     
-    // 船期
+    // 長榮船期詳細資訊
     if (data.ship_schedule) {
         const sn = document.getElementById("shipName");
+        const sr = document.getElementById("shipRoute");
         const sd = document.getElementById("shipDest");
         const se = document.getElementById("shipEta");
         const sc = document.getElementById("shipCapacity");
-        const st = document.getElementById("shipType");
+        const ss = document.getElementById("shipSchedule");
+        
         if (sn) sn.innerHTML = data.ship_schedule.name;
+        if (sr) sr.innerHTML = data.ship_schedule.route || "TBS 藍色公路";
         if (sd) sd.innerHTML = data.ship_schedule.destination;
         if (se) se.innerHTML = data.ship_schedule.eta_hours;
         if (sc) sc.innerHTML = data.ship_schedule.available;
-        if (st) st.innerHTML = data.ship_schedule.type;
+        if (ss) ss.innerHTML = data.ship_schedule.eta === "FRI" ? "每週五、日" : "每週二、四、六";
     }
     
     // 指派建議
@@ -166,6 +217,9 @@ function displayResults(data) {
                         <div style="background:rgba(255,255,255,0.2); border-radius:15px; padding:1rem; margin-top:1rem">
                             <p style="font-weight:bold">📌 詳細分析：</p>
                             <ul>${reasonsHtml}</ul>
+                            <hr style="margin:0.5rem 0">
+                            <p style="font-size:0.9rem">🌱 <strong>為什麼走海運比較好？</strong><br>
+                            海運碳排放僅為公路的 1/3，且長榮 TBS/TBS2 藍色公路航班穩定。根據航速調控模型，減速航行可再減少 ${Math.round(data.carbon_saved / 100)}% 碳排放。</p>
                         </div>
                     </div>
                 </div>
@@ -186,36 +240,105 @@ function displayResults(data) {
     }
 }
 
-function drawMap(data) {
-    const mapDiv = document.getElementById("map");
-    if (!mapDiv) return;
-    
-    if (typeof L === 'undefined') {
-        mapDiv.innerHTML = '<div style="padding:20px; text-align:center">地圖載入中...</div>';
-        return;
+// ================= 即時路網地圖 =================
+
+let mapInstance = null;
+let trafficLayers = [];
+let animationMarkers = [];
+let trafficUpdateInterval = null;
+
+function initMap(centerLat, centerLon, zoom = 7) {
+    if (mapInstance) {
+        mapInstance.remove();
     }
     
-    const startLat = data.start_lat;
-    const startLon = data.start_lon;
-    const endLat = data.end_lat;
-    const endLon = data.end_lon;
+    if (typeof L === 'undefined') {
+        console.error("Leaflet 未載入");
+        return null;
+    }
     
-    const map = L.map('map').setView([(startLat + endLat) / 2, (startLon + endLon) / 2], 8);
+    mapInstance = L.map('map').setView([centerLat, centerLon], zoom);
     
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
-    }).addTo(map);
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(mapInstance);
     
-    const latlngs = [[startLat, startLon], [endLat, endLon]];
-    L.polyline(latlngs, { color: '#0077b6', weight: 5, opacity: 0.8, dashArray: '10, 10' }).addTo(map);
+    return mapInstance;
+}
+
+async function loadTrafficNetwork() {
+    if (!mapInstance) return;
     
-    const startIcon = L.divIcon({ html: '🚢', className: 'custom-icon', iconSize: [30, 30] });
-    L.marker([startLat, startLon], { icon: startIcon }).bindPopup(`<b>起點：${data.start_name}</b>`).addTo(map);
+    try {
+        const response = await fetch("/api/traffic");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const roads = await response.json();
+        
+        trafficLayers.forEach(layer => {
+            if (mapInstance && mapInstance.hasLayer(layer)) mapInstance.removeLayer(layer);
+        });
+        animationMarkers.forEach(marker => {
+            if (mapInstance && mapInstance.hasLayer(marker)) mapInstance.removeLayer(marker);
+        });
+        trafficLayers = [];
+        animationMarkers = [];
+        
+        let totalSpeed = 0;
+        let congestedCount = 0;
+        
+        roads.forEach(road => {
+            if (!road.coords || road.coords.length < 2) return;
+            
+            const polyline = L.polyline(road.coords, {
+                color: road.color || "#888",
+                weight: 5,
+                opacity: 0.8
+            }).addTo(mapInstance);
+            trafficLayers.push(polyline);
+            
+            totalSpeed += road.speed;
+            if (road.speed < 35) congestedCount++;
+        });
+        
+        const avgSpeed = roads.length > 0 ? (totalSpeed / roads.length).toFixed(1) : 0;
+        const statsDiv = document.getElementById("trafficStats");
+        if (statsDiv) {
+            statsDiv.innerHTML = `
+                <div style="display:flex; gap:1rem; justify-content:space-around">
+                    <div style="text-align:center">
+                        <div style="font-size:1.5rem; font-weight:bold">${avgSpeed}</div>
+                        <div style="font-size:0.8rem">平均車速 (km/h)</div>
+                    </div>
+                    <div style="text-align:center">
+                        <div style="font-size:1.5rem; font-weight:bold; color:#e74c3c">${congestedCount}</div>
+                        <div style="font-size:0.8rem">壅塞路段</div>
+                    </div>
+                    <div style="text-align:center">
+                        <div style="font-size:1.5rem; font-weight:bold; color:#27ae60">${roads.length - congestedCount}</div>
+                        <div style="font-size:0.8rem">順暢路段</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error("載入即時路網失敗:", error);
+    }
+}
+
+function startTrafficAutoUpdate() {
+    if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
+    trafficUpdateInterval = setInterval(loadTrafficNetwork, 30000);
+}
+
+function drawMap(data) {
+    const centerLat = (data.start_lat + data.end_lat) / 2;
+    const centerLon = (data.start_lon + data.end_lon) / 2;
     
-    const endIcon = L.divIcon({ html: '🏁', className: 'custom-icon', iconSize: [30, 30] });
-    L.marker([endLat, endLon], { icon: endIcon }).bindPopup(`<b>終點：${data.end_name}</b>`).addTo(map);
-    
-    map.fitBounds(L.latLngBounds(latlngs));
+    initMap(centerLat, centerLon);
+    loadTrafficNetwork();
 }
 
 function drawCharts(data) {
@@ -249,6 +372,7 @@ function drawCharts(data) {
     }
 }
 
+// 認證功能
 function generateCert() {
     const name = document.getElementById("name").value;
     if (!name) { alert("請輸入公司名稱"); return; }
@@ -332,8 +456,7 @@ function loadHistory() {
             
             data.reverse().forEach(r => {
                 tbody.innerHTML += `<tr>
-                    <td>${r.date}</td>
-                    <td>${r.start}</td><td>${r.end}</td>
+                    <td>${r.date}</td><td>${r.start}</td><td>${r.end}</td>
                     <td>${r.containers}</td><td>${r.distance} km</td>
                     <td>${r.sea_carbon?.toLocaleString() || '-'} kg</td>
                     <td>${r.best_mode}</td>
@@ -406,275 +529,3 @@ function loadDashboard() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log("App loaded");
 });
-// ================= 即時動態路網（1968 等級） =================
-
-let mapInstance = null;
-let trafficLayers = [];
-let animationMarkers = [];
-let trafficUpdateInterval = null;
-let routePolyline = null;
-
-// 初始化地圖（升級版）
-function initMap(centerLat, centerLon, zoom = 7) {
-    // 如果已有地圖實例，先清除
-    if (mapInstance) {
-        // 清除圖層
-        if (trafficLayers.length > 0) {
-            trafficLayers.forEach(layer => {
-                if (mapInstance.hasLayer(layer)) mapInstance.removeLayer(layer);
-            });
-        }
-        if (animationMarkers.length > 0) {
-            animationMarkers.forEach(marker => {
-                if (mapInstance.hasLayer(marker)) mapInstance.removeLayer(marker);
-            });
-        }
-        mapInstance.remove();
-    }
-    
-    // 建立新地圖
-    mapInstance = L.map('map').setView([centerLat, centerLon], zoom);
-    
-    // 使用 CartoDB 淺色底圖（乾淨好看）
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 19,
-        minZoom: 3
-    }).addTo(mapInstance);
-    
-    return mapInstance;
-}
-
-// 載入即時路網並繪製（含動畫）
-async function loadTrafficNetwork() {
-    try {
-        const response = await fetch("/api/traffic");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const roads = await response.json();
-        
-        // 清除舊圖層
-        if (trafficLayers.length > 0) {
-            trafficLayers.forEach(layer => {
-                if (mapInstance && mapInstance.hasLayer(layer)) mapInstance.removeLayer(layer);
-            });
-            trafficLayers = [];
-        }
-        
-        if (animationMarkers.length > 0) {
-            animationMarkers.forEach(marker => {
-                if (mapInstance && mapInstance.hasLayer(marker)) mapInstance.removeLayer(marker);
-            });
-            animationMarkers = [];
-        }
-        
-        // 繪製每條路段
-        roads.forEach(road => {
-            if (!road.coords || road.coords.length < 2) return;
-            
-            // 繪製路線（根據速度決定顏色）
-            const polyline = L.polyline(road.coords, {
-                color: road.color || (road.speed >= 60 ? "#27ae60" : road.speed >= 35 ? "#f39c12" : "#e74c3c"),
-                weight: 5,
-                opacity: 0.85,
-                smoothFactor: 1
-            }).addTo(mapInstance);
-            
-            trafficLayers.push(polyline);
-            
-            // 加上車流動畫（速度越慢動畫越慢）
-            animateTrafficOnRoad(road.coords, road.speed, road.color);
-        });
-        
-        // 更新壅塞統計面板
-        updateCongestionStats(roads);
-        
-    } catch (error) {
-        console.error("載入即時路網失敗:", error);
-    }
-}
-
-// 在路段上產生動畫車輛
-function animateTrafficOnRoad(coords, speed, roadColor) {
-    if (!coords || coords.length < 2) return;
-    
-    // 計算路段總長度（決定要放幾台車）
-    let totalLength = 0;
-    for (let i = 0; i < coords.length - 1; i++) {
-        const p1 = coords[i];
-        const p2 = coords[i + 1];
-        const d = Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
-        totalLength += d;
-    }
-    
-    // 根據路段長度和速度決定車輛數量（3-8台）
-    const vehicleCount = Math.min(8, Math.max(3, Math.floor(totalLength * 15)));
-    
-    // 根據速度決定動畫延遲（速度越快，車移動越快）
-    const moveDelay = Math.max(30, Math.min(150, 200 - speed * 2));
-    
-    for (let v = 0; v < vehicleCount; v++) {
-        // 隨機起始位置
-        let startIndex = Math.floor(Math.random() * (coords.length - 1));
-        let progress = Math.random();
-        
-        // 計算起始點座標
-        const start = coords[startIndex];
-        const end = coords[startIndex + 1];
-        const startLat = start[0] + (end[0] - start[0]) * progress;
-        const startLon = start[1] + (end[1] - start[1]) * progress;
-        
-        // 創建車輛標記（小圓圈）
-        const vehicleMarker = L.circleMarker([startLat, startLon], {
-            radius: 5,
-            color: "#000",
-            weight: 1,
-            fillColor: roadColor === "#27ae60" ? "#2ecc71" : (roadColor === "#f39c12" ? "#f1c40f" : "#e74c3c"),
-            fillOpacity: 1,
-            className: "vehicle-marker"
-        }).addTo(mapInstance);
-        
-        animationMarkers.push(vehicleMarker);
-        
-        // 車輛動畫移動
-        let currentSegmentIndex = startIndex;
-        let currentProgress = progress;
-        
-        function moveVehicle() {
-            if (currentSegmentIndex >= coords.length - 1) {
-                currentSegmentIndex = 0;
-                currentProgress = 0;
-            }
-            
-            const segStart = coords[currentSegmentIndex];
-            const segEnd = coords[currentSegmentIndex + 1];
-            
-            currentProgress += 0.03;
-            
-            if (currentProgress >= 1) {
-                currentProgress = 0;
-                currentSegmentIndex++;
-                
-                if (currentSegmentIndex >= coords.length - 1) {
-                    currentSegmentIndex = 0;
-                }
-            }
-            
-            const lat = segStart[0] + (segEnd[0] - segStart[0]) * currentProgress;
-            const lon = segStart[1] + (segEnd[1] - segStart[1]) * currentProgress;
-            
-            vehicleMarker.setLatLng([lat, lon]);
-            
-            setTimeout(moveVehicle, moveDelay);
-        }
-        
-        // 隨機延遲啟動，讓車輛不同步
-        setTimeout(moveVehicle, v * 300);
-    }
-}
-
-// 更新壅塞統計面板
-function updateCongestionStats(roads) {
-    let totalSpeed = 0;
-    let congestedCount = 0;
-    let smoothCount = 0;
-    
-    roads.forEach(road => {
-        totalSpeed += road.speed;
-        if (road.speed < 35) congestedCount++;
-        if (road.speed >= 60) smoothCount++;
-    });
-    
-    const avgSpeed = roads.length > 0 ? (totalSpeed / roads.length).toFixed(1) : 0;
-    
-    // 更新面板（如果存在的話）
-    const statsPanel = document.getElementById("trafficStats");
-    if (statsPanel) {
-        statsPanel.innerHTML = `
-            <div style="display:flex; gap:1rem; justify-content:space-around">
-                <div style="text-align:center">
-                    <div style="font-size:1.5rem; font-weight:bold">${avgSpeed}</div>
-                    <div style="font-size:0.8rem">平均車速 (km/h)</div>
-                </div>
-                <div style="text-align:center">
-                    <div style="font-size:1.5rem; font-weight:bold; color:#e74c3c">${congestedCount}</div>
-                    <div style="font-size:0.8rem">壅塞路段</div>
-                </div>
-                <div style="text-align:center">
-                    <div style="font-size:1.5rem; font-weight:bold; color:#27ae60">${smoothCount}</div>
-                    <div style="font-size:0.8rem">順暢路段</div>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// 開始自動更新路況（每 30 秒）
-function startTrafficAutoUpdate() {
-    if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
-    
-    // 立即載入一次
-    loadTrafficNetwork();
-    
-    // 每 30 秒更新
-    trafficUpdateInterval = setInterval(() => {
-        console.log("🔄 更新即時路況...");
-        loadTrafficNetwork();
-    }, 30000);
-}
-
-// 停止自動更新
-function stopTrafficAutoUpdate() {
-    if (trafficUpdateInterval) {
-        clearInterval(trafficUpdateInterval);
-        trafficUpdateInterval = null;
-    }
-}
-
-// 修改原有的 drawMap 函數（使用新版地圖）
-function drawMap(data) {
-    const centerLat = (data.start_lat + data.end_lat) / 2;
-    const centerLon = (data.start_lon + data.end_lon) / 2;
-    
-    // 初始化地圖
-    initMap(centerLat, centerLon);
-    
-    // 繪製港口路線
-    const latlngs = [
-        [data.start_lat, data.start_lon],
-        [data.end_lat, data.end_lon]
-    ];
-    
-    routePolyline = L.polyline(latlngs, { 
-        color: '#0077b6', 
-        weight: 4, 
-        opacity: 0.9,
-        dashArray: '8, 8'
-    }).addTo(mapInstance);
-    
-    // 起點標記
-    const startIcon = L.divIcon({ 
-        html: '<div style="font-size:24px">🚢</div>', 
-        className: 'custom-icon',
-        iconSize: [30, 30]
-    });
-    L.marker([data.start_lat, data.start_lon], { icon: startIcon })
-        .bindPopup(`<b>起點：${data.start_name}</b>`)
-        .addTo(mapInstance);
-    
-    // 終點標記
-    const endIcon = L.divIcon({ 
-        html: '<div style="font-size:24px">🏁</div>', 
-        className: 'custom-icon',
-        iconSize: [30, 30]
-    });
-    L.marker([data.end_lat, data.end_lon], { icon: endIcon })
-        .bindPopup(`<b>終點：${data.end_name}</b>`)
-        .addTo(mapInstance);
-    
-    // 調整地圖視野
-    mapInstance.fitBounds(L.latLngBounds(latlngs));
-    
-    // 啟動即時路網
-    startTrafficAutoUpdate();
-}
