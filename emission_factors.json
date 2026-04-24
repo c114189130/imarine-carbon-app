@@ -1,0 +1,22 @@
+{
+    "road": {
+        "value": 0.12,
+        "unit": "kg CO2e/TEU-km",
+        "source": "環保署公告溫室氣體排放係數管理表(2023)",
+        "standard": "CNS 14064-1",
+        "description": "柴油貨運車輛碳排放係數"
+    },
+    "blue_highway": {
+        "value": 0.038,
+        "unit": "kg CO2e/TEU-km",
+        "source": "IMO國際海事組織 + 台灣航港局藍色公路資料庫",
+        "standard": "CNS 14064-1",
+        "description": "藍色公路貨櫃船舶碳排放係數（立昌輪實測數據）",
+        "advantage": "相較公路減少約68%碳排放"
+    },
+    "reference": {
+        "cns_14064_1": "組織層級溫室氣體排放與移除之量化及報告",
+        "cns_14067": "產品碳足跡量化之要求事項與指導綱要",
+        "last_updated": "2024-01-01"
+    }
+}

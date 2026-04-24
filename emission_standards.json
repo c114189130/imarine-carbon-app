@@ -1,0 +1,5 @@
+{
+    "road": {"value": 0.06, "unit": "kg CO2e/FEU-km", "source": "環保署公告(2023)", "standard": "CNS 14064-1"},
+    "sea": {"value": 0.02, "unit": "kg CO2e/FEU-km", "source": "IMO 國際海事組織", "standard": "CNS 14064-1"},
+    "reference": {"cns_14064_1": "組織層級溫室氣體排放與移除之量化及報告", "cns_14067": "產品碳足跡量化之要求事項與指導綱要", "last_updated": "2024-01-01"}
+}
