@@ -23,63 +23,104 @@
     <div class="container" id="content" style="display:none">
         <div id="result"></div>
         
-        <!-- 即時路網地圖（取代運輸路線地圖） -->
+        <!-- 即時路網地圖卡片 -->
         <div class="card fade-in">
-            <h3>🗺️ 國道即時路網（1968 等級）</h3>
-            <div id="trafficStats" class="traffic-stats" style="background:var(--light-cyan); border-radius:15px; padding:1rem; margin-bottom:1rem">
-                <div style="display:flex; gap:1rem; justify-content:space-around">
-                    <div style="text-align:center">
-                        <div class="animate-pulse" style="font-size:1rem">載入中...</div>
+            <div class="card-header">
+                <h3>🗺️ 國道即時路網</h3>
+                <span class="badge">即時更新 30秒</span>
+            </div>
+            <div id="trafficStats" class="traffic-stats">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value animate-pulse">載入中...</div>
+                        <div class="stat-label">平均車速</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="congestedCount">-</div>
+                        <div class="stat-label">壅塞路段</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="smoothCount">-</div>
+                        <div class="stat-label">順暢路段</div>
                     </div>
                 </div>
             </div>
-            <div id="map" style="height:500px; border-radius:15px; background:#e0e0e0"></div>
-            <div style="display:flex; gap:1rem; justify-content:center; margin-top:0.5rem">
-                <span style="font-size:0.8rem"><span style="color:#27ae60">●</span> 順暢 (>60km/h)</span>
-                <span style="font-size:0.8rem"><span style="color:#f39c12">●</span> 車多 (35-60km/h)</span>
-                <span style="font-size:0.8rem"><span style="color:#e74c3c">●</span> 壅塞 (&lt;35km/h)</span>
-                <span style="font-size:0.8rem">🚗 動畫車輛</span>
+            <div id="map" class="map-container"></div>
+            <div class="legend">
+                <span><span class="color-dot green"></span> 順暢 >60km/h</span>
+                <span><span class="color-dot orange"></span> 車多 35-60km/h</span>
+                <span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span>
+                <span><span class="color-dot car"></span> 🚗 動畫車輛</span>
             </div>
-            <p style="margin-top:0.5rem; font-size:0.75rem; color:gray">※ 路況每 30 秒自動更新 | 資料來源：交通部 TDX API</p>
+            <p class="note">※ 路況每 30 秒自動更新 | 資料來源：交通部 TDX API</p>
         </div>
         
-        <!-- 長榮海運船期詳細資訊卡片 -->
-        <div class="card fade-in" style="background:linear-gradient(135deg,var(--deep-twilight),var(--bright-teal-blue));color:white">
-            <h3>🚢 長榮海運「藍色公路」即時船期</h3>
-            <div style="display:flex; gap:2rem; flex-wrap:wrap">
-                <div style="flex:1">
-                    <p>🚢 船名：<strong id="shipName">-</strong></p>
-                    <p>📍 航線：<strong id="shipRoute">-</strong></p>
-                    <p>🎯 目的地：<strong id="shipDest">-</strong></p>
+        <!-- 長榮海運船期卡片 -->
+        <div class="card fade-in gradient-card">
+            <div class="card-header">
+                <h3>🚢 長榮海運「藍色公路」即時船期</h3>
+                <span class="badge light">TBS / TBS2 航線</span>
+            </div>
+            <div class="ship-info-grid">
+                <div class="ship-info-item">
+                    <div class="info-label">🚢 船名</div>
+                    <div class="info-value" id="shipName">-</div>
                 </div>
-                <div style="flex:1">
-                    <p>⏰ 預計到港：<strong id="shipEta">-</strong> 小時後</p>
-                    <p>📦 可用艙位：<strong id="shipCapacity">-</strong> FEU</p>
-                    <p>📅 每週航班：<strong id="shipSchedule">-</strong></p>
+                <div class="ship-info-item">
+                    <div class="info-label">📍 航線</div>
+                    <div class="info-value" id="shipRoute">-</div>
+                </div>
+                <div class="ship-info-item">
+                    <div class="info-label">🎯 目的地</div>
+                    <div class="info-value" id="shipDest">-</div>
+                </div>
+                <div class="ship-info-item">
+                    <div class="info-label">⏰ 預計到港</div>
+                    <div class="info-value" id="shipEta">-</div>
+                </div>
+                <div class="ship-info-item">
+                    <div class="info-label">📦 可用艙位</div>
+                    <div class="info-value" id="shipCapacity">-</div>
+                </div>
+                <div class="ship-info-item">
+                    <div class="info-label">📅 每週航班</div>
+                    <div class="info-value" id="shipSchedule">-</div>
                 </div>
             </div>
-            <div style="margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.15); border-radius:10px">
-                <p style="font-size:0.9rem">✅ 本系統已整合長榮海運 TBS/TBS2 藍色公路航班資訊</p>
-                <p style="font-size:0.85rem">📌 TBS航線：台北港 → 台中港 → 高雄港 → 台中港 → 台北港（每週定期航班）</p>
-                <p style="font-size:0.85rem">📌 TBS2航線：台北港 ↔ 高雄港（直航服務）</p>
+            <div class="info-note">
+                <p>✅ 本系統已整合長榮海運 TBS/TBS2 藍色公路航班資訊</p>
+                <p>📌 TBS航線：台北港 → 台中港 → 高雄港 → 台中港 → 台北港（每週定期航班）</p>
+                <p>📌 TBS2航線：台北港 ↔ 高雄港（直航服務）</p>
             </div>
         </div>
         
-        <!-- AI 指派建議卡片（Uber 風格） -->
-        <div class="card fade-in" style="background:linear-gradient(135deg,#11998e,#38ef7d);color:white">
-            <h3>🧠 AI 智慧指派建議</h3>
+        <!-- AI 指派建議卡片 -->
+        <div class="card fade-in success-card">
+            <div class="card-header">
+                <h3>🧠 AI 智慧指派建議</h3>
+                <span class="badge">AI 即時決策</span>
+            </div>
             <div id="dispatchResult">
                 <div class="animate-pulse">分析中...</div>
             </div>
         </div>
         
-        <!-- 碳排減量分析卡片（參考 PDF T4 模型） -->
+        <!-- 研究成果：優化模型分析卡片 -->
         <div class="card fade-in">
-            <h3>🌱 碳排減量分析（基於航速調控模型）</h3>
-            <div id="carbonAnalysis">
+            <div class="card-header">
+                <h3>📊 研究成果：貨櫃運輸模式最佳化分派系統</h3>
+                <span class="badge">學術模型</span>
+            </div>
+            <p class="model-desc">
+                目標函數：<strong>Min Z = 運輸成本 + 碳排成本 + 事故成本 + 時間成本</strong>
+            </p>
+            <div id="optimizationResult">
                 <div class="animate-pulse">計算中...</div>
             </div>
-            <p style="margin-top:0.5rem; font-size:0.75rem; color:gray">※ 碳排計算公式：CO₂ = k × V² × D（k=0.03）參考自航港大數據競賽研究</p>
+            <div class="research-conclusion" id="researchConclusion">
+                <p class="conclusion-title">🧠 研究結論</p>
+                <p>本研究建構一結合高速公路流量與港口船期之貨櫃運輸指派模型，並納入碳排放與事故外部成本，以最小化整體社會成本為目標，評估海上走廊政策之效益。</p>
+            </div>
         </div>
         
         <!-- 成本比較圖表 -->
@@ -94,15 +135,15 @@
             <canvas id="carbonChart"></canvas>
         </div>
         
-        <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
+        <div class="action-buttons">
             <button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button>
             <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新指派</button>
         </div>
     </div>
     
     <div class="container" id="loading">
-        <div class="card" style="text-align:center">
-            <div class="animate-pulse" style="font-size:1.5rem">🔄 AI 分析中，請稍候...</div>
+        <div class="loading-card">
+            <div class="animate-pulse">🔄 AI 分析中，請稍候...</div>
         </div>
     </div>
     
