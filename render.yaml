@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: imarine-carbon-app
-    runtime: python
-    repo: https://github.com/c114189130/carbon_app.git
-    plan: free
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.13
