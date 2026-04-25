@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>貨櫃指派 - iMarine</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -16,50 +15,15 @@
             <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
-    
     <div class="container">
-        <div class="card fade-in" style="max-width:600px; margin:0 auto">
+        <div class="card fade-in" style="max-width:500px; margin:0 auto">
             <h2>🚢 貨櫃指派系統</h2>
-            <p style="color:var(--french-blue)">請填寫以下資訊，AI 將為您建議最佳運輸方案</p>
-            
-            <div class="form-group">
-                <label>📍 起點港口</label>
-                <select id="start">
-                    <option value="kaohsiung">高雄港</option>
-                    <option value="taichung">台中港</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>📍 終點港口</label>
-                <select id="end">
-                    <option value="taichung">台中港</option>
-                    <option value="kaohsiung">高雄港</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>📦 貨櫃數量 (FEU)</label>
-                <input type="number" id="containers" placeholder="請輸入貨櫃數量" min="1" value="50">
-                <p style="font-size:0.8rem; margin-top:0.3rem">※ 1 FEU = 1 個 40 呎貨櫃</p>
-            </div>
-            
+            <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
+            <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
+            <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <button class="btn btn-primary" onclick="goToResult()" style="width:100%">🚀 AI 智慧指派</button>
-            <button class="btn btn-outline" onclick="location.href='/'" style="width:100%; margin-top:0.5rem">🏠 返回首頁</button>
-        </div>
-        
-        <div class="card fade-in">
-            <h3>📌 系統說明</h3>
-            <ul>
-                <li>🚛 <strong>即時路況</strong>：串接交通部 TDX API，掌握國道即時車速</li>
-                <li>🚢 <strong>陽明海運</strong>：整合陽明海運即時船期與艙位資訊</li>
-                <li>🧠 <strong>AI 評分模型</strong>：多因子決策，綜合評估成本、碳排、路況、船期</li>
-                <li>🌱 <strong>碳排放計算</strong>：依據 CNS 14064-1 國家標準</li>
-                <li>📄 <strong>ESG 報告</strong>：自動產生 PDF 認證證書</li>
-            </ul>
         </div>
     </div>
-    
     <script src="/static/app.js"></script>
 </body>
 </html>

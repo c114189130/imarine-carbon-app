@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>指派結果 - iMarine</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -20,136 +19,69 @@
         </div>
     </nav>
     
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">正在分析最佳運輸方案...</div>
+            <div class="loading-steps">
+                <div class="step" id="step1">⏳ 分析運輸路線</div>
+                <div class="step" id="step2">⏳ 串接即時交通資料</div>
+                <div class="step" id="step3">⏳ 查詢長榮船期</div>
+                <div class="step" id="step4">⏳ 計算碳排效益</div>
+                <div class="step" id="step5">⏳ AI 決策分析</div>
+            </div>
+        </div>
+    </div>
+    
     <div class="container" id="content" style="display:none">
         <div id="result"></div>
         
-        <!-- 即時路網地圖卡片 -->
         <div class="card fade-in">
-            <div class="card-header">
-                <h3>🗺️ 國道即時路網</h3>
-                <span class="badge">即時更新 30秒</span>
-            </div>
-            <div id="trafficStats" class="traffic-stats">
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-value animate-pulse">載入中...</div>
-                        <div class="stat-label">平均車速</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="congestedCount">-</div>
-                        <div class="stat-label">壅塞路段</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="smoothCount">-</div>
-                        <div class="stat-label">順暢路段</div>
-                    </div>
-                </div>
-            </div>
+            <div class="card-header"><h3>🗺️ 國道即時路網</h3><span class="badge">模擬路況</span></div>
+            <div id="trafficStats" class="traffic-stats"><div class="stats-row"><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">順暢路段</div></div></div></div>
             <div id="map" class="map-container"></div>
-            <div class="legend">
-                <span><span class="color-dot green"></span> 順暢 >60km/h</span>
-                <span><span class="color-dot orange"></span> 車多 35-60km/h</span>
-                <span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span>
-                <span><span class="color-dot car"></span> 🚗 動畫車輛</span>
-            </div>
-            <p class="note">※ 路況每 30 秒自動更新 | 資料來源：交通部 TDX API</p>
+            <div class="legend"><span><span class="color-dot green"></span> 順暢 >60km/h</span><span><span class="color-dot orange"></span> 車多 35-60km/h</span><span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span></div>
         </div>
         
-        <!-- 長榮海運船期卡片 -->
         <div class="card fade-in gradient-card">
-            <div class="card-header">
-                <h3>🚢 長榮海運「藍色公路」即時船期</h3>
-                <span class="badge light">TBS / TBS2 航線</span>
-            </div>
+            <div class="card-header"><h3>🚢 長榮海運「藍色公路」即時船期</h3><span class="badge light">TBS / TBS2 航線</span></div>
             <div class="ship-info-grid">
-                <div class="ship-info-item">
-                    <div class="info-label">🚢 船名</div>
-                    <div class="info-value" id="shipName">-</div>
-                </div>
-                <div class="ship-info-item">
-                    <div class="info-label">📍 航線</div>
-                    <div class="info-value" id="shipRoute">-</div>
-                </div>
-                <div class="ship-info-item">
-                    <div class="info-label">🎯 目的地</div>
-                    <div class="info-value" id="shipDest">-</div>
-                </div>
-                <div class="ship-info-item">
-                    <div class="info-label">⏰ 預計到港</div>
-                    <div class="info-value" id="shipEta">-</div>
-                </div>
-                <div class="ship-info-item">
-                    <div class="info-label">📦 可用艙位</div>
-                    <div class="info-value" id="shipCapacity">-</div>
-                </div>
-                <div class="ship-info-item">
-                    <div class="info-label">📅 每週航班</div>
-                    <div class="info-value" id="shipSchedule">-</div>
-                </div>
-            </div>
-            <div class="info-note">
-                <p>✅ 本系統已整合長榮海運 TBS/TBS2 藍色公路航班資訊</p>
-                <p>📌 TBS航線：台北港 → 台中港 → 高雄港 → 台中港 → 台北港（每週定期航班）</p>
-                <p>📌 TBS2航線：台北港 ↔ 高雄港（直航服務）</p>
+                <div class="ship-info-item"><div class="info-label">🚢 船名</div><div class="info-value" id="shipName">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📍 航線</div><div class="info-value" id="shipRoute">-</div></div>
+                <div class="ship-info-item"><div class="info-label">🎯 目的地</div><div class="info-value" id="shipDest">-</div></div>
+                <div class="ship-info-item"><div class="info-label">⏰ 預計到港</div><div class="info-value" id="shipEta">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📦 可用艙位</div><div class="info-value" id="shipCapacity">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📅 每週航班</div><div class="info-value" id="shipSchedule">-</div></div>
             </div>
         </div>
         
-        <!-- AI 指派建議卡片 -->
         <div class="card fade-in success-card">
-            <div class="card-header">
-                <h3>🧠 AI 智慧指派建議</h3>
-                <span class="badge">AI 即時決策</span>
-            </div>
-            <div id="dispatchResult">
-                <div class="animate-pulse">分析中...</div>
-            </div>
+            <div class="card-header"><h3>🧠 AI 智慧指派建議</h3><span class="badge">AI 即時決策</span></div>
+            <div id="dispatchResult">分析中...</div>
         </div>
         
-        <!-- 研究成果：優化模型分析卡片 -->
         <div class="card fade-in">
-            <div class="card-header">
-                <h3>📊 研究成果：貨櫃運輸模式最佳化分派系統</h3>
-                <span class="badge">學術模型</span>
-            </div>
-            <p class="model-desc">
-                目標函數：<strong>Min Z = 運輸成本 + 碳排成本 + 事故成本 + 時間成本</strong>
-            </p>
-            <div id="optimizationResult">
-                <div class="animate-pulse">計算中...</div>
-            </div>
-            <div class="research-conclusion" id="researchConclusion">
-                <p class="conclusion-title">🧠 研究結論</p>
-                <p>本研究建構一結合高速公路流量與港口船期之貨櫃運輸指派模型，並納入碳排放與事故外部成本，以最小化整體社會成本為目標，評估海上走廊政策之效益。</p>
-            </div>
+            <div class="card-header"><h3>📊 優化模型分析</h3><span class="badge">學術模型</span></div>
+            <p class="model-desc">目標函數：<strong>Min Z = 運輸成本 + 碳排成本 + 事故成本 + 時間成本</strong></p>
+            <div id="optimizationResult">計算中...</div>
+            <div class="research-conclusion"><p class="conclusion-title">🧠 研究結論</p><p>本研究建構結合高速公路流量與港口船期之貨櫃運輸指派模型，納入碳排放與事故外部成本，以最小化整體社會成本為目標。</p></div>
         </div>
         
-        <!-- 成本比較圖表 -->
-        <div class="chart-container fade-in">
-            <h3>💰 成本結構比較</h3>
-            <canvas id="costChart"></canvas>
-        </div>
+        <div class="chart-container fade-in"><h3>💰 成本結構比較</h3><canvas id="costChart"></canvas></div>
+        <div class="chart-container fade-in"><h3>🌍 碳排放比較</h3><canvas id="carbonChart"></canvas></div>
         
-        <!-- 碳排放圖表 -->
-        <div class="chart-container fade-in">
-            <h3>🌍 碳排放比較</h3>
-            <canvas id="carbonChart"></canvas>
-        </div>
-        
-        <div class="action-buttons">
-            <button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button>
-            <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新指派</button>
-        </div>
+        <div class="action-buttons"><button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button><button class="btn btn-outline" onclick="location.href='/input'">🔄 重新指派</button></div>
     </div>
     
-    <div class="container" id="loading">
-        <div class="loading-card">
-            <div class="animate-pulse">🔄 AI 分析中，請稍候...</div>
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li></ul></div>
+            <div class="footer-section"><h4>📚 參考標準</h4><ul><li>CNS 14064-1</li><li>GLEC 物流碳排框架</li><li>DEFRA 排放係數</li></ul></div>
         </div>
-    </div>
+        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p></div>
+    </footer>
     
     <script src="/static/app.js"></script>
-    <script>
-        calculate();
-    </script>
+    <script>setTimeout(() => calculate(), 100);</script>
 </body>
 </html>

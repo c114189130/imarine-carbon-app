@@ -2,43 +2,22 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>碳排認證 - iMarine</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/history_page">📊 歷史記錄</a>
-        </div>
+        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始指派</a><a href="/history_page">📊 歷史記錄</a></div>
     </nav>
-    
     <div class="container">
         <div class="card fade-in" style="max-width:500px; margin:0 auto">
             <h2>📄 碳排認證證書</h2>
-            <div class="form-group">
-                <label>🏢 公司名稱</label>
-                <input type="text" id="name" placeholder="請輸入公司全名">
-            </div>
+            <div class="form-group"><label>🏢 公司名稱</label><input type="text" id="name" placeholder="請輸入公司全名"></div>
             <button class="btn btn-primary" onclick="generateCert()" style="width:100%">✅ 產生認證</button>
-            <div id="certResult" style="margin-top:1.5rem"></div>
-        </div>
-        
-        <div class="card fade-in">
-            <h3>📋 認證說明</h3>
-            <ul>
-                <li>CNS 14064-1 組織層級溫室氣體盤查標準</li>
-                <li>碳排放係數：環保署公告(2023)</li>
-                <li>VSL 統計生命價值：NT$5,000萬元</li>
-                <li>陽明海運綠色航線合作</li>
-                <li>認證有效期限：一年</li>
-            </ul>
+            <div id="certResult" style="margin-top:1rem"></div>
         </div>
     </div>
-    
     <script src="/static/app.js"></script>
 </body>
 </html>

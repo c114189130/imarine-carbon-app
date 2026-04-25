@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iMarine 智慧海運碳排管理系統</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -16,43 +15,26 @@
             <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
-    
     <div class="container">
         <div class="hero fade-in">
             <h1>智慧貨櫃指派系統</h1>
-            <p>🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 陽明海運船期 | 🌱 碳排放最佳化</p>
+            <p>🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運船期 | 🌱 碳排放最佳化</p>
             <button class="btn btn-primary" onclick="location.href='/input'">🚀 開始指派貨櫃</button>
         </div>
-        
         <div class="stats-grid">
             <div class="stat-card fade-in"><h3>-66%</h3><p>海運 vs 公路碳排</p></div>
             <div class="stat-card fade-in"><h3>即時</h3><p>TDX 路況 API</p></div>
-            <div class="stat-card fade-in"><h3>陽明海運</h3><p>船期整合</p></div>
+            <div class="stat-card fade-in"><h3>長榮海運</h3><p>船期整合</p></div>
             <div class="stat-card fade-in"><h3>CNS 14064</h3><p>國家標準</p></div>
         </div>
-        
-        <div class="card fade-in">
-            <h2>🚛 如何運作？</h2>
-            <div style="display:flex; gap:2rem; flex-wrap:wrap; margin-top:1rem">
-                <div style="flex:1; text-align:center">
-                    <span style="font-size:3rem">1️⃣</span>
-                    <h3>輸入貨櫃數量</h3>
-                    <p>輸入您需要運送的 FEU 數量</p>
-                </div>
-                <div style="flex:1; text-align:center">
-                    <span style="font-size:3rem">2️⃣</span>
-                    <h3>AI 即時分析</h3>
-                    <p>系統分析即時路況與船期</p>
-                </div>
-                <div style="flex:1; text-align:center">
-                    <span style="font-size:3rem">3️⃣</span>
-                    <h3>獲得指派建議</h3>
-                    <p>AI 建議最佳運輸組合</p>
-                </div>
-            </div>
-        </div>
     </div>
-    
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li></ul></div>
+            <div class="footer-section"><h4>📚 參考標準</h4><ul><li>CNS 14064-1</li><li>GLEC 物流碳排框架</li><li>DEFRA 排放係數</li></ul></div>
+        </div>
+        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p></div>
+    </footer>
     <script src="/static/app.js"></script>
 </body>
 </html>

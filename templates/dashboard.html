@@ -2,7 +2,6 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>儀表板 - iMarine</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -10,35 +9,20 @@
 <body onload="loadDashboard()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/history_page">📊 歷史記錄</a>
-            <a href="/dashboard">📈 Dashboard</a>
-        </div>
+        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始指派</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
     </nav>
-    
     <div class="container">
         <h1>📈 碳排放儀表板</h1>
-        
         <div class="stats-grid">
             <div class="stat-card fade-in"><h3 id="totalReduction">-</h3><p>總減碳量 (kg)</p></div>
             <div class="stat-card fade-in"><h3 id="avgReduction">-</h3><p>平均減碳比例</p></div>
             <div class="stat-card fade-in"><h3 id="totalCount">-</h3><p>總指派次數</p></div>
             <div class="stat-card fade-in"><h3 id="seaRate">-</h3><p>海運推薦率</p></div>
         </div>
-        
-        <div class="chart-container fade-in">
-            <canvas id="trendChart"></canvas>
-        </div>
-        
-        <div class="chart-container fade-in">
-            <canvas id="modeChart"></canvas>
-        </div>
-        
+        <div class="chart-container fade-in"><canvas id="trendChart"></canvas></div>
+        <div class="chart-container fade-in"><canvas id="modeChart"></canvas></div>
         <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-    
     <script src="/static/app.js"></script>
 </body>
 </html>
