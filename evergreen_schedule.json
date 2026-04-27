@@ -4,11 +4,21 @@
         "ships": [
             {
                 "name": "Evergreen TBS2",
-                "eta_hours": 24,
+                "eta_hours": 18,
                 "available": 320,
+                "destination": "台中港",
+                "route": "TBS2",
+                "eta": "FRI",
+                "description": "高雄港 → 台中港，每週五定期航班"
+            },
+            {
+                "name": "Evergreen TBS2",
+                "eta_hours": 42,
+                "available": 280,
                 "destination": "台北港",
                 "route": "TBS2",
-                "eta": "FRI"
+                "eta": "SUN",
+                "description": "高雄港 → 台北港，每週日定期航班"
             }
         ]
     },
@@ -17,11 +27,21 @@
         "ships": [
             {
                 "name": "Evergreen TBS",
-                "eta_hours": 48,
+                "eta_hours": 24,
                 "available": 560,
                 "destination": "高雄港",
                 "route": "TBS",
-                "eta": "THU"
+                "eta": "THU",
+                "description": "台中港 → 高雄港，每週四定期航班"
+            },
+            {
+                "name": "Evergreen TBS",
+                "eta_hours": 36,
+                "available": 420,
+                "destination": "台北港",
+                "route": "TBS",
+                "eta": "TUE",
+                "description": "台中港 → 台北港，每週二定期航班"
             }
         ]
     }

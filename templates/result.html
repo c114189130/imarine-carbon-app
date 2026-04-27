@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>指派結果 - iMarine</title>
+    <title>指派結果 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -10,7 +10,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
             <a href="/">🏠 首頁</a>
             <a href="/input">🚢 開始指派</a>
@@ -37,7 +37,7 @@
         <div id="result"></div>
         
         <div class="card fade-in">
-            <div class="card-header"><h3>🗺️ 國道即時路網</h3><span class="badge">模擬路況</span></div>
+            <div class="card-header"><h3>🗺️ 國道即時路網</h3><span class="badge">TDX 即時 API</span></div>
             <div id="trafficStats" class="traffic-stats"><div class="stats-row"><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">順暢路段</div></div></div></div>
             <div id="map" class="map-container"></div>
             <div class="legend"><span><span class="color-dot green"></span> 順暢 >60km/h</span><span><span class="color-dot orange"></span> 車多 35-60km/h</span><span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span></div>

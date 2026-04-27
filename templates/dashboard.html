@@ -2,13 +2,13 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>儀表板 - iMarine</title>
+    <title>儀表板 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body onload="loadDashboard()">
     <nav class="navbar">
-        <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始指派</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
     </nav>
     <div class="container">

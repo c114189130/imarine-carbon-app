@@ -2,12 +2,12 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>證書驗證 - iMarine</title>
+    <title>證書驗證 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <nav class="navbar">
-        <div class="navbar-brand">🌊 iMarine 智慧海運碳排管理系統</div>
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始指派</a></div>
     </nav>
     <div class="container">
@@ -16,8 +16,8 @@
                 <h2>✅ 證書驗證成功</h2>
                 <p>證書編號：{{ cert.cert_id }}</p>
                 <p>公司名稱：{{ cert.company_name }}</p>
-                <p>減碳量：{{ cert.carbon_improvement }} kg CO2e</p>
-                <p>減碳比例：{{ cert.reduction_pct }}%</p>
+                <p>減碳量：{{ cert.record.carbon_improvement }} kg CO2e</p>
+                <p>減碳比例：{{ cert.record.reduction_pct }}%</p>
                 <p>核發時間：{{ cert.issued_at }}</p>
                 <p>本證書由 iMarine 碳排認證中心核發</p>
             {% else %}

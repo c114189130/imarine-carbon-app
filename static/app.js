@@ -67,24 +67,12 @@ function calculate() {
     .then(res => res.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-        updateLoadingStep(1);
-        setTimeout(() => {
-            updateLoadingStep(2);
-            setTimeout(() => {
-                updateLoadingStep(3);
-                setTimeout(() => {
-                    updateLoadingStep(4);
-                    setTimeout(() => {
-                        currentResult = data;
-                        displayResults(data);
-                        drawCharts(data);
-                        initMapAndTraffic(data);
-                        document.getElementById("loadingOverlay").style.display = "none";
-                        document.getElementById("content").style.display = "block";
-                    }, 300);
-                }, 300);
-            }, 300);
-        }, 300);
+        currentResult = data;
+        displayResults(data);
+        drawCharts(data);
+        initMapAndTraffic(data);
+        document.getElementById("loadingOverlay").style.display = "none";
+        document.getElementById("content").style.display = "block";
     })
     .catch(err => {
         console.error(err);
@@ -106,10 +94,10 @@ function displayResults(data) {
         <div class="card"><h3>💰 總體社會成本分析</h3>
         <table class="cost-table"><thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead><tbody>
         <tr><td><strong>💰 運費</strong></td><td>${formatCurrency(road.freight)}</td><td>${formatCurrency(sea.freight)}</td><td>${formatCurrency(road.freight - sea.freight)}</td></tr>
-        <tr><td><strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
-        <tr><td><strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
-        <tr><td><strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.vsl)}</td><td>${formatCurrency(sea.vsl)}</td><td class="savings-number">${formatCurrency(road.vsl - sea.vsl)}</td></tr>
-        <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.improvement)}</td></tr>
+        <tr>.html<strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
+        <tr>.html<strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
+        <tr>.html<strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
+        <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr>
         </tbody></table></div>`;
     document.getElementById("result").innerHTML = html;
     
@@ -162,10 +150,10 @@ function displayResults(data) {
                 <table class="cost-table">
                     <thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead>
                     <tbody>
-                        <tr><td>運輸成本</td><td>${formatCurrency(opt.road.transport)}</td><td>${formatCurrency(opt.sea.transport)}</td><td>${formatCurrency(opt.savings.transport)}</td></tr>
-                        <tr><td>碳排成本</td><td>${formatCurrency(opt.road.carbon)}</td><td>${formatCurrency(opt.sea.carbon)}</td><td>${formatCurrency(opt.savings.carbon)}</td></tr>
-                        <tr><td>事故成本</td><td>${formatCurrency(opt.road.accident)}</td><td>${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
-                        <tr><td>時間成本</td><td>${formatCurrency(opt.road.time)}</td><td>${formatCurrency(opt.sea.time)}</td><td>${formatCurrency(opt.savings.time)}</td></tr>
+                        <tr>.html運輸成本</td><td>${formatCurrency(opt.road.transport)}</td><td>${formatCurrency(opt.sea.transport)}</td><td>${formatCurrency(opt.savings.transport)}</td></tr>
+                        <tr>.html碳排成本</td><td>${formatCurrency(opt.road.carbon)}</td><td>${formatCurrency(opt.sea.carbon)}</td><td>${formatCurrency(opt.savings.carbon)}</td></tr>
+                        <tr>.html事故成本</td><td>${formatCurrency(opt.road.accident)}</td><td>${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
+                        <tr>.html時間成本</td><td>${formatCurrency(opt.road.time)}</td><td>${formatCurrency(opt.sea.time)}</td><td>${formatCurrency(opt.savings.time)}</td></tr>
                         <tr style="background:var(--light-cyan);font-weight:bold"><td>總成本</td><td>${formatCurrency(opt.road.total)}</td><td>${formatCurrency(opt.sea.total)}</td><td class="savings-number">${formatCurrency(opt.savings.total)}</td></tr>
                     </tbody>
                 </table>
@@ -229,7 +217,7 @@ function drawCharts(data) {
                 { label: '運費', data: [data.road.freight, data.sea.freight], backgroundColor: 'rgba(0,119,182,0.7)' },
                 { label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: 'rgba(0,180,216,0.7)' },
                 { label: '社會成本', data: [data.road.social, data.sea.social], backgroundColor: 'rgba(72,202,228,0.7)' },
-                { label: 'VSL風險', data: [data.road.vsl, data.sea.vsl], backgroundColor: 'rgba(144,224,239,0.7)' }
+                { label: 'VSL風險', data: [data.road.risk, data.sea.risk], backgroundColor: 'rgba(144,224,239,0.7)' }
             ]
         },
         options: { responsive: true }
@@ -301,14 +289,14 @@ function loadHistory() {
             if (!tbody) return;
             tbody.innerHTML = "";
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄</td></tr>';
+                tbody.innerHTML = '</tr><td colspan="9">暫無歷史記錄</td></table>';
                 return;
             }
             const reversed = [...data].reverse();
             reversed.forEach(r => {
                 tbody.innerHTML += `<tr>
                     <td>${r.date}</td><td>${r.start}</td><td>${r.end}</td>
-                    <td>${r.containers}</td><td>${r.distance} km</td>
+                    <td>${r.containers}</td><td>${r.base_distance} km</td>
                     <td>${Number(r.sea_carbon || 0).toLocaleString()} kg</td>
                     <td>${r.best_mode}</td>
                     <td>${Number(r.carbon_improvement || 0).toLocaleString()} kg</td>

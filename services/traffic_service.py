@@ -6,9 +6,9 @@ import os
 import requests
 import random
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
-# 國道路段定義（真實路段名稱）
+# 國道路段定義
 FREEWAY_SEGMENTS = [
     {"id": "NH1-N-0", "name": "國道一號 基隆-台北", "direction": "北", "highway": "國道一號"},
     {"id": "NH1-S-1", "name": "國道一號 台北-桃園", "direction": "南", "highway": "國道一號"},
@@ -26,17 +26,16 @@ FREEWAY_SEGMENTS = [
 
 
 class TrafficService:
-    def __init__(self, app_id: str = None, app_key: str = None):
+    def __init__(self, app_id: Optional[str] = None, app_key: Optional[str] = None):
         self.app_id = app_id or os.environ.get("TDX_APP_ID", "")
         self.app_key = app_key or os.environ.get("TDX_APP_KEY", "")
-        self.token = None
-        self.token_expiry = None
+        self._token = None
+        self._token_expiry = None
         self._use_mock = not (self.app_id and self.app_key)
 
-    def _get_token(self) -> str:
-        """取得 TDX API 存取令牌"""
-        if self.token and self.token_expiry and datetime.now() < self.token_expiry:
-            return self.token
+    def _get_token(self) -> Optional[str]:
+        if self._token and self._token_expiry and datetime.now() < self._token_expiry:
+            return self._token
 
         url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -50,23 +49,25 @@ class TrafficService:
             response = requests.post(url, headers=headers, data=data, timeout=10)
             if response.status_code == 200:
                 result = response.json()
-                self.token = result.get("access_token")
+                self._token = result.get("access_token")
                 expires_in = result.get("expires_in", 3600)
-                self.token_expiry = datetime.now()
-                return self.token
+                self._token_expiry = datetime.now()
+                print(f"✅ TDX Token 取得成功")
+                return self._token
+            else:
+                print(f"❌ TDX Token 取得失敗: HTTP {response.status_code}")
         except Exception as e:
-            print(f"TDX Token 取得錯誤: {e}")
+            print(f"❌ TDX API 連線錯誤: {e}")
 
         self._use_mock = True
         return None
 
     def _fetch_real_traffic(self) -> List[Dict[str, Any]]:
-        """從 TDX API 獲取真實路況"""
         token = self._get_token()
         if not token:
+            print("⚠️ 無法取得 TDX Token，使用模擬資料")
             return self._get_mock_traffic()
 
-        # 即時車流 API
         url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/Freeway"
         headers = {
             "Authorization": f"Bearer {token}",
@@ -77,23 +78,28 @@ class TrafficService:
             response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 data = response.json()
+                print(f"✅ TDX API 成功取得 {len(data.get('Roads', []))} 筆路段資料")
                 return self._parse_traffic_data(data)
+            else:
+                print(f"❌ TDX API 錯誤: HTTP {response.status_code}")
         except Exception as e:
-            print(f"TDX API 錯誤: {e}")
+            print(f"❌ TDX API 連線錯誤: {e}")
 
         return self._get_mock_traffic()
 
     def _parse_traffic_data(self, data: dict) -> List[Dict[str, Any]]:
-        """解析 TDX 回傳的路況資料"""
         results = []
-        for item in data.get("Roads", []):
+        roads = data.get("Roads", [])
+
+        for item in roads:
             road_id = item.get("Id", "")
             speed = item.get("Speed", 0)
             travel_time = item.get("TravelTime", 0)
+            name = item.get("Name", road_id)
 
-            # 比對路段名稱
+            matched = False
             for segment in FREEWAY_SEGMENTS:
-                if segment["id"] in road_id or segment["name"] in road_id:
+                if segment["name"] in name or name in segment["name"]:
                     results.append({
                         "id": segment["id"],
                         "name": segment["name"],
@@ -105,12 +111,13 @@ class TrafficService:
                         "source": "TDX 即時 API",
                         "timestamp": datetime.now().isoformat(),
                     })
+                    matched = True
                     break
-            else:
-                # 如果沒有比對到，直接加入
+
+            if not matched and speed > 0:
                 results.append({
                     "id": road_id,
-                    "name": item.get("Name", road_id),
+                    "name": name,
                     "highway": "國道",
                     "speed": speed,
                     "travel_time_minutes": round(travel_time / 60, 1) if travel_time else None,
@@ -120,7 +127,6 @@ class TrafficService:
                     "timestamp": datetime.now().isoformat(),
                 })
 
-        # 補足沒有回傳的路段（用模擬）
         existing_ids = {r["id"] for r in results}
         for segment in FREEWAY_SEGMENTS:
             if segment["id"] not in existing_ids:
@@ -129,7 +135,6 @@ class TrafficService:
         return results
 
     def _speed_to_level(self, speed: float) -> str:
-        """根據速度轉換壅塞等級"""
         if speed >= 60:
             return "low"
         elif speed >= 35:
@@ -138,34 +143,41 @@ class TrafficService:
             return "high"
 
     def _speed_to_color(self, speed: float) -> str:
-        """根據速度轉換顏色"""
         if speed >= 60:
-            return "#27ae60"  # 綠色
+            return "#27ae60"
         elif speed >= 35:
-            return "#f39c12"  # 橙色
+            return "#f39c12"
         else:
-            return "#e74c3c"  # 紅色
+            return "#e74c3c"
 
     def _mock_segment(self, segment: dict) -> dict:
-        """模擬單一路段"""
-        speed = random.randint(30, 100)
+        current_hour = datetime.now().hour
+        if 7 <= current_hour <= 9 or 17 <= current_hour <= 19:
+            speed = random.randint(25, 65)
+        else:
+            speed = random.randint(50, 100)
+
         return {
             "id": segment["id"],
             "name": segment["name"],
             "highway": segment["highway"],
             "speed": speed,
-            "travel_time_minutes": round(segment["name"].split(" ")[-1] if " " in segment["name"] else 30),
+            "travel_time_minutes": random.randint(15, 90),
             "level": self._speed_to_level(speed),
             "color": self._speed_to_color(speed),
-            "source": "模擬資料",
+            "source": "模擬資料 (路段補償)",
             "timestamp": datetime.now().isoformat(),
         }
 
     def _get_mock_traffic(self) -> List[Dict[str, Any]]:
-        """模擬路況資料（API 無法使用時的備案）"""
         results = []
         for segment in FREEWAY_SEGMENTS:
-            speed = random.randint(30, 100)
+            current_hour = datetime.now().hour
+            if 7 <= current_hour <= 9 or 17 <= current_hour <= 19:
+                speed = random.randint(25, 65)
+            else:
+                speed = random.randint(50, 100)
+
             results.append({
                 "id": segment["id"],
                 "name": segment["name"],
@@ -180,8 +192,8 @@ class TrafficService:
         return results
 
     def get_live_traffic_speed(self) -> List[Dict[str, Any]]:
-        """取得即時路況（輕量版，只回傳 id 和 speed）"""
         if self._use_mock:
+            print("⚠️ 使用模擬路況模式")
             traffic_data = self._get_mock_traffic()
         else:
             traffic_data = self._fetch_real_traffic()
@@ -189,13 +201,11 @@ class TrafficService:
         return [{"id": item["id"], "speed": item["speed"]} for item in traffic_data]
 
     def get_full_traffic(self) -> List[Dict[str, Any]]:
-        """取得完整路況資訊"""
         if self._use_mock:
             return self._get_mock_traffic()
         return self._fetch_real_traffic()
 
     def get_summary(self) -> Dict[str, Any]:
-        """取得路況摘要"""
         traffic = self.get_full_traffic()
         speeds = [t["speed"] for t in traffic]
         avg_speed = sum(speeds) / len(speeds) if speeds else 60
@@ -211,7 +221,6 @@ class TrafficService:
         }
 
     def summarize_traffic(self) -> Dict[str, Any]:
-        """取得簡要路況摘要（用於計算）"""
         summary = self.get_summary()
         if summary["avg_speed"] >= 60:
             level = "low"
