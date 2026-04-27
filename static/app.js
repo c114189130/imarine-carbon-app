@@ -94,9 +94,9 @@ function displayResults(data) {
         <div class="card"><h3>💰 總體社會成本分析</h3>
         <table class="cost-table"><thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead><tbody>
         <tr><td><strong>💰 運費</strong></td><td>${formatCurrency(road.freight)}</td><td>${formatCurrency(sea.freight)}</td><td>${formatCurrency(road.freight - sea.freight)}</td></tr>
-        <tr>.html<strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
-        <tr>.html<strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
-        <tr>.html<strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
+        <tr><td><strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
+        <tr><td><strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
+        <tr><td><strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
         <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr>
         </tbody></table></div>`;
     document.getElementById("result").innerHTML = html;
@@ -148,19 +148,27 @@ function displayResults(data) {
         if (optDiv) {
             optDiv.innerHTML = `
                 <table class="cost-table">
-                    <thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>成本項目</th>
+                            <th>🚛 公路</th>
+                            <th>🚢 海運</th>
+                            <th>節省</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <tr>.html運輸成本</td><td>${formatCurrency(opt.road.transport)}</td><td>${formatCurrency(opt.sea.transport)}</td><td>${formatCurrency(opt.savings.transport)}</td></tr>
-                        <tr>.html碳排成本</td><td>${formatCurrency(opt.road.carbon)}</td><td>${formatCurrency(opt.sea.carbon)}</td><td>${formatCurrency(opt.savings.carbon)}</td></tr>
-                        <tr>.html事故成本</td><td>${formatCurrency(opt.road.accident)}</td><td>${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
-                        <tr>.html時間成本</td><td>${formatCurrency(opt.road.time)}</td><td>${formatCurrency(opt.sea.time)}</td><td>${formatCurrency(opt.savings.time)}</td></tr>
-                        <tr style="background:var(--light-cyan);font-weight:bold"><td>總成本</td><td>${formatCurrency(opt.road.total)}</td><td>${formatCurrency(opt.sea.total)}</td><td class="savings-number">${formatCurrency(opt.savings.total)}</td></tr>
+                        <tr><td><strong>運輸成本</strong></td><td>${formatCurrency(opt.road.transport)}</td><td>${formatCurrency(opt.sea.transport)}</td><td>${formatCurrency(opt.savings.transport)}</td></tr>
+                        <tr><td><strong>碳排成本</strong></td><td>${formatCurrency(opt.road.carbon)}</td><td>${formatCurrency(opt.sea.carbon)}</td><td>${formatCurrency(opt.savings.carbon)}</td></tr>
+                        <tr><td><strong>事故成本</strong></td><td>${formatCurrency(opt.road.accident)}</td><td>${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
+                        <tr><td><strong>時間成本</strong></td><td>${formatCurrency(opt.road.time)}</td><td>${formatCurrency(opt.sea.time)}</td><td>${formatCurrency(opt.savings.time)}</td></tr>
+                        <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>總成本</strong></td><td>${formatCurrency(opt.road.total)}</td><td>${formatCurrency(opt.sea.total)}</td><td class="savings-number">${formatCurrency(opt.savings.total)}</td></tr>
                     </tbody>
                 </table>
                 <div class="benefit-grid">
                     <div class="benefit-card carbon"><div class="benefit-icon">🌱</div><div class="benefit-value">${Number(opt.carbon_reduction_kg).toLocaleString()} kg</div><div class="benefit-label">減碳量</div></div>
                     <div class="benefit-card vsl"><div class="benefit-icon">🚸</div><div class="benefit-value">${formatCurrency(opt.vsl_saved)}</div><div class="benefit-label">人命價值節省</div><div class="benefit-sub">相當於減少 ${opt.deaths_reduced} 人死亡</div></div>
-                </div>`;
+                </div>
+            `;
         }
     }
 }
