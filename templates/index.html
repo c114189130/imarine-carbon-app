@@ -2,8 +2,136 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* 首頁專屬額外樣式 */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 180, 216, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .feature-card:hover::before {
+            left: 100%;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--deep-twilight);
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-desc {
+            color: var(--french-blue);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 3rem 0;
+        }
+        
+        .stat-circle {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            width: 180px;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .stat-circle:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.25);
+            border-color: var(--turquoise-surf);
+            box-shadow: 0 0 30px rgba(0, 180, 216, 0.5);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--turquoise-surf);
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: white;
+            margin-top: 0.5rem;
+        }
+        
+        .cta-button {
+            background: linear-gradient(135deg, var(--bright-teal-blue), var(--turquoise-surf));
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 180, 216, 0.4);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 180, 216, 0.6);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -15,26 +143,126 @@
             <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
+    
     <div class="container">
+        <!-- 主視覺區 -->
         <div class="hero fade-in">
-            <h1>智慧貨櫃指派系統</h1>
+            <div class="floating">
+                <h1>🌊 智慧貨櫃指派系統</h1>
+            </div>
             <p>🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運船期 | 🌱 碳排放最佳化</p>
-            <button class="btn btn-primary" onclick="location.href='/input'">🚀 開始指派貨櫃</button>
+            <button class="cta-button" onclick="location.href='/input'">🚀 開始指派貨櫃</button>
         </div>
-        <div class="stats-grid">
-            <div class="stat-card fade-in"><h3>-66%</h3><p>海運 vs 公路碳排</p></div>
-            <div class="stat-card fade-in"><h3>即時</h3><p>TDX 路況 API</p></div>
-            <div class="stat-card fade-in"><h3>長榮海運</h3><p>船期整合</p></div>
-            <div class="stat-card fade-in"><h3>CNS 14064</h3><p>國家標準</p></div>
+        
+        <!-- 統計數字卡片 -->
+        <div class="stats-container">
+            <div class="stat-circle">
+                <div class="stat-number">-66%</div>
+                <div class="stat-label">海運 vs 公路碳排</div>
+            </div>
+            <div class="stat-circle">
+                <div class="stat-number">即時</div>
+                <div class="stat-label">TDX 路況 API</div>
+            </div>
+            <div class="stat-circle">
+                <div class="stat-number">長榮</div>
+                <div class="stat-label">藍色公路航線</div>
+            </div>
+            <div class="stat-circle">
+                <div class="stat-number">CNS</div>
+                <div class="stat-label">14064 國家標準</div>
+            </div>
+        </div>
+        
+        <!-- 功能特色卡片區 -->
+        <div class="feature-grid">
+            <div class="feature-card" onclick="location.href='/input'">
+                <div class="feature-icon">🚛</div>
+                <div class="feature-title">即時路況分析</div>
+                <div class="feature-desc">串接交通部 TDX API，即時掌握國道車流與壅塞狀況</div>
+            </div>
+            <div class="feature-card" onclick="location.href='/input'">
+                <div class="feature-icon">🚢</div>
+                <div class="feature-title">藍色公路船期</div>
+                <div class="feature-desc">整合長榮海運 TBS/TBS2 航線，即時查詢船班與艙位</div>
+            </div>
+            <div class="feature-card" onclick="location.href='/input'">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">AI 多因子決策</div>
+                <div class="feature-desc">結合成本、碳排、風險、時效，自動推薦最佳運輸方案</div>
+            </div>
+            <div class="feature-card" onclick="location.href='/dashboard'">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">碳排放儀表板</div>
+                <div class="feature-desc">視覺化展示減碳成效與運輸趨勢分析</div>
+            </div>
+            <div class="feature-card" onclick="location.href='/certificate_page'">
+                <div class="feature-icon">📄</div>
+                <div class="feature-title">ESG 認證證書</div>
+                <div class="feature-desc">自動產生中英文碳排減量證明書，支持線上驗證</div>
+            </div>
+            <div class="feature-card" onclick="location.href='/history_page'">
+                <div class="feature-icon">📈</div>
+                <div class="feature-title">歷史記錄追蹤</div>
+                <div class="feature-desc">完整記錄每次運輸評估，便於數據分析與追蹤</div>
+            </div>
+        </div>
+        
+        <!-- 資料來源區塊 -->
+        <div class="card fade-in" style="text-align: center; background: rgba(255,255,255,0.95);">
+            <h3>📊 系統資料來源</h3>
+            <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
+                <div>
+                    <strong>🚛 即時路況</strong><br>
+                    交通部 TDX 平台
+                </div>
+                <div>
+                    <strong>🚢 航運資料</strong><br>
+                    長榮海運 TBS/TBS2
+                </div>
+                <div>
+                    <strong>🌱 碳排係數</strong><br>
+                    環保署 / DEFRA
+                </div>
+                <div>
+                    <strong>📐 標準規範</strong><br>
+                    CNS 14064 / ISO 14064
+                </div>
+            </div>
         </div>
     </div>
+    
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li></ul></div>
-            <div class="footer-section"><h4>📚 參考標準</h4><ul><li>CNS 14064-1</li><li>GLEC 物流碳排框架</li><li>DEFRA 排放係數</li></ul></div>
+            <div class="footer-section">
+                <h4>📊 資料來源</h4>
+                <ul>
+                    <li>交通部 TDX 即時路況 API</li>
+                    <li>長榮海運 TBS/TBS2 航線</li>
+                    <li>環保署溫室氣體排放係數</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>📚 參考標準</h4>
+                <ul>
+                    <li>CNS 14064-1 組織溫室氣體盤查</li>
+                    <li>GLEC 物流碳排放框架</li>
+                    <li>DEFRA 排放係數</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>🔗 相關連結</h4>
+                <ul>
+                    <li><a href="https://tdx.transportdata.tw" target="_blank">TDX 交通資料平台</a></li>
+                    <li><a href="https://www.evergreen-shipping.cn" target="_blank">長榮海運官網</a></li>
+                </ul>
+            </div>
         </div>
-        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p></div>
+        <div class="footer-bottom">
+            <p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p>
+        </div>
     </footer>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>
