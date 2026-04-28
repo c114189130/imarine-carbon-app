@@ -25,16 +25,27 @@ function animateValue(el, start, end, duration = 800, decimals = 0) {
 
 function updateLoadingStep(step) {
     const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
-    const texts = ['正在分析最佳運輸方案...', '串接即時交通資料...', '查詢長榮海運船期...', '計算碳排效益與社會成本...', 'AI 多因子決策分析中...'];
+    const texts = [
+        '正在分析最佳運輸方案...',
+        '串接即時交通資料...',
+        '查詢長榮海運船期...',
+        '計算碳排效益與社會成本...',
+        'AI 多因子決策分析中...'
+    ];
     for (let i = 0; i < steps.length; i++) {
         const el = document.getElementById(steps[i]);
         if (el) {
-            if (i < step) { el.classList.add('completed'); el.innerHTML = el.innerHTML.replace('⏳', '✅'); }
-            else if (i === step) el.classList.add('active');
-            if (document.getElementById('loadingText')) {
-                document.getElementById('loadingText').innerText = texts[step];
+            if (i < step) {
+                el.classList.add('completed');
+                el.innerHTML = el.innerHTML.replace('⏳', '✅');
+            } else if (i === step) {
+                el.classList.add('active');
             }
         }
+    }
+    const loadingText = document.getElementById('loadingText');
+    if (loadingText && step < texts.length) {
+        loadingText.innerText = texts[step];
     }
 }
 
@@ -42,7 +53,10 @@ function goToResult() {
     const start = document.getElementById("start").value;
     const end = document.getElementById("end").value;
     const containers = document.getElementById("containers").value;
-    if (!containers || containers <= 0) { alert("請輸入貨櫃數量"); return; }
+    if (!containers || containers <= 0) {
+        alert("請輸入貨櫃數量");
+        return;
+    }
     localStorage.setItem("start", start);
     localStorage.setItem("end", end);
     localStorage.setItem("containers", containers);
@@ -53,12 +67,15 @@ function calculate() {
     const start = localStorage.getItem("start");
     const end = localStorage.getItem("end");
     const containers = localStorage.getItem("containers");
+    
     if (!start || !end || !containers) {
         alert("請先返回輸入頁面填寫資料");
         window.location = "/input";
         return;
     }
+    
     updateLoadingStep(0);
+    
     fetch("/calculate", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
@@ -67,12 +84,25 @@ function calculate() {
     .then(res => res.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-        currentResult = data;
-        displayResults(data);
-        drawCharts(data);
-        initMapAndTraffic(data);
-        document.getElementById("loadingOverlay").style.display = "none";
-        document.getElementById("content").style.display = "block";
+        
+        updateLoadingStep(1);
+        setTimeout(() => {
+            updateLoadingStep(2);
+            setTimeout(() => {
+                updateLoadingStep(3);
+                setTimeout(() => {
+                    updateLoadingStep(4);
+                    setTimeout(() => {
+                        currentResult = data;
+                        displayResults(data);
+                        drawCharts(data);
+                        initMapAndTraffic(data);
+                        document.getElementById("loadingOverlay").style.display = "none";
+                        document.getElementById("content").style.display = "block";
+                    }, 300);
+                }, 300);
+            }, 300);
+        }, 300);
     })
     .catch(err => {
         console.error(err);
@@ -84,23 +114,72 @@ function calculate() {
 }
 
 function displayResults(data) {
-    const road = data.road, sea = data.sea;
+    const road = data.road;
+    const sea = data.sea;
+    
     let html = `
         <div class="result-card">
             <div><h3>📊 AI 多因子決策分析報告</h3></div>
-            <div><p>🚢 ${data.start_name} → 🏁 ${data.end_name}</p><p>📏 距離：<span class="result-value">${Number(data.distance).toLocaleString()}</span> 公里</p><p>📦 貨櫃數量：<span class="result-value">${Number(data.containers).toLocaleString()}</span> FEU</p></div>
-            <div class="recommendation-box">🤖 <strong>AI 推薦方案：${data.best_mode}</strong><br>${data.recommendation}</div>
+            <div>
+                <p>🚢 ${data.start_name} → 🏁 ${data.end_name}</p>
+                <p>📏 距離：<span class="result-value">${Number(data.distance).toLocaleString()}</span> 公里</p>
+                <p>📦 貨櫃數量：<span class="result-value">${Number(data.containers).toLocaleString()}</span> FEU</p>
+            </div>
+            <div class="recommendation-box">
+                🤖 <strong>AI 推薦方案：${data.best_mode}</strong><br>
+                ${data.recommendation}
+            </div>
         </div>
-        <div class="card"><h3>💰 總體社會成本分析</h3>
-        <table class="cost-table"><thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead><tbody>
-        <tr><td><strong>💰 運費</strong></td><td>${formatCurrency(road.freight)}</td><td>${formatCurrency(sea.freight)}</td><td>${formatCurrency(road.freight - sea.freight)}</td></tr>
-        <tr><td><strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
-        <tr><td><strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
-        <tr><td><strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
-        <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr>
-        </tbody></table></div>`;
+        <div class="card">
+            <h3>💰 總體社會成本分析</h3>
+            <table class="cost-table">
+                <thead>
+                    <tr>
+                        <th>成本項目</th>
+                        <th>🚛 公路</th>
+                        <th>🚢 海運</th>
+                        <th>節省</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>💰 運費</strong></td>
+                        <td>${formatCurrency(road.freight)}</td>
+                        <td>${formatCurrency(sea.freight)}</td>
+                        <td>${formatCurrency(road.freight - sea.freight)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>⏳ 時間成本</strong></td>
+                        <td>${formatCurrency(road.time)}</td>
+                        <td>${formatCurrency(sea.time)}</td>
+                        <td>${formatCurrency(road.time - sea.time)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>🏛️ 社會成本</strong></td>
+                        <td>${formatCurrency(road.social)}</td>
+                        <td>${formatCurrency(sea.social)}</td>
+                        <td class="savings-number">${formatCurrency(road.social - sea.social)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>⚠️ VSL風險</strong></td>
+                        <td>${formatCurrency(road.risk)}</td>
+                        <td>${formatCurrency(sea.risk)}</td>
+                        <td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td>
+                    </tr>
+                    <tr style="background:var(--light-cyan);font-weight:bold">
+                        <td><strong>📊 總成本</strong></td>
+                        <td>${formatCurrency(road.total)}</td>
+                        <td>${formatCurrency(sea.total)}</td>
+                        <td class="savings-number">${formatCurrency(data.social_savings)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
     document.getElementById("result").innerHTML = html;
     
+    // 船期資訊
     if (data.ship_schedule) {
         if (document.getElementById("shipName")) document.getElementById("shipName").innerHTML = data.ship_schedule.name;
         if (document.getElementById("shipRoute")) document.getElementById("shipRoute").innerHTML = data.ship_schedule.route || "TBS";
@@ -110,25 +189,46 @@ function displayResults(data) {
         if (document.getElementById("shipSchedule")) document.getElementById("shipSchedule").innerHTML = data.ship_schedule.eta === "FRI" ? "每週五、日" : "每週二、四、六";
     }
     
+    // AI 指派建議
     if (data.dispatch) {
         const de = document.getElementById("dispatchResult");
         if (de) {
             let reasonsHtml = data.dispatch.reasons.map(r => `<li>${r}</li>`).join('');
-            de.innerHTML = `<div class="dispatch-grid">
-                <div class="score-section">
-                    <div class="score-card sea"><div class="score-number" id="scoreSea">0</div><div>🚢 海運分數</div></div>
-                    <div class="score-card road"><div class="score-number" id="scoreRoad">0</div><div>🚛 公路分數</div></div>
-                </div>
-                <div class="decision-section">
-                    <div class="action-box"><p class="action-title">${data.dispatch.action}</p><p>${data.dispatch.suggestion}</p></div>
-                    <div class="count-box"><div><span class="emoji">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> FEU</div><div><span class="emoji">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> FEU</div></div>
-                    <div class="ratio-bars">
-                        <div class="ratio-bar-container"><div id="ratioBarSea" class="ratio-bar-sea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div>
-                        <div class="ratio-bar-container"><div id="ratioBarRoad" class="ratio-bar-road" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div>
+            de.innerHTML = `
+                <div class="dispatch-grid">
+                    <div class="score-section">
+                        <div class="score-card sea">
+                            <div class="score-number" id="scoreSea">0</div>
+                            <div>🚢 海運分數</div>
+                        </div>
+                        <div class="score-card road">
+                            <div class="score-number" id="scoreRoad">0</div>
+                            <div>🚛 公路分數</div>
+                        </div>
                     </div>
-                    <div class="reason-box"><p class="reason-title">📌 詳細分析</p><ul>${reasonsHtml}</ul><hr><p class="why-sea">🌱 海運碳排放僅為公路的 1/3</p></div>
+                    <div class="decision-section">
+                        <div class="action-box">
+                            <p class="action-title">${data.dispatch.action}</p>
+                            <p>${data.dispatch.suggestion}</p>
+                        </div>
+                        <div class="count-box">
+                            <div><span class="emoji">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> FEU</div>
+                            <div><span class="emoji">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> FEU</div>
+                        </div>
+                        <div class="ratio-bars">
+                            <div class="ratio-bar-container"><div id="ratioBarSea" class="ratio-bar-sea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div>
+                            <div class="ratio-bar-container"><div id="ratioBarRoad" class="ratio-bar-road" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div>
+                        </div>
+                        <div class="reason-box">
+                            <p class="reason-title">📌 詳細分析</p>
+                            <ul>${reasonsHtml}</ul>
+                            <hr>
+                            <p class="why-sea">🌱 海運碳排放僅為公路的 1/3</p>
+                        </div>
+                    </div>
                 </div>
-            </div>`;
+            `;
+            
             setTimeout(() => {
                 animateValue(document.getElementById("scoreSea"), 0, data.dispatch.score_sea, 600, 1);
                 animateValue(document.getElementById("scoreRoad"), 0, data.dispatch.score_road, 600, 1);
@@ -142,6 +242,7 @@ function displayResults(data) {
         }
     }
     
+    // 優化模型分析
     if (data.optimization) {
         const opt = data.optimization;
         const optDiv = document.getElementById("optimizationResult");
@@ -157,16 +258,50 @@ function displayResults(data) {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td><strong>運輸成本</strong></td><td>${formatCurrency(opt.road.transport)}</td><td>${formatCurrency(opt.sea.transport)}</td><td>${formatCurrency(opt.savings.transport)}</td></tr>
-                        <tr><td><strong>碳排成本</strong></td><td>${formatCurrency(opt.road.carbon)}</td><td>${formatCurrency(opt.sea.carbon)}</td><td>${formatCurrency(opt.savings.carbon)}</td></tr>
-                        <tr><td><strong>事故成本</strong></td><td>${formatCurrency(opt.road.accident)}</td><td>${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
-                        <tr><td><strong>時間成本</strong></td><td>${formatCurrency(opt.road.time)}</td><td>${formatCurrency(opt.sea.time)}</td><td>${formatCurrency(opt.savings.time)}</td></tr>
-                        <tr style="background:var(--light-cyan);font-weight:bold"><td><strong>總成本</strong></td><td>${formatCurrency(opt.road.total)}</td><td>${formatCurrency(opt.sea.total)}</td><td class="savings-number">${formatCurrency(opt.savings.total)}</td></tr>
+                        <tr>
+                            <td><strong>運輸成本</strong></td>
+                            <td>${formatCurrency(opt.road.transport)}</td>
+                            <td>${formatCurrency(opt.sea.transport)}</td>
+                            <td>${formatCurrency(opt.savings.transport)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>碳排成本</strong></td>
+                            <td>${formatCurrency(opt.road.carbon)}</td>
+                            <td>${formatCurrency(opt.sea.carbon)}</td>
+                            <td>${formatCurrency(opt.savings.carbon)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>事故成本</strong></td>
+                            <td>${formatCurrency(opt.road.accident)}</td>
+                            <td>${formatCurrency(opt.sea.accident)}</td>
+                            <td class="savings-number">${formatCurrency(opt.savings.accident)}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>時間成本</strong></td>
+                            <td>${formatCurrency(opt.road.time)}</td>
+                            <td>${formatCurrency(opt.sea.time)}</td>
+                            <td>${formatCurrency(opt.savings.time)}</td>
+                        </tr>
+                        <tr style="background:var(--light-cyan);font-weight:bold">
+                            <td><strong>總成本</strong></td>
+                            <td>${formatCurrency(opt.road.total)}</td>
+                            <td>${formatCurrency(opt.sea.total)}</td>
+                            <td class="savings-number">${formatCurrency(opt.savings.total)}</td>
+                        </tr>
                     </tbody>
                 </table>
                 <div class="benefit-grid">
-                    <div class="benefit-card carbon"><div class="benefit-icon">🌱</div><div class="benefit-value">${Number(opt.carbon_reduction_kg).toLocaleString()} kg</div><div class="benefit-label">減碳量</div></div>
-                    <div class="benefit-card vsl"><div class="benefit-icon">🚸</div><div class="benefit-value">${formatCurrency(opt.vsl_saved)}</div><div class="benefit-label">人命價值節省</div><div class="benefit-sub">相當於減少 ${opt.deaths_reduced} 人死亡</div></div>
+                    <div class="benefit-card carbon">
+                        <div class="benefit-icon">🌱</div>
+                        <div class="benefit-value">${Number(opt.carbon_reduction_kg).toLocaleString()} kg</div>
+                        <div class="benefit-label">減碳量</div>
+                    </div>
+                    <div class="benefit-card vsl">
+                        <div class="benefit-icon">🚸</div>
+                        <div class="benefit-value">${formatCurrency(opt.vsl_saved)}</div>
+                        <div class="benefit-label">人命價值節省</div>
+                        <div class="benefit-sub">相當於減少 ${opt.deaths_reduced} 人死亡</div>
+                    </div>
                 </div>
             `;
         }
@@ -177,7 +312,6 @@ async function initMapAndTraffic(data) {
     const centerLat = (data.start_lat + data.end_lat) / 2;
     const centerLon = (data.start_lon + data.end_lon) / 2;
     
-    // 清除舊地圖
     if (mapInstance) {
         mapInstance.remove();
         trafficLayers.clear();
@@ -188,14 +322,12 @@ async function initMapAndTraffic(data) {
         return;
     }
     
-    // 建立地圖
     mapInstance = L.map('map').setView([centerLat, centerLon], 7);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
         subdomains: 'abcd'
     }).addTo(mapInstance);
     
-    // 預載 GeoJSON（只載一次）
     try {
         const response = await fetch('/static/taiwan_freeway.geojson');
         const geojson = await response.json();
@@ -211,10 +343,8 @@ async function initMapAndTraffic(data) {
         console.error("載入路網失敗:", e);
     }
     
-    // 延遲載入即時路況
     setTimeout(() => loadTrafficLight(), 1000);
     
-    // 設定定時更新（60秒一次，減少請求）
     if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
     trafficUpdateInterval = setInterval(loadTrafficLight, 60000);
 }
@@ -272,34 +402,45 @@ async function loadTrafficLight() {
 }
 
 function drawCharts(data) {
-    new Chart(document.getElementById("costChart"), {
-        type: 'bar',
-        data: {
-            labels: ['公路', '海運'],
-            datasets: [
-                { label: '運費', data: [data.road.freight, data.sea.freight], backgroundColor: 'rgba(0,119,182,0.7)' },
-                { label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: 'rgba(0,180,216,0.7)' },
-                { label: '社會成本', data: [data.road.social, data.sea.social], backgroundColor: 'rgba(72,202,228,0.7)' },
-                { label: 'VSL風險', data: [data.road.risk, data.sea.risk], backgroundColor: 'rgba(144,224,239,0.7)' }
-            ]
-        },
-        options: { responsive: true }
-    });
-    new Chart(document.getElementById("carbonChart"), {
-        type: 'bar',
-        data: {
-            labels: ['公路', '海運'],
-            datasets: [{ label: '碳排放 (kg CO2e)', data: [data.road.carbon, data.sea.carbon], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
-        },
-        options: { responsive: true }
-    });
+    const costCtx = document.getElementById("costChart");
+    if (costCtx) {
+        new Chart(costCtx, {
+            type: 'bar',
+            data: {
+                labels: ['公路', '海運'],
+                datasets: [
+                    { label: '運費', data: [data.road.freight, data.sea.freight], backgroundColor: 'rgba(0,119,182,0.7)' },
+                    { label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: 'rgba(0,180,216,0.7)' },
+                    { label: '社會成本', data: [data.road.social, data.sea.social], backgroundColor: 'rgba(72,202,228,0.7)' },
+                    { label: 'VSL風險', data: [data.road.risk, data.sea.risk], backgroundColor: 'rgba(144,224,239,0.7)' }
+                ]
+            },
+            options: { responsive: true }
+        });
+    }
+    
+    const carbonCtx = document.getElementById("carbonChart");
+    if (carbonCtx) {
+        new Chart(carbonCtx, {
+            type: 'bar',
+            data: {
+                labels: ['公路', '海運'],
+                datasets: [{ label: '碳排放 (kg CO2e)', data: [data.road.carbon, data.sea.carbon], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
+            },
+            options: { responsive: true }
+        });
+    }
 }
 
 function generateCert() {
     const name = document.getElementById("name").value;
-    if (!name) { alert("請輸入公司名稱"); return; }
+    if (!name) {
+        alert("請輸入公司名稱");
+        return;
+    }
     const carbonSaved = localStorage.getItem("savedCO2") || 0;
     const reductionPct = localStorage.getItem("reductionPct") || 0;
+    
     fetch("/certificate", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
@@ -309,16 +450,24 @@ function generateCert() {
     .then(data => {
         localStorage.setItem("cert", JSON.stringify(data));
         document.getElementById("certResult").innerHTML = `
-            <div class="card" style="text-align:center"><h3>✅ 碳排認證已產生</h3>
-            <p>公司：${data.name}</p><p>編號：${data.cert_id}</p><p>日期：${data.date}</p>
-            <button class="btn btn-primary" onclick="downloadPDF('chinese')">📄 中文證書</button>
-            <button class="btn btn-primary" onclick="downloadPDF('english')">📄 English Certificate</button></div>`;
+            <div class="card" style="text-align:center">
+                <h3>✅ 碳排認證已產生</h3>
+                <p>公司：${data.name}</p>
+                <p>編號：${data.cert_id}</p>
+                <p>日期：${data.date}</p>
+                <button class="btn btn-primary" onclick="downloadPDF('chinese')">📄 中文證書</button>
+                <button class="btn btn-primary" onclick="downloadPDF('english')">📄 English Certificate</button>
+            </div>
+        `;
     });
 }
 
 function downloadPDF(lang) {
     const cert = JSON.parse(localStorage.getItem("cert"));
-    if (!cert) { alert("請先產生認證"); return; }
+    if (!cert) {
+        alert("請先產生認證");
+        return;
+    }
     const endpoint = lang === 'chinese' ? '/download_pdf_chinese' : '/download_pdf_english';
     fetch(endpoint, {
         method: "POST",
@@ -352,19 +501,24 @@ function loadHistory() {
             if (!tbody) return;
             tbody.innerHTML = "";
             if (data.length === 0) {
-                tbody.innerHTML = '</tr><td colspan="9">暫無歷史記錄</td></table>';
+                tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄</td></tr>';
                 return;
             }
             const reversed = [...data].reverse();
             reversed.forEach(r => {
-                tbody.innerHTML += `<tr>
-                    <td>${r.date}</td><td>${r.start}</td><td>${r.end}</td>
-                    <td>${r.containers}</td><td>${r.base_distance} km</td>
-                    <td>${Number(r.sea_carbon || 0).toLocaleString()} kg</td>
-                    <td>${r.best_mode}</td>
-                    <td>${Number(r.carbon_improvement || 0).toLocaleString()} kg</td>
-                    <td>${r.reduction_pct || 0}%</td>
-                </tr>`;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${r.date}</td>
+                        <td>${r.start}</td>
+                        <td>${r.end}</td>
+                        <td>${r.containers}</td>
+                        <td>${r.base_distance} km</td>
+                        <td>${Number(r.sea_carbon || 0).toLocaleString()} kg</td>
+                        <td>${r.best_mode}</td>
+                        <td>${Number(r.carbon_improvement || 0).toLocaleString()} kg</td>
+                        <td>${r.reduction_pct || 0}%</td>
+                    </tr>
+                `;
             });
             drawHistoryChart(data);
         })
@@ -401,10 +555,12 @@ function loadDashboard() {
             const total = data.reduce((s, d) => s + (d.carbon_improvement || 0), 0);
             const avg = data.reduce((s, d) => s + (d.reduction_pct || 0), 0) / data.length;
             const seaCount = data.filter(d => d.best_mode === "海運").length;
+            
             animateValue(document.getElementById("totalReduction"), 0, total, 1000);
             document.getElementById("avgReduction").innerText = avg.toFixed(1) + "%";
             document.getElementById("totalCount").innerText = data.length;
             document.getElementById("seaRate").innerText = Math.round(seaCount / data.length * 100) + "%";
+            
             new Chart(document.getElementById("trendChart"), {
                 type: 'line',
                 data: {
@@ -412,6 +568,7 @@ function loadDashboard() {
                     datasets: [{ label: "減碳量 (kg)", data: data.slice(-14).map(d => d.carbon_improvement || 0), borderColor: "#0077b6", fill: true }]
                 }
             });
+            
             new Chart(document.getElementById("modeChart"), {
                 type: 'doughnut',
                 data: { labels: ["海運推薦", "公路推薦"], datasets: [{ data: [seaCount, data.length - seaCount], backgroundColor: ["#00b4d8", "#48cae4"] }] }
