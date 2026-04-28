@@ -68,7 +68,7 @@ function calculate() {
 function displayResults(data) {
     const isSea = data.best_mode === "海運";
 
-    // ===== 1. 推薦結果大字卡 =====
+    // ===== 推薦結果大字卡 =====
     const recContent = document.getElementById("recommendationContent");
     const modeEmoji = isSea ? "🚢" : "🚛";
     const modeName = isSea ? "海拖（藍色公路）" : "路拖（公路運輸）";
@@ -88,7 +88,7 @@ function displayResults(data) {
         </p>
     `;
 
-    // ===== 2. 路拖 vs 海拖比較表 =====
+    // ===== 路拖 vs 海拖比較表 =====
     document.getElementById("roadFreight").innerText = formatCurrency(data.road.freight);
     document.getElementById("seaFreight").innerText = formatCurrency(data.sea.freight);
     document.getElementById("roadCarbon").innerText = Number(data.road.carbon).toLocaleString() + " kg CO2e";
@@ -96,10 +96,11 @@ function displayResults(data) {
     document.getElementById("roadTotal").innerText = formatCurrency(data.road.total);
     document.getElementById("seaTotal").innerText = formatCurrency(data.sea.total);
 
-    // ===== 3. 路況 =====
+    // ===== 國道路況 =====
     document.getElementById("nh1Speed").innerText = data.road_condition.nh1_speed + " km/h";
     document.getElementById("nh3Speed").innerText = data.road_condition.nh3_speed + " km/h";
     document.getElementById("overallSpeed").innerText = data.road_condition.avg_speed + " km/h";
+    
     ['nh1Speed', 'nh3Speed', 'overallSpeed'].forEach(id => {
         const el = document.getElementById(id);
         const v = parseFloat(el.innerText);
@@ -108,7 +109,7 @@ function displayResults(data) {
         else el.style.color = '#e74c3c';
     });
 
-    // ===== 4. 船班資訊 =====
+    // ===== 船班資訊 =====
     const s = data.ship_schedule || {};
     document.getElementById("shipName").innerText = s.name_zh ? `${s.name} (${s.name_zh})` : (s.name || "-");
     document.getElementById("shipVoyage").innerText = s.voyage || "-";
@@ -127,6 +128,7 @@ function displayResults(data) {
         document.getElementById("virtualBadge").style.display = "none";
     }
 
+    // 艙位進度條
     const capPct = s.capacity > 0 ? (s.available / s.capacity * 100) : 0;
     setTimeout(() => {
         const bar = document.getElementById("capacityBar");
@@ -138,7 +140,7 @@ function displayResults(data) {
         }
     }, 300);
 
-    // ===== 5. 碳排節省卡片 =====
+    // ===== 碳排節省卡片 =====
     const carbonCard = document.getElementById("carbonCard");
     if (data.carbon_improvement > 0) {
         carbonCard.style.display = "block";
@@ -153,6 +155,7 @@ function displayResults(data) {
     }
 }
 
+// ================= 地圖 =================
 async function initMapAndTraffic(data) {
     const centerLat = (data.start_lat + data.end_lat) / 2;
     const centerLon = (data.start_lon + data.end_lon) / 2;
@@ -169,7 +172,7 @@ async function initMapAndTraffic(data) {
     
     mapInstance = L.map('map').setView([centerLat, centerLon], 7);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        attribution: '&copy; OSM',
         subdomains: 'abcd'
     }).addTo(mapInstance);
 
