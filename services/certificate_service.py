@@ -14,42 +14,30 @@ try:
 except:
     FONT_NAME = 'Helvetica'
 
-
-def generate_certificate_id() -> str:
+def generate_certificate_id():
     return f"CC-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
 
-
-def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
+def build_certificate_pdf(certificate, lang="zh"):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
 
     if lang == "zh":
         title = "🌱 碳排放減量證明書"
-        cert_label = "證書編號"
-        date_label = "核發日期"
-        company_label = "公司名稱"
-        route_label = "運輸路線"
-        containers_label = "貨櫃數量"
-        reduction_label = "減碳量"
-        reduction_rate_label = "減碳比例"
+        cert_label, date_label, company_label = "證書編號", "核發日期", "公司名稱"
+        route_label, containers_label = "運輸路線", "貨櫃數量 (FEU)"
+        reduction_label, reduction_rate_label = "減碳量", "減碳比例"
         basis_title = "📊 計算依據"
         basis_items = ["• ISO 14064 原則", "• GLEC Framework（物流碳排）", "• DEFRA emission factors", "• 台灣環境部碳費參考"]
-        footer = "特此證明"
-        issuer = "iMarine 智慧海運碳排認證中心"
+        footer, issuer = "特此證明", "iMarine 智慧海運碳排認證中心"
     else:
         title = "🌱 Carbon Emission Reduction Certificate"
-        cert_label = "Certificate ID"
-        date_label = "Issue Date"
-        company_label = "Company Name"
-        route_label = "Route"
-        containers_label = "Containers (FEU)"
-        reduction_label = "Carbon Saved"
-        reduction_rate_label = "Reduction Rate"
+        cert_label, date_label, company_label = "Certificate ID", "Issue Date", "Company Name"
+        route_label, containers_label = "Route", "Containers (FEU)"
+        reduction_label, reduction_rate_label = "Carbon Saved", "Reduction Rate"
         basis_title = "📊 Calculation Basis"
         basis_items = ["• ISO 14064", "• GLEC Framework", "• DEFRA emission factors", "• Taiwan EPA Carbon Fee"]
-        footer = "Hereby Certified"
-        issuer = "iMarine Carbon Management Center"
+        footer, issuer = "Hereby Certified", "iMarine Carbon Management Center"
 
     title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=24, textColor=colors.HexColor('#03045e'), alignment=1, spaceAfter=30, fontName=FONT_NAME)
     cert_style = ParagraphStyle('Cert', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor('#023e8a'), spaceAfter=12, fontName=FONT_NAME)
@@ -68,7 +56,6 @@ def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
     ]
     for item in basis_items:
         content.append(Paragraph(item, cert_style))
-
     content.extend([
         Spacer(1, 20),
         Paragraph(f"{reduction_label}：{record.get('carbon_improvement', 0):.2f} kg CO2e", cert_style),

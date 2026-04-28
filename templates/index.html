@@ -1,162 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
-    <style>
-        /* 首頁專屬動畫 */
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes shipMove {
-            0% { transform: translateX(-100px); opacity: 0; }
-            100% { transform: translateX(calc(100vw + 100px)); opacity: 1; }
-        }
-        
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .hero {
-            background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
-            background-size: 200% 200%;
-            animation: gradientMove 10s ease infinite;
-            border-radius: 30px;
-            padding: 4rem 3rem;
-            margin: 2rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero::before {
-            content: '🚢';
-            position: absolute;
-            bottom: 20px;
-            left: -50px;
-            font-size: 60px;
-            opacity: 0.3;
-            animation: shipMove 15s linear infinite;
-        }
-        
-        .hero::after {
-            content: '🌊';
-            position: absolute;
-            bottom: 10px;
-            right: 20px;
-            font-size: 40px;
-            opacity: 0.2;
-        }
-        
-        .hero h1 {
-            font-size: 3rem;
-            background: linear-gradient(135deg, #fff, #caf0f8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 1rem;
-            animation: fadeInUp 0.8s ease;
-        }
-        
-        .hero p {
-            font-size: 1.2rem;
-            color: rgba(255,255,255,0.9);
-            margin-bottom: 2rem;
-            animation: fadeInUp 0.8s ease 0.2s backwards;
-        }
-        
-        .hero-buttons {
-            animation: fadeInUp 0.8s ease 0.4s backwards;
-        }
-        
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-        
-        .feature-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            cursor: pointer;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-        
-        .feature-card h3 {
-            color: #03045e;
-            margin: 1rem 0 0.5rem;
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-        }
-        
-        .stats-grid-home {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-            text-align: center;
-        }
-        
-        .stat-number-home {
-            font-size: 2.5rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #03045e, #0077b6);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .process-steps {
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin: 3rem 0;
-        }
-        
-        .step {
-            flex: 1;
-            text-align: center;
-            padding: 1.5rem;
-            background: white;
-            border-radius: 20px;
-            min-width: 150px;
-        }
-        
-        .step-number {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #0077b6, #00b4d8);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -165,153 +13,66 @@
             <a href="/">🏠 首頁</a>
             <a href="/input">🚢 開始指派</a>
             <a href="/history_page">📊 歷史記錄</a>
-            <a href="/dashboard">📈 Dashboard</a>
+            <a href="/dashboard">📈 儀表板</a>
         </div>
     </nav>
-    
+
     <div class="container">
-        <!-- Hero 首屏 -->
         <div class="hero">
-            <div class="hero-content">
-                <h1>🌊 iMarine 智慧海運碳排管理平台</h1>
-                <p>AI 分析公路與海運最佳運輸方案<br>即時路況 × 船期資料 × ESG 減碳決策</p>
-                <div class="hero-buttons">
-                    <a href="/input" class="btn btn-primary">🚢 立即開始分析</a>
-                    <a href="/dashboard" class="btn btn-outline">📈 查看 Dashboard</a>
-                </div>
+            <h1>🌊 iMarine 智慧海運碳排管理</h1>
+            <p style="color: white; margin-top: 1rem; font-size: 1.2rem;">整合 TDX 即時路況 × 長榮藍色公路 × 碳排最佳化</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/input" class="btn btn-primary" style="font-size: 1.3rem; padding: 15px 50px;">🚀 開始貨櫃指派</a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem;">
+            <div class="card">
+                <h3>🛣️ 即時國道路況</h3>
+                <p>串接 TDX 運輸資料平台，取得國道一號、三號即時車速，精準評估公路運輸時間。</p>
+            </div>
+            <div class="card">
+                <h3>🚢 長榮藍色公路</h3>
+                <p>使用長榮海運真實船班資料（TBS/TBN 航線），高雄－台中航線完整船期。</p>
+            </div>
+            <div class="card">
+                <h3>🌱 碳排放計算</h3>
+                <p>依 GLEC 框架計算運輸碳足跡，海運碳排僅公路的 1/3，協助達成減碳目標。</p>
             </div>
         </div>
-        
-        <!-- 三大核心功能 -->
-        <div class="feature-grid">
-            <div class="feature-card" onclick="location.href='/input'">
-                <div class="feature-icon">🚛</div>
-                <h3>智慧運輸分析</h3>
-                <p>AI 比較公路與海運成本、碳排、風險，推薦最佳方案</p>
-            </div>
-            <div class="feature-card" onclick="location.href='/certificate_page'">
-                <div class="feature-icon">🌱</div>
-                <h3>ESG 減碳管理</h3>
-                <p>自動產生碳排認證證書與 ESG 報告</p>
-            </div>
-            <div class="feature-card" onclick="location.href='/dashboard'">
-                <div class="feature-icon">📊</div>
-                <h3>即時 Dashboard</h3>
-                <p>歷史數據視覺化，追蹤減碳成效</p>
-            </div>
-        </div>
-        
-        <!-- 數字震撼區 -->
-        <div class="stats-grid-home" id="statsSection">
-            <div>
-                <div class="stat-number-home" id="totalCarbonStat">0</div>
-                <p>累積減碳 (kg)</p>
-            </div>
-            <div>
-                <div class="stat-number-home" id="avgSavingStat">0</div>
-                <p>平均節省成本 (NTD)</p>
-            </div>
-            <div>
-                <div class="stat-number-home" id="seaRateStat">0%</div>
-                <p>海運推薦率</p>
-            </div>
-            <div>
-                <div class="stat-number-home" id="totalCountStat">0</div>
-                <p>已分析次數</p>
-            </div>
-        </div>
-        
-        <!-- 流程圖 -->
-        <div class="card fade-in">
-            <h2 style="text-align: center;">📋 運作流程</h2>
-            <div class="process-steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>輸入起訖點</h3>
-                    <p>選擇港口與貨櫃數量</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>AI 分析</h3>
-                    <p>即時路況與船期評估</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>推薦方案</h3>
-                    <p>最佳運輸模式建議</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <h3>產生證書</h3>
-                    <p>ESG 碳排證明</p>
-                </div>
+
+        <div class="card" style="margin-top: 2rem; text-align: center;">
+            <h3>📋 支援航線</h3>
+            <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+                <div style="background: var(--light-cyan); padding: 1rem; border-radius: 15px;">🚢 高雄港 → 台中港 <br><small>長榮 TBS 真實船班</small></div>
+                <div style="background: var(--light-cyan); padding: 1rem; border-radius: 15px;">🚢 台中港 → 汐止調度場 <br><small>模擬船班</small></div>
+                <div style="background: var(--light-cyan); padding: 1rem; border-radius: 15px;">🚢 高雄港 → 汐止調度場 <br><small>模擬船班</small></div>
+                <div style="background: var(--light-cyan); padding: 1rem; border-radius: 15px;">🚢 汐止調度場 → 高雄港 <br><small>模擬船班</small></div>
             </div>
         </div>
     </div>
-    
+
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-section">
-                <h4>📊 資料來源</h4>
+                <h4>📞 聯絡我們</h4>
                 <ul>
-                    <li>交通部 TDX 即時路況 API</li>
-                    <li>長榮海運 TBS/TBS2 航線</li>
-                    <li>環保署溫室氣體排放係數</li>
+                    <li>📧 Email: imarine@example.com</li>
+                    <li>📱 電話: 02-1234-5678</li>
                 </ul>
             </div>
             <div class="footer-section">
-                <h4>📚 參考標準</h4>
+                <h4>🔗 相關連結</h4>
                 <ul>
-                    <li>CNS 14064-1 組織溫室氣體盤查</li>
-                    <li>GLEC 物流碳排放框架</li>
-                    <li>DEFRA 排放係數</li>
+                    <li><a href="https://www.evergreen-marine.com" style="color: #ccc;">長榮海運</a></li>
+                    <li><a href="https://tdx.transportdata.tw" style="color: #ccc;">TDX 運輸資料</a></li>
                 </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p>
+            <p>© 2024 iMarine 智慧海運碳排管理系統 | Powered by TDX & Evergreen Marine</p>
         </div>
     </footer>
-    
-    <script src="/static/app.js"></script>
-    <script>
-        // 載入統計數字動畫
-        fetch('/get_history')
-            .then(res => res.json())
-            .then(data => {
-                if (data.length > 0) {
-                    const totalCarbon = data.reduce((s, d) => s + (d.carbon_improvement || 0), 0);
-                    const totalSavings = data.reduce((s, d) => s + (d.social_savings || 0), 0);
-                    const avgSaving = totalSavings / data.length;
-                    const seaCount = data.filter(d => d.best_mode === "海運").length;
-                    const seaRate = (seaCount / data.length * 100).toFixed(0);
-                    
-                    animateNumber(document.getElementById('totalCarbonStat'), 0, totalCarbon, 1500);
-                    animateNumber(document.getElementById('avgSavingStat'), 0, avgSaving, 1500);
-                    document.getElementById('seaRateStat').innerText = seaRate + "%";
-                    document.getElementById('totalCountStat').innerText = data.length;
-                } else {
-                    document.getElementById('totalCarbonStat').innerText = "0";
-                    document.getElementById('avgSavingStat').innerText = "0";
-                    document.getElementById('seaRateStat').innerText = "0%";
-                    document.getElementById('totalCountStat').innerText = "0";
-                }
-            });
-        
-        function animateNumber(el, start, end, duration) {
-            if (!el) return;
-            const range = end - start;
-            const increment = range / (duration / 16);
-            let current = start;
-            const timer = setInterval(() => {
-                current += increment;
-                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                el.innerText = Math.round(current).toLocaleString();
-            }, 16);
-        }
-    </script>
 </body>
 </html>

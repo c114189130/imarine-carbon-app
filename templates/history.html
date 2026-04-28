@@ -1,22 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <title>歷史記錄 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body onload="loadHistory()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 {{ app_title }}</div>
-        <div class="navbar-links"><a href="/">🏠 首頁</a><a href="/input">🚢 開始指派</a><a href="/history_page">📊 歷史記錄</a><a href="/dashboard">📈 Dashboard</a></div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 儀表板</a>
+        </div>
     </nav>
     <div class="container">
         <h1>📊 貨櫃指派歷史記錄</h1>
-        <div class="chart-container fade-in"><canvas id="historyChart"></canvas></div>
-        <div class="card fade-in"><div style="overflow-x:auto"><table class="history-table"><thead><tr><th>時間</th><th>起點</th><th>終點</th><th>貨櫃數</th><th>距離</th><th>海運碳排</th><th>最佳方案</th><th>減碳量</th><th>減碳比例</th></table></thead><tbody id="historyBody"><tr><td colspan="9">載入中...</td></tr></tbody></table></div></div>
+        <div class="card">
+            <div style="overflow-x:auto">
+                <table class="history-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:linear-gradient(135deg, var(--deep-twilight), var(--bright-teal-blue)); color:white;">
+                            <th style="padding:1rem;">時間</th>
+                            <th>起點</th>
+                            <th>終點</th>
+                            <th>貨櫃數(FEU)</th>
+                            <th>距離</th>
+                            <th>海運碳排</th>
+                            <th>最佳方案</th>
+                            <th>減碳量</th>
+                            <th>減碳比例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="9">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-    <script src="/static/app.js"></script>
+    <script>
+        function loadHistory() {
+            fetch("/get_history")
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById("historyBody");
+                    if (!tbody) return;
+                    tbody.innerHTML = "";
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄</td></tr>';
+                        return;
+                    }
+                    [...data].reverse().forEach(r => {
+                        tbody.innerHTML += `
+                            <tr style="text-align:center; border-bottom:1px solid #ddd;">
+                                <td style="padding:0.8rem;">${r.date}</td>
+                                <td>${r.start}</td>
+                                <td>${r.end}</td>
+                                <td>${r.containers}</td>
+                                <td>${r.base_distance} km</td>
+                                <td>${(r.sea_carbon || 0).toLocaleString()} kg</td>
+                                <td>${r.best_mode}</td>
+                                <td>${(r.carbon_improvement || 0).toLocaleString()} kg</td>
+                                <td>${r.reduction_pct || 0}%</td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+    </script>
 </body>
 </html>
