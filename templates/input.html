@@ -20,13 +20,12 @@
     <div class="container">
         <div class="hero">
             <h1>🚢 貨櫃運輸指派系統</h1>
-            <p style="color: white; margin-top: 1rem;">選擇起迄港口，智慧計算路拖 vs 海拖最佳方案</p>
+            <p style="color:white;margin-top:1rem;">選擇起迄港口，智慧計算路拖 vs 海拖最佳方案</p>
         </div>
 
-        <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card" style="max-width:600px;margin:0 auto;">
             <h2>📋 運輸需求</h2>
             
-            <!-- 起始港 -->
             <div class="form-group">
                 <label for="startPort">🚀 起始港</label>
                 <select id="startPort" onchange="updateEndPorts()">
@@ -37,7 +36,6 @@
                 </select>
             </div>
 
-            <!-- 目的港 -->
             <div class="form-group">
                 <label for="endPort">🏁 目的港</label>
                 <select id="endPort">
@@ -45,119 +43,63 @@
                 </select>
             </div>
 
-            <!-- 預定出貨時間 -->
             <div class="form-group">
                 <label for="shipDate">📅 預定出貨日期</label>
                 <input type="date" id="shipDate">
             </div>
 
-            <!-- 貨櫃規格 -->
             <div class="form-group">
-                <label>📦 貨櫃規格</label>
-                <div style="display: flex; gap: 1rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 10px 20px; border: 2px solid var(--light-cyan); border-radius: 12px; flex: 1; justify-content: center;">
-                        <input type="radio" name="containerType" value="20" checked onchange="updateContainerLabel()"> 20呎 (TEU)
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 10px 20px; border: 2px solid var(--light-cyan); border-radius: 12px; flex: 1; justify-content: center;">
-                        <input type="radio" name="containerType" value="40" onchange="updateContainerLabel()"> 40呎 (FEU)
-                    </label>
-                </div>
+                <label for="containers">📦 貨櫃數量 (FEU)</label>
+                <input type="number" id="containers" placeholder="請輸入 1-5000 FEU" min="1" max="5000" value="100">
             </div>
 
-            <!-- 貨櫃數量 -->
-            <div class="form-group">
-                <label for="containers">🔢 <span id="containerUnitLabel">20呎貨櫃數量 (TEU)</span></label>
-                <input type="number" id="containers" placeholder="請輸入 1-5000" min="1" max="5000" value="100">
-            </div>
-
-            <div style="text-align: center; margin-top: 2rem;">
-                <button class="btn btn-primary" onclick="goToResult()" style="width: 100%; font-size: 1.2rem; padding: 15px;">
-                    🚀 開始計算
-                </button>
+            <div style="text-align:center;margin-top:2rem;">
+                <button class="btn btn-primary" onclick="goToResult()" style="width:100%;font-size:1.2rem;padding:15px;">🚀 開始計算</button>
             </div>
         </div>
     </div>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-section">
-                <h4>📞 聯絡我們</h4>
-                <ul>
-                    <li>📧 Email: imarine@example.com</li>
-                    <li>📱 電話: 02-1234-5678</li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>🔗 相關連結</h4>
-                <ul>
-                    <li><a href="https://www.evergreen-marine.com" style="color: #ccc;">長榮海運</a></li>
-                    <li><a href="https://tdx.transportdata.tw" style="color: #ccc;">TDX 運輸資料</a></li>
-                </ul>
-            </div>
+            <div class="footer-section"><h4>📞 聯絡我們</h4><ul><li>📧 imarine@example.com</li></ul></div>
         </div>
-        <div class="footer-bottom">
-            <p>© 2024 iMarine 智慧海運碳排管理系統 | Powered by TDX & Evergreen Marine</p>
-        </div>
+        <div class="footer-bottom"><p>© 2024 iMarine</p></div>
     </footer>
 
     <script>
-        // 目的港選項（根據起始港過濾）
-        const allPorts = [
-            { value: "kaohsiung", label: "高雄港" },
-            { value: "taichung", label: "台中港" },
-            { value: "taipei", label: "汐止調度場" }
+        var allPorts = [
+            {value:"kaohsiung",label:"高雄港"},
+            {value:"taichung",label:"台中港"},
+            {value:"taipei",label:"汐止調度場"}
         ];
-
-        function updateEndPorts() {
-            const startVal = document.getElementById("startPort").value;
-            const endSelect = document.getElementById("endPort");
-            endSelect.innerHTML = '<option value="">請選擇目的港</option>';
-            
-            if (!startVal) return;
-            
-            allPorts.forEach(port => {
-                if (port.value !== startVal) {
-                    const option = document.createElement("option");
-                    option.value = port.value;
-                    option.textContent = port.label;
-                    endSelect.appendChild(option);
+        function updateEndPorts(){
+            var sv = document.getElementById("startPort").value;
+            var es = document.getElementById("endPort");
+            es.innerHTML = '<option value="">請選擇目的港</option>';
+            if(!sv) return;
+            allPorts.forEach(function(p){
+                if(p.value !== sv){
+                    var o = document.createElement("option");
+                    o.value = p.value;
+                    o.textContent = p.label;
+                    es.appendChild(o);
                 }
             });
         }
-
-        function updateContainerLabel() {
-            const type = document.querySelector('input[name="containerType"]:checked').value;
-            const label = document.getElementById("containerUnitLabel");
-            if (type === "20") {
-                label.innerText = "20呎貨櫃數量 (TEU)";
-            } else {
-                label.innerText = "40呎貨櫃數量 (FEU)";
-            }
-        }
-
-        function goToResult() {
-            const start = document.getElementById("startPort").value;
-            const end = document.getElementById("endPort").value;
-            const containers = document.getElementById("containers").value;
-            const shipDate = document.getElementById("shipDate").value;
-            const containerType = document.querySelector('input[name="containerType"]:checked').value;
-            
-            if (!start) { alert("請選擇起始港"); return; }
-            if (!end) { alert("請選擇目的港"); return; }
-            if (!containers || containers <= 0 || containers > 5000) {
-                alert("貨櫃數量需介於 1 到 5000 之間");
-                return;
-            }
-            
+        function goToResult(){
+            var start = document.getElementById("startPort").value;
+            var end = document.getElementById("endPort").value;
+            var containers = document.getElementById("containers").value;
+            var shipDate = document.getElementById("shipDate").value;
+            if(!start){alert("請選擇起始港");return;}
+            if(!end){alert("請選擇目的港");return;}
+            if(!containers || containers<=0 || containers>5000){alert("貨櫃數量需介於 1 到 5000 FEU");return;}
             localStorage.setItem("start", start);
             localStorage.setItem("end", end);
             localStorage.setItem("containers", containers);
             localStorage.setItem("shipDate", shipDate);
-            localStorage.setItem("containerType", containerType);
-            window.location = "/result";
+            window.location.href = "/result";
         }
-
-        // 預設日期為今天
         document.getElementById("shipDate").value = new Date().toISOString().split('T')[0];
     </script>
 </body>
