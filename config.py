@@ -10,6 +10,10 @@ DATA_DIR.mkdir(exist_ok=True)
 APP_TITLE = "iMarine 智慧海運碳排管理系統"
 SECRET_KEY = "change-me-in-production"
 
+# TDX API 憑證（請填入你的）
+TDX_CLIENT_ID = "你的App ID"
+TDX_CLIENT_SECRET = "你的App Key"
+
 EMISSION_FACTORS = {
     "road": 0.06,
     "sea": 0.02,

@@ -8,7 +8,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# 註冊中文字型
 try:
     pdfmetrics.registerFont(TTFont('MicrosoftJhengHei', 'msjh.ttf'))
     FONT_NAME = 'MicrosoftJhengHei'
@@ -27,7 +26,6 @@ def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
 
     if lang == "zh":
         title = "🌱 碳排放減量證明書"
-        title_text = "碳排放減量證明書"
         cert_label = "證書編號"
         date_label = "核發日期"
         company_label = "公司名稱"
@@ -36,17 +34,11 @@ def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
         reduction_label = "減碳量"
         reduction_rate_label = "減碳比例"
         basis_title = "📊 計算依據"
-        basis_items = [
-            "• ISO 14064 原則",
-            "• GLEC Framework（物流碳排）",
-            "• DEFRA emission factors",
-            "• 台灣環境部碳費參考",
-        ]
+        basis_items = ["• ISO 14064 原則", "• GLEC Framework（物流碳排）", "• DEFRA emission factors", "• 台灣環境部碳費參考"]
         footer = "特此證明"
         issuer = "iMarine 智慧海運碳排認證中心"
     else:
         title = "🌱 Carbon Emission Reduction Certificate"
-        title_text = "Carbon Emission Reduction Certificate"
         cert_label = "Certificate ID"
         date_label = "Issue Date"
         company_label = "Company Name"
@@ -55,23 +47,12 @@ def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
         reduction_label = "Carbon Saved"
         reduction_rate_label = "Reduction Rate"
         basis_title = "📊 Calculation Basis"
-        basis_items = [
-            "• ISO 14064",
-            "• GLEC Framework",
-            "• DEFRA emission factors",
-            "• Taiwan EPA Carbon Fee",
-        ]
+        basis_items = ["• ISO 14064", "• GLEC Framework", "• DEFRA emission factors", "• Taiwan EPA Carbon Fee"]
         footer = "Hereby Certified"
         issuer = "iMarine Carbon Management Center"
 
-    title_style = ParagraphStyle(
-        'Title', parent=styles['Title'], fontSize=24,
-        textColor=colors.HexColor('#03045e'), alignment=1, spaceAfter=30, fontName=FONT_NAME
-    )
-    cert_style = ParagraphStyle(
-        'Cert', parent=styles['Normal'], fontSize=12,
-        textColor=colors.HexColor('#023e8a'), spaceAfter=12, fontName=FONT_NAME
-    )
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontSize=24, textColor=colors.HexColor('#03045e'), alignment=1, spaceAfter=30, fontName=FONT_NAME)
+    cert_style = ParagraphStyle('Cert', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor('#023e8a'), spaceAfter=12, fontName=FONT_NAME)
 
     record = certificate.get("record", {})
     content = [
@@ -94,6 +75,7 @@ def build_certificate_pdf(certificate: dict, lang: str = "zh") -> BytesIO:
         Paragraph(f"{reduction_rate_label}：{record.get('reduction_pct', 0)}%", cert_style),
         Spacer(1, 30),
         Paragraph(footer, cert_style),
+        Spacer(1, 10),
         Paragraph(issuer, cert_style),
     ])
 

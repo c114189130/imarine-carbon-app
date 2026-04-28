@@ -176,44 +176,99 @@ function displayResults(data) {
 async function initMapAndTraffic(data) {
     const centerLat = (data.start_lat + data.end_lat) / 2;
     const centerLon = (data.start_lon + data.end_lon) / 2;
-    if (mapInstance) mapInstance.remove();
-    if (typeof L === 'undefined') return;
+    
+    // 清除舊地圖
+    if (mapInstance) {
+        mapInstance.remove();
+        trafficLayers.clear();
+    }
+    
+    if (typeof L === 'undefined') {
+        console.error("Leaflet 未載入");
+        return;
+    }
+    
+    // 建立地圖
     mapInstance = L.map('map').setView([centerLat, centerLon], 7);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OSM', subdomains: 'abcd' }).addTo(mapInstance);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+        subdomains: 'abcd'
+    }).addTo(mapInstance);
+    
+    // 預載 GeoJSON（只載一次）
     try {
         const response = await fetch('/static/taiwan_freeway.geojson');
         const geojson = await response.json();
-        geojson.features.forEach(f => {
-            const layer = L.geoJSON(f, { style: { color: '#ccc', weight: 3 } }).addTo(mapInstance);
-            trafficLayers.set(f.properties.id, layer);
+        
+        geojson.features.forEach(feature => {
+            const layer = L.geoJSON(feature, {
+                style: { color: '#ccc', weight: 4, opacity: 0.7 }
+            }).addTo(mapInstance);
+            trafficLayers.set(feature.properties.id, layer);
         });
-    } catch(e) { console.error("載入路網失敗:", e); }
-    setTimeout(() => loadTrafficLight(), 500);
+        console.log("✅ 國道路網載入完成");
+    } catch(e) {
+        console.error("載入路網失敗:", e);
+    }
+    
+    // 延遲載入即時路況
+    setTimeout(() => loadTrafficLight(), 1000);
+    
+    // 設定定時更新（60秒一次，減少請求）
     if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
-    trafficUpdateInterval = setInterval(loadTrafficLight, 30000);
+    trafficUpdateInterval = setInterval(loadTrafficLight, 60000);
 }
 
 async function loadTrafficLight() {
     if (!mapInstance) return;
+    
     try {
         const response = await fetch("/api/traffic");
-        if (!response.ok) throw new Error();
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const speedData = await response.json();
-        let totalSpeed = 0, congested = 0, smooth = 0;
+        
+        let totalSpeed = 0;
+        let congested = 0;
+        let smooth = 0;
+        let updated = 0;
+        
         speedData.forEach(item => {
             const layer = trafficLayers.get(item.id);
             if (layer) {
                 const color = item.speed >= 60 ? "#27ae60" : (item.speed >= 35 ? "#f39c12" : "#e74c3c");
-                layer.setStyle({ color: color, weight: 5 });
+                layer.setStyle({ color: color, weight: 5, opacity: 0.9 });
                 totalSpeed += item.speed;
                 if (item.speed < 35) congested++;
                 if (item.speed >= 60) smooth++;
+                updated++;
             }
         });
+        
         const avgSpeed = speedData.length > 0 ? (totalSpeed / speedData.length).toFixed(1) : 0;
         const statsDiv = document.getElementById("trafficStats");
-        if (statsDiv) statsDiv.innerHTML = `<div class="stats-row"><div class="stat-item"><div class="stat-value">${avgSpeed}</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value" style="color:#e74c3c">${congested}</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value" style="color:#27ae60">${smooth}</div><div class="stat-label">順暢路段</div></div></div>`;
-    } catch(error) { console.error("載入即時路況失敗:", error); }
+        if (statsDiv) {
+            statsDiv.innerHTML = `
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value">${avgSpeed}</div>
+                        <div class="stat-label">平均車速 (km/h)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#e74c3c">${congested}</div>
+                        <div class="stat-label">壅塞路段</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#27ae60">${smooth}</div>
+                        <div class="stat-label">順暢路段</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        console.log(`✅ 路況更新: ${updated} 個路段, 平均車速 ${avgSpeed} km/h`);
+    } catch(error) {
+        console.error("載入即時路況失敗:", error);
+    }
 }
 
 function drawCharts(data) {

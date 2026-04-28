@@ -6,130 +6,155 @@
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* 首頁專屬額外樣式 */
+        /* 首頁專屬動畫 */
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes shipMove {
+            0% { transform: translateX(-100px); opacity: 0; }
+            100% { transform: translateX(calc(100vw + 100px)); opacity: 1; }
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
+            background-size: 200% 200%;
+            animation: gradientMove 10s ease infinite;
+            border-radius: 30px;
+            padding: 4rem 3rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '🚢';
+            position: absolute;
+            bottom: 20px;
+            left: -50px;
+            font-size: 60px;
+            opacity: 0.3;
+            animation: shipMove 15s linear infinite;
+        }
+        
+        .hero::after {
+            content: '🌊';
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 40px;
+            opacity: 0.2;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #fff, #caf0f8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.8s ease;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease 0.2s backwards;
+        }
+        
+        .hero-buttons {
+            animation: fadeInUp 0.8s ease 0.4s backwards;
+        }
+        
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
             margin: 3rem 0;
         }
         
         .feature-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 20px;
             padding: 2rem;
             text-align: center;
             transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 180, 216, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-        
-        .feature-card:hover::before {
-            left: 100%;
         }
         
         .feature-card:hover {
             transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .feature-card h3 {
+            color: #03045e;
+            margin: 1rem 0 0.5rem;
         }
         
         .feature-icon {
             font-size: 3rem;
-            margin-bottom: 1rem;
         }
         
-        .feature-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--deep-twilight);
-            margin-bottom: 0.5rem;
-        }
-        
-        .feature-desc {
-            color: var(--french-blue);
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-        
-        .stats-container {
-            display: flex;
-            justify-content: center;
+        .stats-grid-home {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 2rem;
+            margin: 3rem 0;
+            text-align: center;
+        }
+        
+        .stat-number-home {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #03045e, #0077b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .process-steps {
+            display: flex;
+            justify-content: space-between;
             flex-wrap: wrap;
+            gap: 1rem;
             margin: 3rem 0;
         }
         
-        .stat-circle {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 20px;
+            min-width: 150px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0077b6, #00b4d8);
+            color: white;
             border-radius: 50%;
-            width: 180px;
-            height: 180px;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .stat-circle:hover {
-            transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.25);
-            border-color: var(--turquoise-surf);
-            box-shadow: 0 0 30px rgba(0, 180, 216, 0.5);
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
+            justify-content: center;
+            margin: 0 auto 1rem;
             font-weight: bold;
-            color: var(--turquoise-surf);
-        }
-        
-        .stat-label {
-            font-size: 1rem;
-            color: white;
-            margin-top: 0.5rem;
-        }
-        
-        .cta-button {
-            background: linear-gradient(135deg, var(--bright-teal-blue), var(--turquoise-surf));
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0, 180, 216, 0.4);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 180, 216, 0.6);
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .floating {
-            animation: float 3s ease-in-out infinite;
         }
     </style>
 </head>
@@ -145,88 +170,80 @@
     </nav>
     
     <div class="container">
-        <!-- 主視覺區 -->
-        <div class="hero fade-in">
-            <div class="floating">
-                <h1>🌊 智慧貨櫃指派系統</h1>
-            </div>
-            <p>🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運船期 | 🌱 碳排放最佳化</p>
-            <button class="cta-button" onclick="location.href='/input'">🚀 開始指派貨櫃</button>
-        </div>
-        
-        <!-- 統計數字卡片 -->
-        <div class="stats-container">
-            <div class="stat-circle">
-                <div class="stat-number">-66%</div>
-                <div class="stat-label">海運 vs 公路碳排</div>
-            </div>
-            <div class="stat-circle">
-                <div class="stat-number">即時</div>
-                <div class="stat-label">TDX 路況 API</div>
-            </div>
-            <div class="stat-circle">
-                <div class="stat-number">長榮</div>
-                <div class="stat-label">藍色公路航線</div>
-            </div>
-            <div class="stat-circle">
-                <div class="stat-number">CNS</div>
-                <div class="stat-label">14064 國家標準</div>
+        <!-- Hero 首屏 -->
+        <div class="hero">
+            <div class="hero-content">
+                <h1>🌊 iMarine 智慧海運碳排管理平台</h1>
+                <p>AI 分析公路與海運最佳運輸方案<br>即時路況 × 船期資料 × ESG 減碳決策</p>
+                <div class="hero-buttons">
+                    <a href="/input" class="btn btn-primary">🚢 立即開始分析</a>
+                    <a href="/dashboard" class="btn btn-outline">📈 查看 Dashboard</a>
+                </div>
             </div>
         </div>
         
-        <!-- 功能特色卡片區 -->
+        <!-- 三大核心功能 -->
         <div class="feature-grid">
             <div class="feature-card" onclick="location.href='/input'">
                 <div class="feature-icon">🚛</div>
-                <div class="feature-title">即時路況分析</div>
-                <div class="feature-desc">串接交通部 TDX API，即時掌握國道車流與壅塞狀況</div>
+                <h3>智慧運輸分析</h3>
+                <p>AI 比較公路與海運成本、碳排、風險，推薦最佳方案</p>
             </div>
-            <div class="feature-card" onclick="location.href='/input'">
-                <div class="feature-icon">🚢</div>
-                <div class="feature-title">藍色公路船期</div>
-                <div class="feature-desc">整合長榮海運 TBS/TBS2 航線，即時查詢船班與艙位</div>
-            </div>
-            <div class="feature-card" onclick="location.href='/input'">
-                <div class="feature-icon">🤖</div>
-                <div class="feature-title">AI 多因子決策</div>
-                <div class="feature-desc">結合成本、碳排、風險、時效，自動推薦最佳運輸方案</div>
+            <div class="feature-card" onclick="location.href='/certificate_page'">
+                <div class="feature-icon">🌱</div>
+                <h3>ESG 減碳管理</h3>
+                <p>自動產生碳排認證證書與 ESG 報告</p>
             </div>
             <div class="feature-card" onclick="location.href='/dashboard'">
                 <div class="feature-icon">📊</div>
-                <div class="feature-title">碳排放儀表板</div>
-                <div class="feature-desc">視覺化展示減碳成效與運輸趨勢分析</div>
-            </div>
-            <div class="feature-card" onclick="location.href='/certificate_page'">
-                <div class="feature-icon">📄</div>
-                <div class="feature-title">ESG 認證證書</div>
-                <div class="feature-desc">自動產生中英文碳排減量證明書，支持線上驗證</div>
-            </div>
-            <div class="feature-card" onclick="location.href='/history_page'">
-                <div class="feature-icon">📈</div>
-                <div class="feature-title">歷史記錄追蹤</div>
-                <div class="feature-desc">完整記錄每次運輸評估，便於數據分析與追蹤</div>
+                <h3>即時 Dashboard</h3>
+                <p>歷史數據視覺化，追蹤減碳成效</p>
             </div>
         </div>
         
-        <!-- 資料來源區塊 -->
-        <div class="card fade-in" style="text-align: center; background: rgba(255,255,255,0.95);">
-            <h3>📊 系統資料來源</h3>
-            <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
-                <div>
-                    <strong>🚛 即時路況</strong><br>
-                    交通部 TDX 平台
+        <!-- 數字震撼區 -->
+        <div class="stats-grid-home" id="statsSection">
+            <div>
+                <div class="stat-number-home" id="totalCarbonStat">0</div>
+                <p>累積減碳 (kg)</p>
+            </div>
+            <div>
+                <div class="stat-number-home" id="avgSavingStat">0</div>
+                <p>平均節省成本 (NTD)</p>
+            </div>
+            <div>
+                <div class="stat-number-home" id="seaRateStat">0%</div>
+                <p>海運推薦率</p>
+            </div>
+            <div>
+                <div class="stat-number-home" id="totalCountStat">0</div>
+                <p>已分析次數</p>
+            </div>
+        </div>
+        
+        <!-- 流程圖 -->
+        <div class="card fade-in">
+            <h2 style="text-align: center;">📋 運作流程</h2>
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>輸入起訖點</h3>
+                    <p>選擇港口與貨櫃數量</p>
                 </div>
-                <div>
-                    <strong>🚢 航運資料</strong><br>
-                    長榮海運 TBS/TBS2
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>AI 分析</h3>
+                    <p>即時路況與船期評估</p>
                 </div>
-                <div>
-                    <strong>🌱 碳排係數</strong><br>
-                    環保署 / DEFRA
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>推薦方案</h3>
+                    <p>最佳運輸模式建議</p>
                 </div>
-                <div>
-                    <strong>📐 標準規範</strong><br>
-                    CNS 14064 / ISO 14064
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>產生證書</h3>
+                    <p>ESG 碳排證明</p>
                 </div>
             </div>
         </div>
@@ -250,13 +267,6 @@
                     <li>DEFRA 排放係數</li>
                 </ul>
             </div>
-            <div class="footer-section">
-                <h4>🔗 相關連結</h4>
-                <ul>
-                    <li><a href="https://tdx.transportdata.tw" target="_blank">TDX 交通資料平台</a></li>
-                    <li><a href="https://www.evergreen-shipping.cn" target="_blank">長榮海運官網</a></li>
-                </ul>
-            </div>
         </div>
         <div class="footer-bottom">
             <p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p>
@@ -264,5 +274,44 @@
     </footer>
     
     <script src="/static/app.js"></script>
+    <script>
+        // 載入統計數字動畫
+        fetch('/get_history')
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const totalCarbon = data.reduce((s, d) => s + (d.carbon_improvement || 0), 0);
+                    const totalSavings = data.reduce((s, d) => s + (d.social_savings || 0), 0);
+                    const avgSaving = totalSavings / data.length;
+                    const seaCount = data.filter(d => d.best_mode === "海運").length;
+                    const seaRate = (seaCount / data.length * 100).toFixed(0);
+                    
+                    animateNumber(document.getElementById('totalCarbonStat'), 0, totalCarbon, 1500);
+                    animateNumber(document.getElementById('avgSavingStat'), 0, avgSaving, 1500);
+                    document.getElementById('seaRateStat').innerText = seaRate + "%";
+                    document.getElementById('totalCountStat').innerText = data.length;
+                } else {
+                    document.getElementById('totalCarbonStat').innerText = "0";
+                    document.getElementById('avgSavingStat').innerText = "0";
+                    document.getElementById('seaRateStat').innerText = "0%";
+                    document.getElementById('totalCountStat').innerText = "0";
+                }
+            });
+        
+        function animateNumber(el, start, end, duration) {
+            if (!el) return;
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                el.innerText = Math.round(current).toLocaleString();
+            }, 16);
+        }
+    </script>
 </body>
 </html>

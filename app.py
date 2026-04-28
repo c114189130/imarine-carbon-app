@@ -1,8 +1,8 @@
 import os
 import math
+import requests
 from datetime import datetime
 from uuid import uuid4
-
 from flask import Flask, jsonify, render_template, request, send_file
 
 from config import (
@@ -22,24 +22,38 @@ from config import (
     SOCIAL_COST_RATES,
     TRANSPORT_COST_RATES,
     EMISSION_FACTORS,
+    TDX_CLIENT_ID,
+    TDX_CLIENT_SECRET,
 )
 from optimization_model import compare_modes, calculate_optimal_transfer_ratio
 from services.certificate_service import build_certificate_pdf, generate_certificate_id
 from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
-from services.traffic_service import TrafficService
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 
-traffic_service = TrafficService(
-    app_id=os.environ.get("TDX_APP_ID"),
-    app_key=os.environ.get("TDX_APP_KEY")
-)
 schedule_service = ScheduleService()
 
 ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
+
+# ================= TDX API 輔助函數 =================
+def get_tdx_token():
+    """取得 TDX API 存取令牌"""
+    url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": TDX_CLIENT_ID,
+        "client_secret": TDX_CLIENT_SECRET
+    }
+    try:
+        res = requests.post(url, data=data, timeout=10)
+        if res.status_code == 200:
+            return res.json()["access_token"]
+    except Exception as e:
+        print(f"TDX Token 錯誤: {e}")
+    return None
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -171,6 +185,38 @@ def get_certificate(cert_id: str):
     return None
 
 
+def get_road_condition():
+    """從 TDX API 獲取即時路況摘要"""
+    token = get_tdx_token()
+    if not token:
+        return {"level": "medium", "avg_speed": 50}
+    
+    url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON"
+    headers = {"authorization": f"Bearer {token}"}
+    
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            speeds = []
+            for item in data.get("Data", []):
+                if "Speed" in item:
+                    speeds.append(item["Speed"])
+            if speeds:
+                avg_speed = sum(speeds) / len(speeds)
+                if avg_speed >= 60:
+                    level = "low"
+                elif avg_speed >= 35:
+                    level = "medium"
+                else:
+                    level = "high"
+                return {"level": level, "avg_speed": round(avg_speed, 1)}
+    except Exception as e:
+        print(f"TDX API 錯誤: {e}")
+    
+    return {"level": "medium", "avg_speed": 50}
+
+
 def build_calculation_result(start: str, end: str, containers: int) -> dict:
     p1 = PORTS[start]
     p2 = PORTS[end]
@@ -178,7 +224,7 @@ def build_calculation_result(start: str, end: str, containers: int) -> dict:
     road_distance = estimate_route_distance(base_distance, "road")
     sea_distance = estimate_route_distance(base_distance, "sea")
 
-    road_condition = traffic_service.summarize_traffic()
+    road_condition = get_road_condition()
     ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
 
     road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
@@ -328,7 +374,55 @@ def get_history():
 
 @app.route("/api/traffic")
 def api_traffic():
-    return jsonify(traffic_service.get_live_traffic_speed())
+    """取得國道即時路況（TDX API）"""
+    token = get_tdx_token()
+    if not token:
+        return jsonify([])
+    
+    url = "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON"
+    headers = {"authorization": f"Bearer {token}"}
+    
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            results = []
+            # 國道路段對應 ID
+            road_segments = {
+                "NH1-N-0": "國道一號 基隆-台北",
+                "NH1-S-1": "國道一號 台北-桃園",
+                "NH1-S-2": "國道一號 桃園-新竹",
+                "NH1-S-3": "國道一號 新竹-台中",
+                "NH1-S-4": "國道一號 台中-高雄",
+                "NH3-N-0": "國道三號 基隆-台北",
+                "NH3-S-1": "國道三號 台北-桃園",
+                "NH3-S-2": "國道三號 桃園-新竹",
+                "NH3-S-3": "國道三號 新竹-台中",
+                "NH3-S-4": "國道三號 台中-彰化",
+                "NH3-S-5": "國道三號 彰化-高雄",
+                "NH5-S-0": "國道五號 南港-宜蘭",
+            }
+            
+            for i, item in enumerate(data.get("Data", [])):
+                if "Speed" in item:
+                    speed = item["Speed"]
+                    # 根據索引分配路段 ID
+                    seg_keys = list(road_segments.keys())
+                    if i < len(seg_keys):
+                        seg_id = seg_keys[i]
+                        results.append({"id": seg_id, "speed": speed})
+            
+            if not results:
+                # 模擬資料
+                for seg_id in road_segments.keys():
+                    results.append({"id": seg_id, "speed": 50 + (hash(seg_id) % 40)})
+            return jsonify(results)
+    except Exception as e:
+        print(f"TDX API 錯誤: {e}")
+    
+    # 回傳模擬資料
+    road_segments = ["NH1-N-0", "NH1-S-1", "NH1-S-2", "NH1-S-3", "NH1-S-4", "NH3-N-0", "NH3-S-1", "NH3-S-2", "NH3-S-3", "NH3-S-4", "NH3-S-5", "NH5-S-0"]
+    return jsonify([{"id": seg, "speed": 50 + (hash(seg) % 40)} for seg in road_segments])
 
 
 @app.route("/calculate", methods=["POST"])
