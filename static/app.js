@@ -25,13 +25,7 @@ function animateValue(el, start, end, duration = 800, decimals = 0) {
 
 function updateLoadingStep(step) {
     const steps = ['step1', 'step2', 'step3', 'step4', 'step5'];
-    const texts = [
-        '正在分析最佳運輸方案...',
-        '串接即時交通資料...',
-        '查詢長榮海運船期...',
-        '計算碳排效益與社會成本...',
-        'AI 多因子決策分析中...'
-    ];
+    const texts = ['正在分析最佳運輸方案...', '串接即時交通資料...', '查詢長榮海運船期...', '計算碳排效益與社會成本...', 'AI 多因子決策分析中...'];
     for (let i = 0; i < steps.length; i++) {
         const el = document.getElementById(steps[i]);
         if (el) {
@@ -84,7 +78,6 @@ function calculate() {
     .then(res => res.json())
     .then(data => {
         if (data.error) throw new Error(data.error);
-        
         updateLoadingStep(1);
         setTimeout(() => {
             updateLoadingStep(2);
@@ -108,7 +101,7 @@ function calculate() {
         console.error(err);
         const overlay = document.getElementById("loadingOverlay");
         if (overlay) {
-            overlay.innerHTML = `<div class="loading-container"><div style="color:#e74c3c">計算失敗：${err.message}</div><button class="btn btn-primary" onclick="location.href='/input'">返回重新輸入</button></div>`;
+            overlay.innerHTML = '<div class="loading-container"><div style="color:#e74c3c">計算失敗：' + err.message + '</div><button class="btn btn-primary" onclick="location.href=\'/input\'">返回重新輸入</button></div>';
         }
     });
 }
@@ -179,7 +172,6 @@ function displayResults(data) {
     
     document.getElementById("result").innerHTML = html;
     
-    // 船期資訊
     if (data.ship_schedule) {
         if (document.getElementById("shipName")) document.getElementById("shipName").innerHTML = data.ship_schedule.name;
         if (document.getElementById("shipRoute")) document.getElementById("shipRoute").innerHTML = data.ship_schedule.route || "TBS";
@@ -189,7 +181,6 @@ function displayResults(data) {
         if (document.getElementById("shipSchedule")) document.getElementById("shipSchedule").innerHTML = data.ship_schedule.eta === "FRI" ? "每週五、日" : "每週二、四、六";
     }
     
-    // AI 指派建議
     if (data.dispatch) {
         const de = document.getElementById("dispatchResult");
         if (de) {
@@ -236,13 +227,12 @@ function displayResults(data) {
                 animateValue(document.getElementById("roadCount"), 0, data.dispatch.to_road, 600);
                 if (document.getElementById("seaPercent")) document.getElementById("seaPercent").innerText = data.dispatch.ratio;
                 if (document.getElementById("roadPercent")) document.getElementById("roadPercent").innerText = (100 - data.dispatch.ratio).toFixed(1);
-                if (document.getElementById("ratioBarSea")) document.getElementById("ratioBarSea").style.width = `${data.dispatch.ratio}%`;
-                if (document.getElementById("ratioBarRoad")) document.getElementById("ratioBarRoad").style.width = `${100 - data.dispatch.ratio}%`;
+                if (document.getElementById("ratioBarSea")) document.getElementById("ratioBarSea").style.width = data.dispatch.ratio + "%";
+                if (document.getElementById("ratioBarRoad")) document.getElementById("ratioBarRoad").style.width = (100 - data.dispatch.ratio) + "%";
             }, 100);
         }
     }
     
-    // 優化模型分析
     if (data.optimization) {
         const opt = data.optimization;
         const optDiv = document.getElementById("optimizationResult");
@@ -338,7 +328,7 @@ async function initMapAndTraffic(data) {
             }).addTo(mapInstance);
             trafficLayers.set(feature.properties.id, layer);
         });
-        console.log("✅ 國道路網載入完成");
+        console.log("國道路網載入完成");
     } catch(e) {
         console.error("載入路網失敗:", e);
     }
@@ -354,7 +344,7 @@ async function loadTrafficLight() {
     
     try {
         const response = await fetch("/api/traffic");
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error("HTTP " + response.status);
         const speedData = await response.json();
         
         let totalSpeed = 0;
@@ -395,7 +385,7 @@ async function loadTrafficLight() {
             `;
         }
         
-        console.log(`✅ 路況更新: ${updated} 個路段, 平均車速 ${avgSpeed} km/h`);
+        console.log("路況更新: " + updated + " 個路段, 平均車速 " + avgSpeed + " km/h");
     } catch(error) {
         console.error("載入即時路況失敗:", error);
     }
@@ -444,21 +434,24 @@ function generateCert() {
     fetch("/certificate", {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, carbon_saved: parseFloat(carbonSaved), reduction_pct: parseFloat(reductionPct) })
+        body: JSON.stringify({ name: name, carbon_saved: parseFloat(carbonSaved), reduction_pct: parseFloat(reductionPct) })
     })
     .then(res => res.json())
     .then(data => {
         localStorage.setItem("cert", JSON.stringify(data));
-        document.getElementById("certResult").innerHTML = `
-            <div class="card" style="text-align:center">
-                <h3>✅ 碳排認證已產生</h3>
-                <p>公司：${data.name}</p>
-                <p>編號：${data.cert_id}</p>
-                <p>日期：${data.date}</p>
-                <button class="btn btn-primary" onclick="downloadPDF('chinese')">📄 中文證書</button>
-                <button class="btn btn-primary" onclick="downloadPDF('english')">📄 English Certificate</button>
-            </div>
-        `;
+        const certDiv = document.getElementById("certResult");
+        if (certDiv) {
+            certDiv.innerHTML = `
+                <div class="card" style="text-align:center">
+                    <h3>✅ 碳排認證已產生</h3>
+                    <p>公司：${data.name}</p>
+                    <p>編號：${data.cert_id}</p>
+                    <p>日期：${data.date}</p>
+                    <button class="btn btn-primary" onclick="downloadPDF('chinese')">📄 中文證書</button>
+                    <button class="btn btn-primary" onclick="downloadPDF('english')">📄 English Certificate</button>
+                </div>
+            `;
+        }
     });
 }
 
@@ -479,7 +472,7 @@ function downloadPDF(lang) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `certificate_${cert.cert_id}_${lang}.pdf`;
+        a.download = "certificate_" + cert.cert_id + "_" + lang + ".pdf";
         a.click();
         URL.revokeObjectURL(url);
     });
@@ -513,9 +506,9 @@ function loadHistory() {
                         <td>${r.end}</td>
                         <td>${r.containers}</td>
                         <td>${r.base_distance} km</td>
-                        <td>${Number(r.sea_carbon || 0).toLocaleString()} kg</td>
+                        <td>${(r.sea_carbon || 0).toLocaleString()} kg</td>
                         <td>${r.best_mode}</td>
-                        <td>${Number(r.carbon_improvement || 0).toLocaleString()} kg</td>
+                        <td>${(r.carbon_improvement || 0).toLocaleString()} kg</td>
                         <td>${r.reduction_pct || 0}%</td>
                     </tr>
                 `;
@@ -532,7 +525,7 @@ function drawHistoryChart(history) {
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: last7.map(h => h.date?.split(' ')[0] || ''),
+            labels: last7.map(h => h.date ? h.date.split(' ')[0] : ''),
             datasets: [
                 { label: '公路碳排', data: last7.map(h => h.road_carbon || 0), borderColor: '#e74c3c', fill: true },
                 { label: '海運碳排', data: last7.map(h => h.sea_carbon || 0), borderColor: '#0077b6', fill: true }
@@ -564,7 +557,7 @@ function loadDashboard() {
             new Chart(document.getElementById("trendChart"), {
                 type: 'line',
                 data: {
-                    labels: data.slice(-14).map(d => d.date?.split(' ')[0] || ''),
+                    labels: data.slice(-14).map(d => d.date ? d.date.split(' ')[0] : ''),
                     datasets: [{ label: "減碳量 (kg)", data: data.slice(-14).map(d => d.carbon_improvement || 0), borderColor: "#0077b6", fill: true }]
                 }
             });
