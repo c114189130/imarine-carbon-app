@@ -2,10 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>計算結果 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body onload="calculate()">
@@ -27,22 +26,34 @@
 
     <div class="container" id="content" style="display:none;">
         
-        <!-- 推薦結果 -->
+        <!-- 推薦方案 -->
         <div class="card fade-in" style="text-align:center;">
-            <div id="recommendationContent"></div>
+            <div id="bestBadge" style="display:inline-block;color:white;padding:10px 30px;border-radius:25px;font-size:1.5rem;font-weight:bold;margin-bottom:1rem;"></div>
+            <p id="routeInfo" style="font-size:1.1rem;color:#555;"></p>
         </div>
 
         <!-- 成本比較 -->
         <div class="card fade-in">
-            <h3>📊 路拖 vs 海拖 成本比較</h3>
+            <h3>📊 海轉 vs 陸拖 比較</h3>
             <table class="cost-table">
-                <thead><tr><th>項目</th><th>🚛 路拖</th><th>🚢 海拖</th></tr></thead>
+                <thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
                 <tbody>
                     <tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
                     <tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
+                    <tr><td>⏱ 運輸時間</td><td id="roadTime">-</td><td>依船班</td></tr>
                     <tr style="font-weight:bold;background:#fff3e0;"><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- 碳排節省 & 碳權 -->
+        <div class="card success-card fade-in">
+            <h3>🌱 碳排節省 & 碳權價值</h3>
+            <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;text-align:center;">
+                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonSaved">-</div><div>減碳量 (kg CO2e)</div></div>
+                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonPct">-</div><div>減碳比例 (%)</div></div>
+                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div><div>碳權價值 (NT$)</div></div>
+            </div>
         </div>
 
         <!-- 路況 -->
@@ -52,12 +63,7 @@
                 <div class="stats-row">
                     <div class="stat-item"><div class="stat-value" id="nh1Speed">-</div><div>國道一號</div></div>
                     <div class="stat-item"><div class="stat-value" id="nh3Speed">-</div><div>國道三號</div></div>
-                    <div class="stat-item"><div class="stat-value" id="overallSpeed">-</div><div>整體均速</div></div>
-                </div>
-                <div class="legend">
-                    <span><span class="color-dot green"></span>順暢</span>
-                    <span><span class="color-dot orange"></span>車多</span>
-                    <span><span class="color-dot red"></span>壅塞</span>
+                    <div class="stat-item"><div class="stat-value" id="congestionText">-</div><div>壅塞程度</div></div>
                 </div>
             </div>
             <div class="map-container" id="map"></div>
@@ -65,47 +71,13 @@
 
         <!-- 船班 -->
         <div class="card gradient-card fade-in">
-            <h3>🚢 長榮海運船班 <span id="virtualBadge" style="font-size:0.7rem;background:rgba(255,255,255,0.3);padding:2px 8px;border-radius:10px;display:none;">模擬</span></h3>
-            <div class="ship-info-grid">
-                <div class="ship-info-item"><div class="info-label">船名</div><div class="info-value" id="shipName">-</div></div>
-                <div class="ship-info-item"><div class="info-label">航次</div><div class="info-value" id="shipVoyage">-</div></div>
-                <div class="ship-info-item"><div class="info-label">航線</div><div class="info-value" id="shipRoute">-</div></div>
-                <div class="ship-info-item"><div class="info-label">目的地</div><div class="info-value" id="shipDest">-</div></div>
-            </div>
-            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0;">
-                <div style="flex:1;background:rgba(255,255,255,0.2);border-radius:15px;padding:1rem;text-align:center;">
-                    <div>🚀 預計開航 ETD</div>
-                    <div style="font-size:2rem;font-weight:bold;" id="shipEtd">-</div>
-                </div>
-                <div style="flex:1;background:rgba(255,255,255,0.2);border-radius:15px;padding:1rem;text-align:center;">
-                    <div>⚓ 預計到港 ETA</div>
-                    <div style="font-size:2rem;font-weight:bold;" id="shipEta">-</div>
-                </div>
-                <div style="flex:1;background:rgba(255,255,255,0.2);border-radius:15px;padding:1rem;text-align:center;">
-                    <div>⏱ 航行時間</div>
-                    <div style="font-size:2rem;font-weight:bold;" id="shipHours">-</div>
-                </div>
-            </div>
-            <div>
-                <div style="display:flex;justify-content:space-between;"><span>📦 剩餘艙位</span><span><strong id="shipAvailable">-</strong> / <span id="shipCapacity">-</span> FEU</span></div>
-                <div class="ratio-bar-container"><div id="capacityBar" style="height:100%;border-radius:20px;width:0%;"></div></div>
-                <div style="text-align:center;margin-top:0.5rem;" id="shipScheduleDay">-</div>
-            </div>
-        </div>
-
-        <!-- 碳排 -->
-        <div class="card success-card fade-in" id="carbonCard" style="display:none;">
-            <h3>🌱 海運碳排節省</h3>
-            <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;">
-                <div style="text-align:center;"><div style="font-size:3rem;font-weight:bold;" id="carbonSaved">-</div><div>kg CO2e</div></div>
-                <div style="text-align:center;"><div style="font-size:3rem;font-weight:bold;" id="carbonPct">-</div><div>%</div></div>
-            </div>
-            <div style="text-align:center;margin-top:1rem;padding:1rem;background:rgba(255,255,255,0.3);border-radius:12px;" id="carbonCompareText"></div>
+            <h3>🚢 可用船班（立昌輪 / 立揚輪）</h3>
+            <div id="shipList"></div>
         </div>
 
         <div class="action-buttons fade-in">
             <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button>
-            <button class="btn btn-primary" onclick="goToCertificate()">📄 產生證書</button>
+            <button class="btn btn-primary" onclick="goToCertificate()">📄 產出報表/證書</button>
         </div>
     </div>
 
