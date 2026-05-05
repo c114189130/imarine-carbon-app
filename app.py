@@ -1,210 +1,214 @@
-import os
-import math
-import requests
-from datetime import datetime
+import os, math, requests
+from datetime import datetime, timedelta
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request, send_file
 
 from config import *
 from services.certificate_service import build_certificate_pdf, generate_certificate_id
-from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
-
-REQUEST_TIMEOUT = 8
-schedule_service = ScheduleService()
+TIMEOUT = 8
 
 ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
 
-
-def haversine_distance(lat1, lon1, lat2, lon2):
-    R = 6371
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-
+# ================= TDX =================
 def get_tdx_token():
-    if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET:
-        return None
-    url = "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token"
+    if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET: return None
     try:
-        res = requests.post(url, data={"grant_type":"client_credentials","client_id":TDX_CLIENT_ID,"client_secret":TDX_CLIENT_SECRET}, timeout=REQUEST_TIMEOUT)
-        if res.status_code == 200:
-            return res.json()["access_token"]
-    except:
-        pass
+        r = requests.post(
+            "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
+            data={"grant_type":"client_credentials","client_id":TDX_CLIENT_ID,"client_secret":TDX_CLIENT_SECRET},
+            timeout=TIMEOUT)
+        if r.status_code==200: return r.json()["access_token"]
+    except: pass
     return None
 
-
-def get_tdx_highway_traffic():
-    """取得國道即時路況"""
+def get_highway_traffic():
+    """取得國道即時路況 → 壅塞程度"""
     token = get_tdx_token()
-    if not token:
-        return {"avg_speed": 55, "nh1_speed": 58, "nh3_speed": 52, "congestion": "medium"}
+    if not token: return {"nh1":58,"nh3":52,"avg":55,"level":"medium"}
     try:
-        res = requests.get(
+        r = requests.get(
             "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON",
-            headers={"authorization": f"Bearer {token}"}, timeout=REQUEST_TIMEOUT
-        )
-        if res.status_code == 200:
-            data = res.json()
-            nh1_speeds, nh3_speeds = [], []
-            for item in data.get("Data", []):
-                if "Speed" not in item: continue
-                vd = item.get("VDID", "")
-                if "NH1" in vd or "N1" in vd: nh1_speeds.append(item["Speed"])
-                elif "NH3" in vd or "N3" in vd: nh3_speeds.append(item["Speed"])
-                else: nh1_speeds.append(item["Speed"])
-            n1 = round(sum(nh1_speeds)/len(nh1_speeds),1) if nh1_speeds else 50
-            n3 = round(sum(nh3_speeds)/len(nh3_speeds),1) if nh3_speeds else 50
-            avg = round((sum(nh1_speeds)+sum(nh3_speeds))/(len(nh1_speeds)+len(nh3_speeds)),1) if (nh1_speeds or nh3_speeds) else 50
-            cong = "low" if avg >= 60 else ("medium" if avg >= 35 else "high")
-            return {"avg_speed": avg, "nh1_speed": n1, "nh3_speed": n3, "congestion": cong}
-    except:
-        pass
-    return {"avg_speed": 55, "nh1_speed": 58, "nh3_speed": 52, "congestion": "medium"}
+            headers={"authorization":f"Bearer {token}"}, timeout=TIMEOUT)
+        if r.status_code==200:
+            data = r.json()
+            nh1, nh3 = [], []
+            for it in data.get("Data",[]):
+                if "Speed" not in it: continue
+                vd = it.get("VDID","")
+                (nh1 if "NH1" in vd or "N1" in vd else nh3).append(it["Speed"])
+            n1 = round(sum(nh1)/len(nh1),1) if nh1 else 50
+            n3 = round(sum(nh3)/len(nh3),1) if nh3 else 50
+            avg = round((sum(nh1)+sum(nh3))/(len(nh1)+len(nh3)),1) if (nh1 or nh3) else 50
+            level = "low" if avg>=60 else ("medium" if avg>=35 else "high")
+            return {"nh1":n1,"nh3":n3,"avg":avg,"level":level}
+    except: pass
+    return {"nh1":58,"nh3":52,"avg":55,"level":"medium"}
 
+# ================= 船班查詢 =================
+def find_ships(start_code, end_code, target_date, containers_feu):
+    """從目標到貨日反向查詢可用船班"""
+    ships = SHIP_SCHEDULE.get(start_code, [])
+    candidates = []
+    for days_back in range(7, -1, -1):
+        check = target_date - timedelta(days=days_back)
+        wd = check.weekday()  # 0=Mon
+        for ship in ships:
+            if ship["dest"] != end_code: continue
+            if wd not in ship["weekdays"]: continue
+            etd = check.replace(hour=ship["etd_hour"], minute=0)
+            eta = etd + timedelta(hours=ship["hours"])
+            if eta <= target_date + timedelta(hours=12):  # 容許半天緩衝
+                wname = ["一","二","三","四","五","六","日"][wd]
+                candidates.append({
+                    "ship": f"{ship['name']}({ship['en']})",
+                    "weekday": f"週{wname}",
+                    "etd": etd.strftime("%m/%d %H:%M"),
+                    "eta": eta.strftime("%m/%d %H:%M"),
+                    "hours": ship["hours"],
+                    "capacity": ship["capacity_feu"],
+                    "fits": True
+                })
+    return candidates[:4]
 
-def build_calculation_result(start, end, containers, container_unit="FEU", ship_date=""):
-    """核心計算函數"""
-    # TEU/FEU 換算
-    if container_unit == "TEU":
-        containers_feu = float(containers) * TEU_TO_FEU_RATIO
-        container_display = f"{containers} TEU（約 {containers_feu:.1f} FEU）"
+# ================= 核心計算 =================
+def calculate_result(start, end, containers, unit, target_date_str):
+    # --- TEU/FEU ---
+    if unit == "TEU":
+        cf = float(containers) * TEU_TO_FEU
+        cdisp = f"{containers} TEU ({cf:.1f} FEU)"
     else:
-        containers_feu = float(containers)
-        container_display = f"{containers} FEU"
-    
-    p1 = PORTS[start]
-    p2 = PORTS[end]
-    
-    # 取得路線距離
-    route_key = (start, end)
-    route_info = ROUTES_INFO.get(route_key, {})
-    road_km = route_info.get("road_km", round(haversine_distance(p1["lat"],p1["lon"],p2["lat"],p2["lon"])*1.22))
-    sea_km = route_info.get("sea_km", round(haversine_distance(p1["lat"],p1["lon"],p2["lat"],p2["lon"])*1.08))
-    
-    # 公路路況
-    traffic = get_tdx_highway_traffic()
-    # 根據壅塞程度調整公路時間
-    congestion_factor = {"low": 1.0, "medium": 1.2, "high": 1.5}
-    road_time_hours = round(road_km / ROAD_SPEED_KMH * congestion_factor.get(traffic["congestion"], 1.0), 1)
-    
-    # 船班查詢（附多個航次）
-    ship_schedules = schedule_service.get_ship_schedules(p1["code"], p2["name"], containers_feu, ship_date)
-    
-    # 碳排放計算
-    road_carbon = EMISSION_FACTORS["road"] * road_km * containers_feu
-    sea_carbon = EMISSION_FACTORS["sea"] * sea_km * containers_feu + PORT_HANDLING_EMISSION * containers_feu * 2
-    
-    # 作業費計算
-    road_freight = TRANSPORT_COST_RATES["road"] * road_km * containers_feu
-    sea_freight = TRANSPORT_COST_RATES["sea"] * sea_km * containers_feu
-    
-    # 運輸成本（含裝卸）
-    road_total = road_freight
-    sea_total = sea_freight
-    
-    # 海運節省
-    cost_savings = road_total - sea_total  # 正數表示海運較便宜
-    
-    # 碳排改善
-    carbon_improvement = road_carbon - sea_carbon
-    reduction_pct = round(carbon_improvement / road_carbon * 100, 1) if road_carbon > 0 else 0
-    
-    # 碳權價值
-    carbon_credit_value = round(carbon_improvement * CARBON_PRICE_PER_KG, 2)
-    
-    # 最佳模式判斷
-    if cost_savings > 0:
-        best_mode = "海轉（藍色公路）"
+        cf = float(containers)
+        cdisp = f"{containers} FEU"
+
+    p1, p2 = PORTS[start], PORTS[end]
+    route = ROUTES.get((start,end), {"road_km":200,"sea_km":160})
+    rkm, skm = route["road_km"], route["sea_km"]
+
+    # --- 路況 ---
+    traffic = get_highway_traffic()
+    cfactor = CONGESTION_FACTOR.get(traffic["level"], 1.0)
+    road_hours = round(rkm / ROAD_SPEED_KMH * cfactor, 1)
+
+    # --- 時間 ---
+    try: target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
+    except: target_dt = datetime.now() + timedelta(days=7)
+
+    now = datetime.now()
+    road_eta = now + timedelta(hours=road_hours)
+    road_ok = road_eta <= target_dt + timedelta(hours=12)
+
+    ship_list = find_ships(p1["code"], end, target_dt, cf)
+    best_ship = ship_list[0] if ship_list else None
+    sea_ok = best_ship is not None
+
+    # --- 碳排 ---
+    road_carbon = EMISSION_FACTORS["road"] * rkm * cf
+    sea_carbon = EMISSION_FACTORS["sea"] * skm * cf + PORT_HANDLING_EMISSION * cf * 2
+
+    # --- 成本 ---
+    road_cost = TRANSPORT_COST_RATES["road"] * rkm * cf + ROAD_TOLL_RATE * rkm * cf
+    sea_cost = TRANSPORT_COST_RATES["sea"] * skm * cf + PORT_HANDLING_FEE * cf
+
+    road_total = road_cost
+    sea_total = sea_cost
+
+    # --- 碳費（外部成本） ---
+    road_carbon_fee = road_carbon * CARBON_PRICE_PER_KG
+    sea_carbon_fee = sea_carbon * CARBON_PRICE_PER_KG
+
+    road_full_cost = road_total + road_carbon_fee
+    sea_full_cost = sea_total + sea_carbon_fee
+
+    # --- 改善量 ---
+    carbon_saved = road_carbon - sea_carbon   # 正=海運減碳
+    carbon_pct = round(carbon_saved/road_carbon*100,1) if road_carbon>0 else 0
+    carbon_credit = round(carbon_saved * CARBON_PRICE_PER_KG, 2)
+
+    cost_saved = road_full_cost - sea_full_cost
+
+    # --- 決策 ---
+    reasons = []
+    if sea_ok and sea_full_cost < road_full_cost:
+        decision = "海轉（藍色公路）"
+        reasons.append("✅ 船班可於目標日前抵達")
+        reasons.append(f"💰 海運總成本（含碳費）較陸拖節省 NT$ {abs(cost_saved):,.0f}")
+        reasons.append(f"🌱 海運減碳 {carbon_saved:.0f} kg CO2e（-{carbon_pct}%）")
+    elif sea_ok and not road_ok:
+        decision = "海轉（藍色公路）"
+        reasons.append("⚠️ 陸拖無法於目標日前抵達，海運為唯一選項")
+    elif road_ok and (not sea_ok or road_full_cost <= sea_full_cost):
+        decision = "陸拖（公路運輸）"
+        if not sea_ok: reasons.append("❌ 無合適船班可於目標日前抵達")
+        else: reasons.append("💰 陸拖總成本（含碳費）較海運低或相當")
+    elif not road_ok and not sea_ok:
+        decision = "無法滿足（建議調整目標日）"
+        reasons.append("❌ 海陸方案皆無法於目標日前抵達，請放寬到貨日")
     else:
-        best_mode = "陸拖（公路運輸）"
-    
-    # 儲存記錄
-    record = {
-        "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
+        decision = "海轉（藍色公路）"
+        reasons.append("綜合評估後海運較優")
+
+    # --- 存記錄 ---
+    rec = {
+        "id": datetime.now().strftime("%Y%m%d%H%M%S")+uuid4().hex[:4],
         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "start": p1["name"], "end": p2["name"],
-        "containers": containers, "container_unit": container_unit, "containers_feu": round(containers_feu,1),
-        "ship_date": ship_date,
-        "road_km": road_km, "sea_km": sea_km,
-        "road_carbon": round(road_carbon,2), "sea_carbon": round(sea_carbon,2),
-        "carbon_improvement": round(carbon_improvement,2), "reduction_pct": reduction_pct,
-        "carbon_credit_value": carbon_credit_value,
-        "best_mode": best_mode, "cost_savings": round(cost_savings),
-        "road_total": round(road_total), "sea_total": round(sea_total),
+        "containers": containers, "unit": unit, "cf": round(cf,1),
+        "target": target_date_str, "rkm": rkm, "skm": skm,
+        "rc": round(road_carbon,2), "sc": round(sea_carbon,2),
+        "ci": round(carbon_saved,2), "rp": carbon_pct, "cc": carbon_credit,
+        "decision": decision, "rf": round(road_total), "sf": round(sea_total),
     }
-    save_history(record)
-    
+    save_history(rec)
+
     return {
-        "record_id": record["id"],
+        "record_id": rec["id"],
         "start_name": p1["name"], "end_name": p2["name"],
-        "start_lat": p1["lat"], "start_lon": p1["lon"],
-        "end_lat": p2["lat"], "end_lon": p2["lon"],
-        "containers": containers, "container_unit": container_unit,
-        "containers_feu": round(containers_feu,1), "container_display": container_display,
-        "ship_date": ship_date,
-        "road_km": road_km, "sea_km": sea_km,
-        "road_time_hours": road_time_hours,
+        "containers": cdisp, "target_date": target_date_str,
+        "road_km": rkm, "sea_km": skm, "road_hours": road_hours,
+        "road_eta": road_eta.strftime("%m/%d %H:%M"),
+        "road_ok": road_ok, "sea_ok": sea_ok,
         "road": {
-            "freight": round(road_freight),
-            "carbon": round(road_carbon,2),
-            "total": round(road_total),
-            "time_hours": road_time_hours
+            "freight": round(road_cost), "carbon_fee": round(road_carbon_fee),
+            "carbon": round(road_carbon,2), "total": round(road_full_cost)
         },
         "sea": {
-            "freight": round(sea_freight),
-            "carbon": round(sea_carbon,2),
-            "total": round(sea_total),
+            "freight": round(sea_cost), "carbon_fee": round(sea_carbon_fee),
+            "carbon": round(sea_carbon,2), "total": round(sea_full_cost)
         },
-        "best_mode": best_mode,
-        "cost_savings": round(cost_savings),
-        "carbon_improvement": round(carbon_improvement,2),
-        "reduction_pct": reduction_pct,
-        "carbon_credit_value": carbon_credit_value,
+        "carbon_saved": round(carbon_saved,2),
+        "carbon_pct": carbon_pct,
+        "carbon_credit": carbon_credit,
+        "decision": decision,
+        "reasons": reasons,
         "traffic": {
-            "avg_speed": traffic["avg_speed"],
-            "nh1_speed": traffic["nh1_speed"],
-            "nh3_speed": traffic["nh3_speed"],
-            "congestion": traffic["congestion"],
-            "congestion_text": "順暢" if traffic["congestion"]=="low" else ("車多" if traffic["congestion"]=="medium" else "壅塞")
+            "nh1": traffic["nh1"], "nh3": traffic["nh3"],
+            "avg": traffic["avg"],
+            "level": traffic["level"],
+            "level_text": "順暢" if traffic["level"]=="low" else ("車多" if traffic["level"]=="medium" else "壅塞")
         },
-        "ship_schedules": ship_schedules,
+        "ships": ship_list,
     }
 
-
-def load_history():
-    return read_json(HISTORY_FILE, [])
-
-def save_history(record):
-    h = load_history()
-    h.append(record)
-    write_json(HISTORY_FILE, h[-MAX_HISTORY_RECORDS:])
-
-def load_certificates():
-    return read_json(CERTIFICATE_FILE, [])
-
-def save_certificate(cert):
-    rows = load_certificates()
-    rows.append(cert)
-    write_json(CERTIFICATE_FILE, rows)
-
-def get_history_record(rid):
+# ================= 資料存取 =================
+def load_history(): return read_json(HISTORY_FILE, [])
+def save_history(r):
+    h = load_history(); h.append(r); write_json(HISTORY_FILE, h[-MAX_HISTORY_RECORDS:])
+def load_certs(): return read_json(CERTIFICATE_FILE, [])
+def save_cert(c):
+    rows=load_certs(); rows.append(c); write_json(CERTIFICATE_FILE, rows)
+def get_hist(rid):
     for r in load_history():
-        if r["id"] == rid: return r
+        if r["id"]==rid: return r
     return None
-
-def get_certificate(cid):
-    for c in load_certificates():
-        if c["cert_id"] == cid: return c
+def get_cert(cid):
+    for c in load_certs():
+        if c["cert_id"]==cid: return c
     return None
-
 
 # ================= 路由 =================
 @app.route("/")
@@ -220,94 +224,60 @@ def result_page():
     return render_template("result.html", app_title=APP_TITLE)
 
 @app.route("/certificate_page")
-def certificate_page():
+def cert_page():
     return render_template("certificate.html", app_title=APP_TITLE)
 
 @app.route("/history_page")
-def history_page():
+def hist_page():
     return render_template("history.html", app_title=APP_TITLE)
 
 @app.route("/dashboard")
-def dashboard_page():
+def dash_page():
     return render_template("dashboard.html", app_title=APP_TITLE)
 
 @app.route("/get_history")
-def get_history():
+def api_hist():
     return jsonify(load_history())
 
-@app.route("/api/traffic")
-def api_traffic():
-    segments = ["NH1-N-0","NH1-S-1","NH1-S-2","NH1-S-3","NH1-S-4",
-                "NH3-N-0","NH3-S-1","NH3-S-2","NH3-S-3","NH3-S-4","NH3-S-5","NH5-S-0"]
-    token = get_tdx_token()
-    if not token:
-        return jsonify([{"id":s,"speed":55} for s in segments])
-    try:
-        res = requests.get(
-            "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON",
-            headers={"authorization":f"Bearer {token}"}, timeout=REQUEST_TIMEOUT
-        )
-        if res.status_code == 200:
-            speeds = [i["Speed"] for i in res.json().get("Data",[]) if "Speed" in i]
-            if speeds:
-                return jsonify([{"id":segments[i%len(segments)],"speed":speeds[i%len(speeds)]} for i in range(len(segments))])
-    except: pass
-    return jsonify([{"id":s,"speed":55} for s in segments])
-
 @app.route("/calculate", methods=["POST"])
-def calculate():
-    data = request.get_json(silent=True) or {}
-    start = data.get("start")
-    end = data.get("end")
-    containers = data.get("containers")
-    container_unit = data.get("container_unit", "FEU")
-    ship_date = data.get("ship_date", "")
-    
-    if start not in PORTS or end not in PORTS:
-        return jsonify({"error": "港口代碼無效"}), 400
-    if start == end:
-        return jsonify({"error": "起點與終點不可相同"}), 400
-    try:
-        containers = int(containers)
-    except:
-        return jsonify({"error": "貨櫃數量格式錯誤"}), 400
-    if containers <= 0 or containers > 5000:
-        return jsonify({"error": "貨櫃數量需介於 1 到 5000 之間"}), 400
-    
-    try:
-        return jsonify(build_calculation_result(start, end, containers, container_unit, ship_date))
-    except Exception as e:
-        return jsonify({"error": f"計算失敗: {str(e)}"}), 500
+def calc():
+    d = request.get_json(silent=True) or {}
+    s, e = d.get("start"), d.get("end")
+    c, u = d.get("containers"), d.get("unit","FEU")
+    td = d.get("target_date","")
+    if s not in PORTS or e not in PORTS: return jsonify({"error":"港口無效"}),400
+    if s==e: return jsonify({"error":"起終點相同"}),400
+    try: c=int(c)
+    except: return jsonify({"error":"數量錯誤"}),400
+    if c<=0 or c>5000: return jsonify({"error":"數量需1~5000"}),400
+    try: return jsonify(calculate_result(s,e,c,u,td))
+    except Exception as ex: return jsonify({"error":str(ex)}),500
 
 @app.route("/certificate", methods=["POST"])
-def create_certificate():
-    data = request.get_json(silent=True) or {}
-    record_id = data.get("record_id")
-    company_name = (data.get("company_name") or "").strip()
-    if not company_name: return jsonify({"error":"請輸入公司名稱"}), 400
-    if not record_id: return jsonify({"error":"缺少計算紀錄 ID"}), 400
-    record = get_history_record(record_id)
-    if not record: return jsonify({"error":"查無對應的計算紀錄"}), 404
-    cert_id = generate_certificate_id()
-    cert = {"cert_id":cert_id,"company_name":company_name,"issued_at":datetime.now().strftime("%Y-%m-%d"),"record_id":record_id,"record":record}
-    save_certificate(cert)
-    return jsonify({"cert_id":cert_id,"company_name":company_name,"issued_at":cert["issued_at"],
-                    "route":f"{record['start']} → {record['end']}","containers":record["containers"],
-                    "carbon_improvement":record["carbon_improvement"],"reduction_pct":record["reduction_pct"]})
+def create_cert():
+    d = request.get_json(silent=True) or {}
+    rid, cn = d.get("record_id"), (d.get("company_name") or "").strip()
+    if not cn: return jsonify({"error":"請輸入公司名稱"}),400
+    if not rid: return jsonify({"error":"缺少ID"}),400
+    rec = get_hist(rid)
+    if not rec: return jsonify({"error":"查無記錄"}),404
+    cid = generate_certificate_id()
+    cert = {"cert_id":cid,"company_name":cn,"issued_at":datetime.now().strftime("%Y-%m-%d"),"record_id":rid,"record":rec}
+    save_cert(cert)
+    return jsonify({"cert_id":cid,"company_name":cn,"route":f"{rec['start']}→{rec['end']}","ci":rec["ci"]})
 
-@app.route("/download_certificate/<cert_id>/<lang>")
-def download_certificate(cert_id, lang):
-    cert = get_certificate(cert_id)
-    if not cert: return jsonify({"error":"查無證書"}), 404
-    lang = "en" if lang=="en" else "zh"
-    buf = build_certificate_pdf(cert, lang=lang)
+@app.route("/download_certificate/<cert_id>")
+def download_cert(cert_id):
+    cert = get_cert(cert_id)
+    if not cert: return jsonify({"error":"查無"}),404
+    buf = build_certificate_pdf(cert, lang="en")
     return send_file(buf, as_attachment=True, download_name=f"certificate_{cert_id}.pdf", mimetype="application/pdf")
 
 @app.route("/verify/<cert_id>")
-def verify_certificate(cert_id):
-    cert = get_certificate(cert_id)
+def verify(cert_id):
+    cert = get_cert(cert_id)
     return render_template("verify.html", valid=bool(cert), cert=cert, app_title=APP_TITLE)
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+if __name__=="__main__":
+    port = int(os.environ.get("PORT",5000))
     app.run(host="0.0.0.0", port=port, debug=False)

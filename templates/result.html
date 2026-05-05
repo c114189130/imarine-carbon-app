@@ -1,87 +1,49 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <title>計算結果 - {{ app_title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
+<head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title><link rel="stylesheet" href="/static/style.css"></head>
 <body onload="calculate()">
-    <nav class="navbar">
-        <div class="navbar-brand">🌊 {{ app_title }}</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/history_page">📊 歷史記錄</a>
-        </div>
-    </nav>
+<nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a><a href="/history_page">📊</a></div></nav>
 
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">正在計算最佳運輸方案...</div>
-        </div>
-    </div>
+<div class="loading-overlay" id="loading"><div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">計算最佳方案中...</div></div></div>
 
-    <div class="container" id="content" style="display:none;">
-        
-        <!-- 推薦方案 -->
-        <div class="card fade-in" style="text-align:center;">
-            <div id="bestBadge" style="display:inline-block;color:white;padding:10px 30px;border-radius:25px;font-size:1.5rem;font-weight:bold;margin-bottom:1rem;"></div>
-            <p id="routeInfo" style="font-size:1.1rem;color:#555;"></p>
-        </div>
+<div class="container" id="main" style="display:none;">
 
-        <!-- 成本比較 -->
-        <div class="card fade-in">
-            <h3>📊 海轉 vs 陸拖 比較</h3>
-            <table class="cost-table">
-                <thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
-                <tbody>
-                    <tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
-                    <tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
-                    <tr><td>⏱ 運輸時間</td><td id="roadTime">-</td><td>依船班</td></tr>
-                    <tr style="font-weight:bold;background:#fff3e0;"><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
-                </tbody>
-            </table>
-        </div>
+<div class="card fade-in" style="text-align:center;">
+    <div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div>
+    <p id="routeInfo" style="color:#888;margin-top:1rem;"></p>
+</div>
 
-        <!-- 碳排節省 & 碳權 -->
-        <div class="card success-card fade-in">
-            <h3>🌱 碳排節省 & 碳權價值</h3>
-            <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;text-align:center;">
-                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonSaved">-</div><div>減碳量 (kg CO2e)</div></div>
-                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonPct">-</div><div>減碳比例 (%)</div></div>
-                <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div><div>碳權價值 (NT$)</div></div>
-            </div>
-        </div>
+<div class="card fade-in"><h3>📊 成本比較（含碳費）</h3><table class="cost-table">
+<thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
+<tbody>
+<tr><td>💰 運費+規費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
+<tr><td>🏛️ 碳費</td><td id="roadCarbonFee">-</td><td id="seaCarbonFee">-</td></tr>
+<tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
+<tr><td>⏱ 陸拖ETA</td><td id="roadEta">-</td><td>依船班</td></tr>
+<tr style="font-weight:bold;background:#fff3e0;"><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
+</tbody></table></div>
 
-        <!-- 路況 -->
-        <div class="card fade-in">
-            <h3>🛣️ 即時國道路況</h3>
-            <div class="traffic-stats">
-                <div class="stats-row">
-                    <div class="stat-item"><div class="stat-value" id="nh1Speed">-</div><div>國道一號</div></div>
-                    <div class="stat-item"><div class="stat-value" id="nh3Speed">-</div><div>國道三號</div></div>
-                    <div class="stat-item"><div class="stat-value" id="congestionText">-</div><div>壅塞程度</div></div>
-                </div>
-            </div>
-            <div class="map-container" id="map"></div>
-        </div>
+<div class="card success-card fade-in"><h3>🌱 減碳效益</h3>
+<div style="display:flex;gap:2rem;justify-content:center;text-align:center;flex-wrap:wrap;">
+<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonSaved">-</div>減碳量 (kg CO2e)</div>
+<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonPct">-</div>減碳比例 (%)</div>
+<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值 (NT$)</div>
+</div></div>
 
-        <!-- 船班 -->
-        <div class="card gradient-card fade-in">
-            <h3>🚢 可用船班（立昌輪 / 立揚輪）</h3>
-            <div id="shipList"></div>
-        </div>
+<div class="card fade-in"><h3>🛣️ 即時國道路況</h3><p id="congestion" style="font-size:1.3rem;text-align:center;"></p></div>
 
-        <div class="action-buttons fade-in">
-            <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button>
-            <button class="btn btn-primary" onclick="goToCertificate()">📄 產出報表/證書</button>
-        </div>
-    </div>
+<div class="card gradient-card fade-in"><h3>🚢 可用船班（立昌輪:二、五 | 立揚輪:三、六）</h3><div id="shipList"></div></div>
 
-    <footer class="footer"><div class="footer-bottom"><p>© 2024 iMarine</p></div></footer>
-    <script src="/static/app.js"></script>
+<div class="card fade-in" style="background:#f0f8ff;"><h3>🗺️ 路線</h3><p id="routeText" style="line-height:2;"></p></div>
+
+<div class="card fade-in"><h3>💡 決策說明</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
+
+<div class="action-buttons fade-in">
+    <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button>
+    <button class="btn btn-primary" onclick="goCert()">📄 英文證書</button>
+</div></div>
+
+<footer class="footer"><div class="footer-bottom">© 2024 iMarine</div></footer>
+<script src="/static/app.js"></script>
 </body>
 </html>

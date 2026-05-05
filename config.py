@@ -12,125 +12,84 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
 TDX_CLIENT_ID = os.environ.get("TDX_CLIENT_ID", "")
 TDX_CLIENT_SECRET = os.environ.get("TDX_CLIENT_SECRET", "")
 
-# 碳排放係數 (kg CO2e / km / FEU)（取每FEU平均值）
+# ========== 碳排放係數 (kg CO2e / km / FEU) ==========
 EMISSION_FACTORS = {
-    "road": 0.098,   # 公路每FEU每公里碳排 (約40呎平均值)
-    "sea": 0.024     # 海運每FEU每公里碳排 (約40呎平均值)
+    "road": 0.098,   # 公路每FEU每公里
+    "sea": 0.024     # 海運每FEU每公里
 }
 
-# 港口裝卸碳排 (kg CO2e / FEU)
+# 港口裝卸碳排 (kg CO2e / FEU / 次)
 PORT_HANDLING_EMISSION = 8.0
 
-# 作業費費率 (NT$/km/FEU)
+# ========== 運輸成本費率 (NT$/km/FEU) ==========
 TRANSPORT_COST_RATES = {
-    "road": 60,
-    "sea": 24
+    "road": 60,      # 公路運費
+    "sea": 24        # 海運費
 }
 
-# 碳權價格 (NT$/kg CO2e，參考歐盟ETS約80歐元/噸 ≈ 2800 NT$/噸)
-CARBON_PRICE_PER_KG = 2.8
+# 港口作業費 (NT$/FEU)
+PORT_HANDLING_FEE = 1200
 
-# 行駛速度 (km/h)
+# 公路過路費 (NT$/km/FEU)（簡化估算）
+ROAD_TOLL_RATE = 2.5
+
+# ========== 碳權/碳費 ==========
+CARBON_PRICE_PER_KG = 2.8   # NT$/kg CO2e（參考歐盟ETS）
+
+# ========== 速度 ==========
 ROAD_SPEED_KMH = 60
 SEA_SPEED_KMH = 46
 
-# TEU 轉 FEU 比例
-TEU_TO_FEU_RATIO = 0.5
+# 壅塞調整係數
+CONGESTION_FACTOR = {"low": 1.0, "medium": 1.2, "high": 1.5}
 
-# 歷史記錄上限
+# TEU → FEU
+TEU_TO_FEU = 0.5
+
 MAX_HISTORY_RECORDS = 200
 
-# 港口定義（新增「台北港」作為航線節點，但實際顯示用汐止調度場）
+# ========== 港口定義 ==========
 PORTS = {
     "kaohsiung": {"name": "高雄港", "lat": 22.616, "lon": 120.300, "code": "KHH"},
     "taichung": {"name": "台中港", "lat": 24.270, "lon": 120.520, "code": "TXG"},
     "taipei": {"name": "汐止調度場(台北)", "lat": 25.066, "lon": 121.660, "code": "TPE"},
 }
 
-# 航線距離（直線+路網係數）及碳排放基準
-ROUTES_INFO = {
-    ("kaohsiung", "taichung"): {"road_km": 215, "sea_km": 175, "carbon_per_feu_road": 21.07, "carbon_per_feu_sea": 4.2},
-    ("kaohsiung", "taipei"): {"road_km": 365, "sea_km": 310, "carbon_per_feu_road": 35.77, "carbon_per_feu_sea": 7.44},
-    ("taichung", "taipei"): {"road_km": 170, "sea_km": 140, "carbon_per_feu_road": 16.66, "carbon_per_feu_sea": 3.36},
-    ("taipei", "kaohsiung"): {"road_km": 365, "sea_km": 310, "carbon_per_feu_road": 35.77, "carbon_per_feu_sea": 7.44},
-    ("taipei", "taichung"): {"road_km": 170, "sea_km": 140, "carbon_per_feu_road": 16.66, "carbon_per_feu_sea": 3.36},
+# ========== 航線距離 (km) ==========
+ROUTES = {
+    ("kaohsiung", "taichung"): {"road_km": 215, "sea_km": 175},
+    ("kaohsiung", "taipei"):   {"road_km": 365, "sea_km": 310},
+    ("taichung", "taipei"):    {"road_km": 170, "sea_km": 140},
+    ("taipei", "kaohsiung"):   {"road_km": 365, "sea_km": 310},
+    ("taipei", "taichung"):    {"road_km": 170, "sea_km": 140},
 }
 
-# 檔案路徑
+# ========== 船班資料（固定航班） ==========
+# 立昌輪：週二(1)、週五(4)
+# 立揚輪：週三(2)、週六(5)
+SHIP_SCHEDULE = {
+    "KHH": [
+        {"name": "立昌輪", "en": "LI CHANG", "weekdays": [1,4], "etd_hour": 8,
+         "hours": 22, "capacity_feu": 600, "dest": "TXG"},
+        {"name": "立揚輪", "en": "LI YANG", "weekdays": [2,5], "etd_hour": 18,
+         "hours": 22, "capacity_feu": 809, "dest": "TXG"},
+    ],
+    "TXG": [
+        {"name": "立昌輪", "en": "LI CHANG", "weekdays": [1,4], "etd_hour": 14,
+         "hours": 12, "capacity_feu": 600, "dest": "TPE"},
+        {"name": "立揚輪", "en": "LI YANG", "weekdays": [2,5], "etd_hour": 8,
+         "hours": 12, "capacity_feu": 809, "dest": "TPE"},
+    ],
+    "TPE": [
+        {"name": "立昌輪", "en": "LI CHANG", "weekdays": [1,4], "etd_hour": 6,
+         "hours": 22, "capacity_feu": 600, "dest": "KHH"},
+        {"name": "立昌輪", "en": "LI CHANG", "weekdays": [0,2], "etd_hour": 20,
+         "hours": 12, "capacity_feu": 600, "dest": "TXG"},
+        {"name": "立揚輪", "en": "LI YANG", "weekdays": [2,4], "etd_hour": 12,
+         "hours": 22, "capacity_feu": 809, "dest": "KHH"},
+    ],
+}
+
+# 檔案
 HISTORY_FILE = DATA_DIR / "history.json"
 CERTIFICATE_FILE = DATA_DIR / "certificates.json"
-SCHEDULE_FILE = DATA_DIR / "ship_schedule.json"
-
-# 船班資料（立昌輪、立揚輪）
-DEFAULT_SHIPS = {
-    "KHH": {
-        "port_name": "高雄港",
-        "ships": [
-            {"name": "立昌輪", "name_zh": "LI CHANG", "voyage": "LC-2401", "route": "TBS",
-             "etd": "04/01 08:00", "eta": "04/02 06:00", "hours": 22, "capacity_teu": 1200, "capacity_feu": 600,
-             "available_feu": 320, "destination": "台中港", "dest_code": "TXG", "schedule_day": "一、三、五",
-             "next_sailings": [
-                 {"etd": "04/01 08:00", "eta": "04/02 06:00", "available_feu": 320},
-                 {"etd": "04/03 08:00", "eta": "04/04 06:00", "available_feu": 450},
-                 {"etd": "04/05 08:00", "eta": "04/06 06:00", "available_feu": 280},
-                 {"etd": "04/08 08:00", "eta": "04/09 06:00", "available_feu": 500}
-             ]},
-            {"name": "立揚輪", "name_zh": "LI YANG", "voyage": "LY-2401", "route": "TBS",
-             "etd": "04/02 18:00", "eta": "04/03 16:00", "hours": 22, "capacity_teu": 1618, "capacity_feu": 809,
-             "available_feu": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "二、四、六",
-             "next_sailings": [
-                 {"etd": "04/02 18:00", "eta": "04/03 16:00", "available_feu": 500},
-                 {"etd": "04/04 18:00", "eta": "04/05 16:00", "available_feu": 600},
-                 {"etd": "04/06 18:00", "eta": "04/07 16:00", "available_feu": 700},
-                 {"etd": "04/09 18:00", "eta": "04/10 16:00", "available_feu": 800}
-             ]}
-        ]
-    },
-    "TXG": {
-        "port_name": "台中港",
-        "ships": [
-            {"name": "立昌輪", "name_zh": "LI CHANG", "voyage": "LC-2402", "route": "TBN",
-             "etd": "04/01 14:00", "eta": "04/02 02:00", "hours": 12, "capacity_teu": 1200, "capacity_feu": 600,
-             "available_feu": 250, "destination": "汐止調度場(台北)", "dest_code": "TPE", "schedule_day": "一、三、五",
-             "next_sailings": [
-                 {"etd": "04/01 14:00", "eta": "04/02 02:00", "available_feu": 250},
-                 {"etd": "04/03 14:00", "eta": "04/04 02:00", "available_feu": 350},
-                 {"etd": "04/05 14:00", "eta": "04/06 02:00", "available_feu": 400}
-             ]},
-            {"name": "立揚輪", "name_zh": "LI YANG", "voyage": "LY-2402", "route": "TBN",
-             "etd": "04/02 08:00", "eta": "04/02 20:00", "hours": 12, "capacity_teu": 1618, "capacity_feu": 809,
-             "available_feu": 600, "destination": "汐止調度場(台北)", "dest_code": "TPE", "schedule_day": "二、四、六",
-             "next_sailings": [
-                 {"etd": "04/02 08:00", "eta": "04/02 20:00", "available_feu": 600},
-                 {"etd": "04/04 08:00", "eta": "04/04 20:00", "available_feu": 700},
-                 {"etd": "04/06 08:00", "eta": "04/06 20:00", "available_feu": 750}
-             ]}
-        ]
-    },
-    "TPE": {
-        "port_name": "汐止調度場(台北)",
-        "ships": [
-            {"name": "立昌輪", "name_zh": "LI CHANG", "voyage": "LC-2403", "route": "TBS",
-             "etd": "04/02 06:00", "eta": "04/03 04:00", "hours": 22, "capacity_teu": 1200, "capacity_feu": 600,
-             "available_feu": 300, "destination": "高雄港", "dest_code": "KHH", "schedule_day": "二、四、六",
-             "next_sailings": [
-                 {"etd": "04/02 06:00", "eta": "04/03 04:00", "available_feu": 300},
-                 {"etd": "04/04 06:00", "eta": "04/05 04:00", "available_feu": 400}
-             ]},
-            {"name": "立揚輪", "name_zh": "LI YANG", "voyage": "LY-2403", "route": "TBS",
-             "etd": "04/03 12:00", "eta": "04/04 10:00", "hours": 22, "capacity_teu": 1618, "capacity_feu": 809,
-             "available_feu": 650, "destination": "高雄港", "dest_code": "KHH", "schedule_day": "三、五",
-             "next_sailings": [
-                 {"etd": "04/03 12:00", "eta": "04/04 10:00", "available_feu": 650},
-                 {"etd": "04/05 12:00", "eta": "04/06 10:00", "available_feu": 750}
-             ]},
-            {"name": "立昌輪", "name_zh": "LI CHANG", "voyage": "LC-2404", "route": "TBN",
-             "etd": "04/01 20:00", "eta": "04/02 08:00", "hours": 12, "capacity_teu": 1200, "capacity_feu": 600,
-             "available_feu": 200, "destination": "台中港", "dest_code": "TXG", "schedule_day": "一、三、五",
-             "next_sailings": [
-                 {"etd": "04/01 20:00", "eta": "04/02 08:00", "available_feu": 200},
-                 {"etd": "04/03 20:00", "eta": "04/04 08:00", "available_feu": 350}
-             ]}
-        ]
-    }
-}

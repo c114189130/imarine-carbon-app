@@ -1,114 +1,31 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>貨櫃指派 - {{ app_title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
+<head><meta charset="UTF-8"><title>貨櫃指派 - {{ app_title }}</title><link rel="stylesheet" href="/static/style.css"></head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-brand">🌊 {{ app_title }}</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/history_page">📊 歷史記錄</a>
-            <a href="/dashboard">📈 儀表板</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <div class="hero">
-            <h1>🚢 智慧藍色公路運輸決策系統</h1>
-            <p style="color:white;margin-top:1rem;">選擇起迄港口，計算海轉 vs 陸拖最佳方案 | 碳排 · 碳權 · 成本</p>
-        </div>
-
-        <div class="card" style="max-width:600px;margin:0 auto;">
-            <h2>📋 運輸需求</h2>
-            
-            <div class="form-group">
-                <label>🚀 起始港</label>
-                <select id="startPort" onchange="updateEndPorts()">
-                    <option value="">請選擇起始港</option>
-                    <option value="kaohsiung">高雄港</option>
-                    <option value="taichung">台中港</option>
-                    <option value="taipei">汐止調度場(台北)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>🏁 目的港</label>
-                <select id="endPort"><option value="">請先選擇起始港</option></select>
-            </div>
-
-            <div class="form-group">
-                <label>📅 預定出貨日期</label>
-                <input type="date" id="shipDate">
-            </div>
-
-            <div class="form-group">
-                <label>📦 貨櫃單位</label>
-                <div style="display:flex;gap:1rem;">
-                    <label style="flex:1;padding:10px;border:2px solid #caf0f8;border-radius:12px;text-align:center;cursor:pointer;">
-                        <input type="radio" name="unit" value="FEU" checked onchange="updateUnit()"> 40呎 (FEU)
-                    </label>
-                    <label style="flex:1;padding:10px;border:2px solid #caf0f8;border-radius:12px;text-align:center;cursor:pointer;">
-                        <input type="radio" name="unit" value="TEU" onchange="updateUnit()"> 20呎 (TEU)
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="containers">🔢 <span id="unitLabel">貨櫃數量 (FEU)</span></label>
-                <input type="number" id="containers" placeholder="請輸入數量" min="1" max="5000" value="100">
-            </div>
-
-            <button class="btn btn-primary" onclick="goToResult()" style="width:100%;font-size:1.2rem;padding:15px;">🚀 開始計算</button>
-        </div>
+<nav class="navbar">
+    <div class="navbar-brand">🌊 {{ app_title }}</div>
+    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a><a href="/history_page">📊</a></div>
+</nav>
+<div class="container">
+    <div class="hero"><h1>🚢 智慧藍色公路運輸決策</h1><p style="color:white;">輸入目標到貨日，系統判斷海轉或陸拖</p></div>
+    <div class="card" style="max-width:600px;margin:0 auto;">
+        <div class="form-group"><label>🚀 起始港</label>
+            <select id="startPort" onchange="updateEnd()"><option value="">請選擇</option>
+                <option value="kaohsiung">高雄港</option><option value="taichung">台中港</option><option value="taipei">汐止調度場(台北)</option></select></div>
+        <div class="form-group"><label>🏁 目的港</label><select id="endPort"><option>請先選起始港</option></select></div>
+        <div class="form-group"><label>📅 目標到貨日</label><input type="date" id="targetDate"></div>
+        <div class="form-group"><label>📦 單位</label><div style="display:flex;gap:1rem;">
+            <label style="flex:1;padding:10px;border:2px solid #caf0f8;border-radius:12px;text-align:center;"><input type="radio" name="unit" value="FEU" checked> 40呎 FEU</label>
+            <label style="flex:1;padding:10px;border:2px solid #caf0f8;border-radius:12px;text-align:center;"><input type="radio" name="unit" value="TEU"> 20呎 TEU</label></div></div>
+        <div class="form-group"><label>🔢 數量</label><input type="number" id="containers" value="100" min="1" max="5000"></div>
+        <button class="btn btn-primary" onclick="go()" style="width:100%;padding:15px;">🚀 開始計算</button>
     </div>
-
-    <footer class="footer"><div class="footer-bottom"><p>© 2024 iMarine 智慧藍色公路運輸決策系統</p></div></footer>
-
-    <script>
-        var ports = [
-            {v:"kaohsiung",l:"高雄港"},
-            {v:"taichung",l:"台中港"},
-            {v:"taipei",l:"汐止調度場(台北)"}
-        ];
-        function updateEndPorts(){
-            var sv = document.getElementById("startPort").value;
-            var es = document.getElementById("endPort");
-            es.innerHTML = '<option value="">請選擇目的港</option>';
-            if(!sv) return;
-            ports.forEach(function(p){
-                if(p.v !== sv){
-                    var o = document.createElement("option");
-                    o.value = p.v; o.textContent = p.l;
-                    es.appendChild(o);
-                }
-            });
-        }
-        function updateUnit(){
-            var u = document.querySelector('input[name="unit"]:checked').value;
-            document.getElementById("unitLabel").innerText = "貨櫃數量 (" + u + ")";
-        }
-        function goToResult(){
-            var start = document.getElementById("startPort").value;
-            var end = document.getElementById("endPort").value;
-            var containers = document.getElementById("containers").value;
-            var unit = document.querySelector('input[name="unit"]:checked').value;
-            var shipDate = document.getElementById("shipDate").value;
-            if(!start){alert("請選擇起始港");return;}
-            if(!end){alert("請選擇目的港");return;}
-            if(!containers||containers<=0||containers>5000){alert("數量需介於1~5000");return;}
-            localStorage.setItem("start",start);
-            localStorage.setItem("end",end);
-            localStorage.setItem("containers",containers);
-            localStorage.setItem("containerUnit",unit);
-            localStorage.setItem("shipDate",shipDate);
-            window.location.href="/result";
-        }
-        document.getElementById("shipDate").value = new Date().toISOString().split('T')[0];
-    </script>
+</div>
+<script>
+var pts=[{v:"kaohsiung",l:"高雄港"},{v:"taichung",l:"台中港"},{v:"taipei",l:"汐止調度場(台北)"}];
+function updateEnd(){var sv=document.getElementById("startPort").value,es=document.getElementById("endPort");es.innerHTML='<option value="">請選擇</option>';if(!sv)return;pts.forEach(function(p){if(p.v!==sv){var o=document.createElement("option");o.value=p.v;o.textContent=p.l;es.appendChild(o);}});}
+function go(){var s=document.getElementById("startPort").value,e=document.getElementById("endPort").value,c=document.getElementById("containers").value,u=document.querySelector('input[name="unit"]:checked').value,td=document.getElementById("targetDate").value;if(!s||!e||!c||c<=0||c>5000){alert("請完整填寫");return;}localStorage.setItem("start",s);localStorage.setItem("end",e);localStorage.setItem("containers",c);localStorage.setItem("unit",u);localStorage.setItem("targetDate",td);location.href="/result";}
+document.getElementById("targetDate").value=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
+</script>
 </body>
 </html>
