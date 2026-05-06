@@ -1,6 +1,5 @@
 var currentResult = null;
 var mapInstance = null;
-var segmentLayers = {};
 
 function fm(v){ return "NT$ "+Number(v||0).toLocaleString(); }
 
@@ -15,7 +14,10 @@ function calculate(){
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.error) throw new Error(d.error);
-        currentResult=d; show(d); initMap(d);
+        currentResult=d;
+        show(d);
+        // ✅ 關鍵：displayResults 之後一定要呼叫 drawMap
+        drawMap(d);
         document.getElementById("loading").style.display="none";
         document.getElementById("main").style.display="block";
     }).catch(function(e){
@@ -44,7 +46,7 @@ function show(d){
 
     var sh="";
     if(d.ships&&d.ships.length>0){
-        d.ships.forEach(function(s,i){
+        d.ships.forEach(function(s){
             sh+='<div style="background:rgba(255,255,255,0.15);padding:0.8rem;border-radius:10px;margin:0.3rem 0;">'+
                 '✅ '+s.ship+'（'+s.weekday+'）<br>ETD '+s.etd+' → ETA '+s.eta+'（'+s.hours+'h）| 剩餘 '+s.available+' / '+s.capacity+' FEU</div>';
         });
@@ -56,25 +58,49 @@ function show(d){
     document.getElementById("reasonsList").innerHTML=re;
 }
 
-function initMap(d){
-    if(mapInstance){mapInstance.remove();}
-    mapInstance = L.map('map').setView([23.5,120.8],7);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OSM'}).addTo(mapInstance);
+// ✅ 保證能跑的地圖函數
+function drawMap(data){
+    // 清除舊地圖
+    if(mapInstance){ mapInstance.remove(); mapInstance=null; }
 
-    // 起終點標記
-    L.marker([d.start_lat,d.start_lon]).addTo(mapInstance).bindPopup('<b>📍 '+d.start_name+'</b>').openPopup();
-    L.marker([d.end_lat,d.end_lon]).addTo(mapInstance).bindPopup('<b>🏁 '+d.end_name+'</b>');
+    // 檢查 Leaflet 是否載入
+    if(typeof L === 'undefined'){
+        console.error("Leaflet 未載入");
+        return;
+    }
 
-    // 載入路段
+    // 檢查資料
+    if(!data.start_lat || !data.end_lat){
+        console.error("缺少經緯度資料");
+        return;
+    }
+
+    // 建立地圖
+    mapInstance = L.map('map').setView([23.5, 120.8], 7);
+
+    // 底圖
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OSM contributors'
+    }).addTo(mapInstance);
+
+    // 起點終點標記
+    L.marker([data.start_lat, data.start_lon]).addTo(mapInstance)
+        .bindPopup('<b>📍 起點：'+data.start_name+'</b>').openPopup();
+    L.marker([data.end_lat, data.end_lon]).addTo(mapInstance)
+        .bindPopup('<b>🏁 終點：'+data.end_name+'</b>');
+
+    // 繪製路段（從 API 取得）
     fetch("/api/traffic_segments")
     .then(function(r){return r.json();})
     .then(function(segments){
         segments.forEach(function(seg){
             var color = seg.level==="low"?"#27ae60":(seg.level==="medium"?"#f39c12":"#e74c3c");
             var latlngs = seg.coords.map(function(c){return [c[0],c[1]];});
-            var layer = L.polyline(latlngs,{color:color,weight:5,opacity:0.9}).addTo(mapInstance);
-            layer.bindPopup('<b>'+seg.name+'</b><br>'+seg.speed+' km/h');
+            L.polyline(latlngs,{color:color,weight:5,opacity:0.9}).addTo(mapInstance)
+                .bindPopup('<b>'+seg.name+'</b><br>'+seg.speed+' km/h');
         });
+    }).catch(function(e){
+        console.error("路段載入失敗:",e);
     });
 }
 
