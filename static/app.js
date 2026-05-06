@@ -14,10 +14,7 @@ function calculate(){
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.error) throw new Error(d.error);
-        currentResult=d;
-        show(d);
-        // ✅ 關鍵：displayResults 之後一定要呼叫 drawMap
-        drawMap(d);
+        currentResult=d; show(d); drawMap(d);
         document.getElementById("loading").style.display="none";
         document.getElementById("main").style.display="block";
     }).catch(function(e){
@@ -45,12 +42,14 @@ function show(d){
     document.getElementById("carbonCredit").innerText=fm(d.carbon_credit);
 
     var sh="";
-    if(d.ships&&d.ships.length>0){
-        d.ships.forEach(function(s){
+    if(d.valid_ships&&d.valid_ships.length>0){
+        d.valid_ships.forEach(function(s){
             sh+='<div style="background:rgba(255,255,255,0.15);padding:0.8rem;border-radius:10px;margin:0.3rem 0;">'+
-                '✅ '+s.ship+'（'+s.weekday+'）<br>ETD '+s.etd+' → ETA '+s.eta+'（'+s.hours+'h）| 剩餘 '+s.available+' / '+s.capacity+' FEU</div>';
+                '✅ '+s.ship+'（'+s.weekday+'）<br>ETD '+s.etd+' → ETA '+s.eta+'（'+s.hours+'h）| 剩餘 '+s.available+' FEU</div>';
         });
-    } else { sh='<p>暫無可用船班</p>'; }
+    } else {
+        sh='<p style="color:#ff6b6b;">⚠️ 暫無可用船班（目標日前無船班或艙位不足）</p>';
+    }
     document.getElementById("shipList").innerHTML=sh;
 
     var re="";
@@ -58,49 +57,24 @@ function show(d){
     document.getElementById("reasonsList").innerHTML=re;
 }
 
-// ✅ 保證能跑的地圖函數
 function drawMap(data){
-    // 清除舊地圖
     if(mapInstance){ mapInstance.remove(); mapInstance=null; }
+    if(typeof L==='undefined'){ console.error("Leaflet 未載入"); return; }
+    if(!data.start_lat||!data.end_lat){ console.error("缺少經緯度"); return; }
 
-    // 檢查 Leaflet 是否載入
-    if(typeof L === 'undefined'){
-        console.error("Leaflet 未載入");
-        return;
-    }
+    mapInstance = L.map('map').setView([23.5,120.8],7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(mapInstance);
+    L.marker([data.start_lat,data.start_lon]).addTo(mapInstance).bindPopup('<b>📍 '+data.start_name+'</b>').openPopup();
+    L.marker([data.end_lat,data.end_lon]).addTo(mapInstance).bindPopup('<b>🏁 '+data.end_name+'</b>');
 
-    // 檢查資料
-    if(!data.start_lat || !data.end_lat){
-        console.error("缺少經緯度資料");
-        return;
-    }
-
-    // 建立地圖
-    mapInstance = L.map('map').setView([23.5, 120.8], 7);
-
-    // 底圖
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OSM contributors'
-    }).addTo(mapInstance);
-
-    // 起點終點標記
-    L.marker([data.start_lat, data.start_lon]).addTo(mapInstance)
-        .bindPopup('<b>📍 起點：'+data.start_name+'</b>').openPopup();
-    L.marker([data.end_lat, data.end_lon]).addTo(mapInstance)
-        .bindPopup('<b>🏁 終點：'+data.end_name+'</b>');
-
-    // 繪製路段（從 API 取得）
     fetch("/api/traffic_segments")
     .then(function(r){return r.json();})
-    .then(function(segments){
-        segments.forEach(function(seg){
-            var color = seg.level==="low"?"#27ae60":(seg.level==="medium"?"#f39c12":"#e74c3c");
-            var latlngs = seg.coords.map(function(c){return [c[0],c[1]];});
-            L.polyline(latlngs,{color:color,weight:5,opacity:0.9}).addTo(mapInstance)
-                .bindPopup('<b>'+seg.name+'</b><br>'+seg.speed+' km/h');
+    .then(function(segs){
+        segs.forEach(function(s){
+            var color = s.level==="low"?"#27ae60":(s.level==="medium"?"#f39c12":"#e74c3c");
+            var latlngs = s.coords.map(function(c){return [c[0],c[1]];});
+            L.polyline(latlngs,{color:color,weight:5,opacity:0.9}).addTo(mapInstance).bindPopup('<b>'+s.name+'</b><br>'+s.speed+' km/h');
         });
-    }).catch(function(e){
-        console.error("路段載入失敗:",e);
     });
 }
 

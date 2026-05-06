@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>計算結果 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <!-- ✅ Leaflet CSS 一定要先載入 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body onload="calculate()">
 <nav class="navbar">
@@ -41,9 +41,9 @@
 <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值 (NT$)</div>
 </div></div>
 
-<!-- 國道路況地圖 -->
-<div class="card fade-in"><h3>🛣️ 即時國道路況 <span style="font-size:0.8rem;">（🟢順暢 🟡車多 🔴壅塞）</span></h3>
-<div class="map-container" id="map" style="height:450px;"></div></div>
+<!-- ✅ 地圖容器：一定要有高度 -->
+<div class="card fade-in"><h3>🛣️ 即時國道路況地圖 <span style="font-size:0.8rem;">（🟢順暢 🟡車多 🔴壅塞）</span></h3>
+<div id="map" style="height:500px;border-radius:12px;"></div></div>
 
 <div class="card gradient-card fade-in"><h3>🚢 可用船班（立昌輪:二、五 | 立揚輪:三、六）</h3><div id="shipList"></div></div>
 
@@ -55,6 +55,10 @@
 </div></div>
 
 <footer class="footer"><div class="footer-bottom">© 2024 iMarine</div></footer>
+
+<!-- ✅ Leaflet JS 在 app.js 之前載入 -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- ✅ 你的 app.js -->
 <script src="/static/app.js"></script>
 </body>
 </html>
