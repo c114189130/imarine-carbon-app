@@ -1,4 +1,7 @@
-import os, math, requests, random
+import os
+import math
+import requests
+import random
 from datetime import datetime, timedelta
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request, send_file
@@ -14,7 +17,8 @@ TIMEOUT = 8
 ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
 
-# ========== 國道路段定義（後端版本） ==========
+
+# ========== 國道路段定義 ==========
 FREEWAY_DEFINITION = [
     # 國道一號 北上
     {"id": "NH1-N-1", "name": "基隆-台北", "hw": "NH1", "dir": "north"},
@@ -44,6 +48,7 @@ FREEWAY_DEFINITION = [
     {"id": "NH3-S-5", "name": "台北-基隆", "hw": "NH3", "dir": "south"},
 ]
 
+
 # ================= TDX API =================
 def get_tdx_token():
     if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET:
@@ -51,7 +56,11 @@ def get_tdx_token():
     try:
         r = requests.post(
             "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
-            data={"grant_type": "client_credentials", "client_id": TDX_CLIENT_ID, "client_secret": TDX_CLIENT_SECRET},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": TDX_CLIENT_ID,
+                "client_secret": TDX_CLIENT_SECRET
+            },
             timeout=TIMEOUT
         )
         if r.status_code == 200:
@@ -81,14 +90,12 @@ def get_highway_traffic():
                     continue
                 vd_id = item.get("VDID", "")
                 speed = item["Speed"]
-                # 判斷國道
                 if "NH1" in vd_id or "N1" in vd_id:
                     hw = "NH1"
                 elif "NH3" in vd_id or "N3" in vd_id:
                     hw = "NH3"
                 else:
                     continue
-                # 判斷方向 (VDID 中通常 N 開頭=北上, S 開頭=南下)
                 direction = "north" if "-N" in vd_id else "south"
                 key = f"{hw}-{direction}"
                 if key not in segments:
@@ -160,9 +167,7 @@ def calculate_result(start, end, containers, unit, target_date_str):
     route = ROUTES.get((start, end), {"road_km": 200, "sea_km": 160})
     rkm, skm = route["road_km"], route["sea_km"]
 
-    # 路況
     traffic_data = get_highway_traffic()
-    # 取與路線相關的國道一號平均速度（簡化）
     nh1_n = traffic_data.get("NH1-north", 55)
     nh1_s = traffic_data.get("NH1-south", 55)
     avg_speed = (nh1_n + nh1_s) / 2
@@ -178,7 +183,6 @@ def calculate_result(start, end, containers, unit, target_date_str):
 
     road_hours = round(rkm / ROAD_SPEED_KMH * cfactor, 1)
 
-    # 時間
     try:
         target_dt = datetime.strptime(target_date_str, "%Y-%m-%d")
     except:
@@ -192,11 +196,9 @@ def calculate_result(start, end, containers, unit, target_date_str):
     best_ship = ship_list[0] if ship_list else None
     sea_ok = best_ship is not None and best_ship["fits"]
 
-    # 碳排
     road_carbon = EMISSION_FACTORS["road"] * rkm * cf
     sea_carbon = EMISSION_FACTORS["sea"] * skm * cf + PORT_HANDLING_EMISSION * cf * 2
 
-    # 成本
     road_cost = TRANSPORT_COST_RATES["road"] * rkm * cf + ROAD_TOLL_RATE * rkm * cf
     sea_cost = TRANSPORT_COST_RATES["sea"] * skm * cf + PORT_HANDLING_FEE * cf
 
@@ -215,7 +217,6 @@ def calculate_result(start, end, containers, unit, target_date_str):
 
     cost_saved = road_full - sea_full
 
-    # 決策
     reasons = []
     if sea_ok and sea_full < road_full:
         decision = "海轉（藍色公路）"
@@ -238,7 +239,6 @@ def calculate_result(start, end, containers, unit, target_date_str):
         decision = "海轉（藍色公路）"
         reasons.append("綜合評估後海運較優")
 
-    # 存記錄
     rec = {
         "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -284,29 +284,24 @@ def calculate_result(start, end, containers, unit, target_date_str):
 def load_history():
     return read_json(HISTORY_FILE, [])
 
-
 def save_history(r):
     h = load_history()
     h.append(r)
     write_json(HISTORY_FILE, h[-MAX_HISTORY_RECORDS:])
 
-
 def load_certs():
     return read_json(CERTIFICATE_FILE, [])
-
 
 def save_cert(c):
     rows = load_certs()
     rows.append(c)
     write_json(CERTIFICATE_FILE, rows)
 
-
 def get_hist(rid):
     for r in load_history():
         if r["id"] == rid:
             return r
     return None
-
 
 def get_cert(cid):
     for c in load_certs():
@@ -320,36 +315,29 @@ def get_cert(cid):
 def index():
     return render_template("index.html", app_title=APP_TITLE)
 
-
 @app.route("/input")
 def input_page():
     return render_template("input.html", ports=PORTS, app_title=APP_TITLE)
-
 
 @app.route("/result")
 def result_page():
     return render_template("result.html", app_title=APP_TITLE)
 
-
 @app.route("/certificate_page")
 def cert_page():
     return render_template("certificate.html", app_title=APP_TITLE)
-
 
 @app.route("/history_page")
 def hist_page():
     return render_template("history.html", app_title=APP_TITLE)
 
-
 @app.route("/dashboard")
 def dash_page():
     return render_template("dashboard.html", app_title=APP_TITLE)
 
-
 @app.route("/get_history")
 def api_hist():
     return jsonify(load_history())
-
 
 @app.route("/api/traffic_segments")
 def api_traffic_segments():
@@ -359,7 +347,6 @@ def api_traffic_segments():
     for seg in FREEWAY_DEFINITION:
         key = f"{seg['hw']}-{seg['dir']}"
         base_speed = traffic.get(key, 55)
-        # 加隨機波動 ±10
         speed = max(20, min(100, int(base_speed) + random.randint(-10, 10)))
         if speed >= 60:
             level = "low"
@@ -376,7 +363,6 @@ def api_traffic_segments():
             "level": level
         })
     return jsonify(result)
-
 
 @app.route("/calculate", methods=["POST"])
 def calc():
@@ -398,7 +384,6 @@ def calc():
         return jsonify(calculate_result(s, e, c, u, td))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 500
-
 
 @app.route("/certificate", methods=["POST"])
 def create_cert():
@@ -424,7 +409,6 @@ def create_cert():
         "ci": rec["ci"]
     })
 
-
 @app.route("/download_certificate/<cert_id>")
 def download_cert(cert_id):
     cert = get_cert(cert_id)
@@ -433,13 +417,13 @@ def download_cert(cert_id):
     buf = build_certificate_pdf(cert, lang="en")
     return send_file(buf, as_attachment=True, download_name=f"certificate_{cert_id}.pdf", mimetype="application/pdf")
 
-
 @app.route("/verify/<cert_id>")
 def verify(cert_id):
     cert = get_cert(cert_id)
     return render_template("verify.html", valid=bool(cert), cert=cert, app_title=APP_TITLE)
 
 
+# ================= 啟動 =================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
