@@ -5,74 +5,474 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 首頁動畫效果 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes glowPulse {
+            0% { box-shadow: 0 0 5px rgba(0,180,216,0.3); }
+            100% { box-shadow: 0 0 30px rgba(0,180,216,0.8); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
+            background-size: 200% 200%;
+            animation: gradientMove 8s ease infinite;
+            border-radius: 30px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #fff, #caf0f8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.9);
+            margin-top: 1rem;
+        }
+        .floating-ship {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 80px;
+            opacity: 0.3;
+            animation: float 4s ease-in-out infinite;
+        }
+        .floating-wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px);
+            animation: shimmer 3s linear infinite;
+        }
+        .result-card {
+            background: linear-gradient(135deg, var(--deep-twilight), var(--bright-teal-blue));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+        }
+        .benefit-card {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-radius: 15px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .benefit-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .kpi-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--bright-teal-blue);
+        }
+        .capacity-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+        }
+        .booking-success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            border-radius: 10px;
+            animation: slideIn 0.5s ease;
+        }
+        .booking-fail {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 1rem;
+            border-radius: 10px;
+        }
+        .tab-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--light-cyan);
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--french-blue);
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            color: var(--bright-teal-blue);
+            border-bottom: 3px solid var(--bright-teal-blue);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-number {
+            transition: all 0.5s ease;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
             <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/booking">🎟️ 艙位訂票</a>
             <a href="/history_page">📊 歷史記錄</a>
             <a href="/dashboard">📈 Dashboard</a>
         </div>
     </nav>
-    
+
     <div class="container">
-        <div class="hero fade-in">
-            <h1>🌊 iMarine 智慧海運碳排管理平台</h1>
-            <p>🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運船期 | 🌱 碳排放最佳化 | 🎟️ 即時艙位訂票</p>
-            <button class="btn btn-primary" onclick="location.href='/input'">🚀 開始指派</button>
-            <button class="btn btn-outline" onclick="location.href='/booking'">🎟️ 艙位訂票</button>
-        </div>
-        
-        <div class="stats-grid">
-            <div class="stat-card fade-in"><h3>-66%</h3><p>海運 vs 公路碳排</p></div>
-            <div class="stat-card fade-in"><h3>即時</h3><p>TDX 路況 API</p></div>
-            <div class="stat-card fade-in"><h3>長榮海運</h3><p>船期整合</p></div>
-            <div class="stat-card fade-in"><h3>CNS 14064</h3><p>國家標準</p></div>
-        </div>
-        
-        <div class="card fade-in">
-            <h2>🚀 系統特色</h2>
-            <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1.5rem;">
-                <div style="flex: 1; text-align: center; padding: 1rem;">
-                    <span style="font-size: 2.5rem;">🧠</span>
-                    <h3>AI 決策引擎</h3>
-                    <p>7 層優先級邏輯，多因子評分模型</p>
-                </div>
-                <div style="flex: 1; text-align: center; padding: 1rem;">
-                    <span style="font-size: 2.5rem;">🚛</span>
-                    <h3>即時路況</h3>
-                    <p>串接交通部 TDX API，即時掌握國道車流</p>
-                </div>
-                <div style="flex: 1; text-align: center; padding: 1rem;">
-                    <span style="font-size: 2.5rem;">🚢</span>
-                    <h3>藍色公路</h3>
-                    <p>整合長榮海運 TBS/TBS2 航線船期</p>
-                </div>
-                <div style="flex: 1; text-align: center; padding: 1rem;">
-                    <span style="font-size: 2.5rem;">🌱</span>
-                    <h3>ESG 減碳</h3>
-                    <p>碳排計算 + 碳權價值 + VSL 人命價值</p>
-                </div>
-                <div style="flex: 1; text-align: center; padding: 1rem;">
-                    <span style="font-size: 2.5rem;">🎟️</span>
-                    <h3>艙位訂票</h3>
-                    <p>即時艙位查詢，一鍵訂票</p>
-                </div>
+        <!-- 炫炮 Hero 區 -->
+        <div class="hero-section">
+            <div class="floating-ship">🚢</div>
+            <div class="floating-wave"></div>
+            <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
+            <div class="hero-subtitle">
+                🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運 TBS/TBS2 航線 | 🌱 ESG 碳排放最佳化
             </div>
         </div>
-    </div>
-    
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li><li>環保署溫室氣體排放係數</li></ul></div>
-            <div class="footer-section"><h4>📚 參考標準</h4><ul><li>CNS 14064-1</li><li>GLEC 物流碳排框架</li><li>DEFRA 排放係數</li></ul></div>
+
+        <!-- 主要操作區（整合指派 + 訂票） -->
+        <div class="card fade-in">
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchTab('dispatch')">🚢 貨櫃指派</button>
+                <button class="tab-btn" onclick="switchTab('booking')">🎟️ 艙位訂票</button>
+            </div>
+
+            <!-- 指派 Tab -->
+            <div id="dispatchTab" class="tab-content active">
+                <h3>📦 貨櫃運輸指派</h3>
+                <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
+                <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
+                <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
+                <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="special">危險品/特殊貨物</option></select></div>
+                <div class="form-group"><label>⏱️ 時效要求 (小時)</label><input type="number" id="timeRequirement" min="1" max="168" value="48"></div>
+                <button class="btn btn-primary" onclick="calculateAndDispatch()" style="width:100%">🚀 AI 智慧指派</button>
+            </div>
+
+            <!-- 訂票 Tab -->
+            <div id="bookingTab" class="tab-content">
+                <h3>🎟️ 藍色公路艙位訂票</h3>
+                <div class="form-group"><label>📍 航線</label><select id="bookRoute"><option value="KHH-TXG">高雄港 → 台中港</option><option value="TXG-KHH">台中港 → 高雄港</option></select></div>
+                <div class="form-group"><label>📦 預訂貨櫃數量 (FEU)</label><input type="number" id="bookContainers" min="1" value="10"></div>
+                <div class="form-group"><label>🏢 公司名稱</label><input type="text" id="companyName" placeholder="請輸入公司名稱"></div>
+                
+                <!-- 艙位資訊卡片 -->
+                <div id="capacityCard" style="background:var(--light-cyan); border-radius:15px; padding:1rem; margin-bottom:1rem">
+                    <h4>📊 即時艙位資訊</h4>
+                    <div class="capacity-bar" style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden; margin:0.5rem 0">
+                        <div id="capacityFill" class="capacity-fill" style="width:0%; height:100%; background:linear-gradient(90deg,#00b4d8,#0077b6); transition:width 0.5s ease"></div>
+                    </div>
+                    <p id="capacityText">載入中...</p>
+                </div>
+                
+                <button class="btn btn-primary" onclick="bookTicket()" style="width:100%">🎟️ 立即訂票</button>
+                <div id="bookingResult" style="margin-top:1rem"></div>
+            </div>
         </div>
+
+        <!-- AI 決策結果區（動態顯示） -->
+        <div id="resultContainer" style="display:none">
+            <div class="result-card" id="resultHeader"></div>
+            
+            <!-- ESG 效益卡片 -->
+            <div id="esgCard"></div>
+            
+            <!-- 成本比較表 -->
+            <div class="card" id="costTable"></div>
+            
+            <!-- 即時路網地圖 -->
+            <div class="card fade-in">
+                <div class="card-header"><h3>🗺️ 國道即時路網</h3><span class="badge">TDX 即時 API</span></div>
+                <div id="trafficStats" class="traffic-stats"><div class="stats-row"><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">順暢路段</div></div></div></div>
+                <div id="map" class="map-container"></div>
+                <div class="legend"><span><span class="color-dot green"></span> 順暢 >60km/h</span><span><span class="color-dot orange"></span> 車多 35-60km/h</span><span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span></div>
+            </div>
+            
+            <!-- 長榮船期 -->
+            <div class="card gradient-card" id="shipCard"></div>
+            
+            <!-- AI 指派建議 -->
+            <div class="card success-card" id="dispatchCard"></div>
+            
+            <!-- 圖表 -->
+            <div class="chart-container fade-in"><h3>💰 成本結構比較</h3><canvas id="costChart"></canvas></div>
+            <div class="chart-container fade-in"><h3>🌍 碳排放比較</h3><canvas id="carbonChart"></canvas></div>
+        </div>
+
+        <!-- Loading 動畫 -->
+        <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); z-index:9999; display:flex; justify-content:center; align-items:center">
+            <div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">AI 分析中...</div><div class="loading-steps"><div class="step">⏳ 分析運輸路線</div><div class="step">⏳ 串接即時交通資料</div><div class="step">⏳ 查詢船期與艙位</div><div class="step">⏳ 計算碳排效益</div><div class="step">⏳ AI 決策分析</div></div></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content"><div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li><li>環保署溫室氣體排放係數</li></ul></div><div class="footer-section"><h4>📚 參考標準</h4><ul><li>CNS 14064-1</li><li>GLEC 物流碳排框架</li><li>DEFRA 排放係數</li></ul></div></div>
         <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 本系統使用公開資料與文獻參數建模</p></div>
     </footer>
-    
-    <script src="/static/app.js"></script>
+
+    <script>
+        // 全域變數
+        let currentResult = null;
+        let mapInstance = null;
+        let trafficLayers = new Map();
+        let trafficUpdateInterval = null;
+        
+        // 艙位設定：總艙位 1700 TEU，剩餘約 1/3
+        let totalCapacity = 1700;
+        let remainingCapacity = 566; // 約 1/3
+        
+        // 頁籤切換
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            if (tab === 'dispatch') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('dispatchTab').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('bookingTab').classList.add('active');
+                loadCapacityInfo();
+            }
+        }
+        
+        // 載入艙位資訊
+        function loadCapacityInfo() {
+            const utilization = ((totalCapacity - remainingCapacity) / totalCapacity * 100).toFixed(1);
+            const fillColor = utilization > 80 ? '#e74c3c' : utilization > 50 ? '#f39c12' : '#27ae60';
+            document.getElementById('capacityFill').style.width = utilization + '%';
+            document.getElementById('capacityFill').style.background = fillColor;
+            document.getElementById('capacityText').innerHTML = `
+                總艙位：<strong>${totalCapacity}</strong> TEU<br>
+                剩餘艙位：<strong style="color:${utilization > 80 ? '#e74c3c' : '#27ae60'}">${remainingCapacity}</strong> TEU<br>
+                使用率：${utilization}%
+                ${utilization > 80 ? '<span style="color:#e74c3c"> ⚠️ 艙位緊張！</span>' : ''}
+            `;
+        }
+        
+        // 訂票功能
+        async function bookTicket() {
+            const route = document.getElementById('bookRoute').value;
+            const containers = parseInt(document.getElementById('bookContainers').value);
+            const companyName = document.getElementById('companyName').value;
+            
+            if (!companyName) { alert('請輸入公司名稱'); return; }
+            if (containers > remainingCapacity) {
+                document.getElementById('bookingResult').innerHTML = `<div class="booking-fail"><h3>❌ 訂票失敗</h3><p>艙位不足！剩餘 ${remainingCapacity} TEU，需要 ${containers} TEU</p></div>`;
+                return;
+            }
+            
+            remainingCapacity -= containers;
+            loadCapacityInfo();
+            
+            document.getElementById('bookingResult').innerHTML = `<div class="booking-success"><h3>✅ 訂票成功！</h3><p>公司：${companyName}</p><p>艙位使用：${containers} TEU</p><p>剩餘艙位：${remainingCapacity} / ${totalCapacity} TEU</p><p>訂位編號：${Date.now()}</p><button class="btn btn-primary" onclick="alert('請前往指派頁面產生碳排認證')">📄 產生碳排認證</button></div>`;
+        }
+        
+        // 數字動畫
+        function animateNumber(el, start, end, duration = 1000) {
+            if (!el) return;
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                el.innerText = Math.round(current).toLocaleString();
+            }, 16);
+        }
+        
+        function formatCurrency(v) { return "NT$ " + (Number(v) || 0).toLocaleString(); }
+        
+        // 指派計算
+        async function calculateAndDispatch() {
+            const start = document.getElementById('start').value;
+            const end = document.getElementById('end').value;
+            const containers = parseInt(document.getElementById('containers').value);
+            const cargoType = document.getElementById('cargoType').value;
+            const timeRequirement = parseInt(document.getElementById('timeRequirement').value);
+            
+            if (containers <= 0) { alert("請輸入貨櫃數量"); return; }
+            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            const res = await fetch("/calculate", {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start, end, containers, cargo_type: cargoType, time_requirement: timeRequirement })
+            });
+            const data = await res.json();
+            if (data.error) { alert(data.error); document.getElementById('loadingOverlay').style.display = 'none'; return; }
+            
+            currentResult = data;
+            displayResults(data);
+            drawResultCharts(data);
+            initMap(data);
+            
+            document.getElementById('resultContainer').style.display = 'block';
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+        
+        function displayResults(data) {
+            const road = data.road, sea = data.sea;
+            const savedCO2 = (data.carbon_improvement || 0).toLocaleString();
+            const reductionPct = data.reduction_pct || 0;
+            const carbonCredit = (data.esg_report?.carbon_credit_value || 0).toLocaleString();
+            
+            document.getElementById('resultHeader').innerHTML = `<h3>📊 AI 決策結果</h3><p>🚢 ${data.start_name} → 🏁 ${data.end_name}</p><p>📏 距離：${Number(data.distance).toLocaleString()} 公里</p><p>📦 貨櫃數量：${Number(data.containers).toLocaleString()} FEU</p><p>🎯 AI 推薦：<strong style="font-size:1.5rem; color:#00b4d8">${data.best_mode}</strong></p><p>${data.recommendation || ''}</p>`;
+            
+            document.getElementById('esgCard').innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem">
+                    <div class="benefit-card"><div class="kpi-number" id="savedCO2Num">0</div><div>減碳量 (kg CO2e)</div><div style="font-size:0.8rem">🌱 ${reductionPct}% 減碳</div></div>
+                    <div class="benefit-card"><div class="kpi-number" id="carbonCreditNum">0</div><div>碳權價值 (NTD)</div><div style="font-size:0.8rem">碳定價 NT$0.3/kg</div></div>
+                    <div class="benefit-card"><div class="kpi-number" id="vslNum">0</div><div>人命價值節省 (NTD)</div><div style="font-size:0.8rem">VSL NT$5,000萬</div></div>
+                </div>
+            `;
+            animateNumber(document.getElementById('savedCO2Num'), 0, data.carbon_improvement || 0, 1000);
+            animateNumber(document.getElementById('carbonCreditNum'), 0, data.esg_report?.carbon_credit_value || 0, 1000);
+            animateNumber(document.getElementById('vslNum'), 0, data.optimization?.vsl_saved || 0, 1000);
+            
+            document.getElementById('costTable').innerHTML = `
+                <h3>💰 總體社會成本分析</h3>
+                <table class="cost-table"><thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead><tbody>
+                <tr><td><strong>💰 運費</strong></td><td>${formatCurrency(road.freight)}</td><td>${formatCurrency(sea.freight)}</td><td>${formatCurrency(road.freight - sea.freight)}</td></tr>
+                <tr><td><strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
+                <tr><td><strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
+                <tr><td><strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
+                <tr style="background:var(--light-cyan)"><td><strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr>
+                </tbody></table>
+            `;
+            
+            if (data.ship_schedule) {
+                document.getElementById('shipCard').innerHTML = `
+                    <div class="card-header"><h3>🚢 長榮海運「藍色公路」即時船期</h3><span class="badge light">TBS/TBS2</span></div>
+                    <div class="ship-info-grid">
+                        <div class="ship-info-item"><div class="info-label">🚢 船名</div><div class="info-value">${data.ship_schedule.name}</div></div>
+                        <div class="ship-info-item"><div class="info-label">📍 目的地</div><div class="info-value">${data.ship_schedule.destination}</div></div>
+                        <div class="ship-info-item"><div class="info-label">⏰ 預計到港</div><div class="info-value">${data.ship_schedule.eta_hours} 小時後</div></div>
+                        <div class="ship-info-item"><div class="info-label">📦 可用艙位</div><div class="info-value">${data.ship_schedule.available} FEU</div></div>
+                    </div>
+                `;
+            }
+            
+            if (data.dispatch) {
+                let reasonsHtml = data.dispatch.reasons.map(r => `<li>${r}</li>`).join('');
+                document.getElementById('dispatchCard').innerHTML = `
+                    <div class="card-header"><h3>🧠 AI 指派建議</h3><span class="badge">AI 即時決策</span></div>
+                    <div class="dispatch-grid">
+                        <div class="score-section"><div class="score-card sea"><div class="score-number" id="scoreSea">0</div><div>🚢 海運分數</div></div><div class="score-card road"><div class="score-number" id="scoreRoad">0</div><div>🚛 公路分數</div></div></div>
+                        <div class="decision-section">
+                            <div class="action-box"><p class="action-title">${data.dispatch.action}</p><p>${data.dispatch.suggestion}</p></div>
+                            <div class="count-box"><div><span class="emoji">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> FEU</div><div><span class="emoji">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> FEU</div></div>
+                            <div class="ratio-bars"><div class="ratio-bar-container"><div id="ratioBarSea" class="ratio-bar-sea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div><div class="ratio-bar-container"><div id="ratioBarRoad" class="ratio-bar-road" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div></div>
+                            <div class="reason-box"><p class="reason-title">📌 詳細分析</p><ul>${reasonsHtml}</ul></div>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => {
+                    animateNumber(document.getElementById('scoreSea'), 0, data.dispatch.score_sea, 600);
+                    animateNumber(document.getElementById('scoreRoad'), 0, data.dispatch.score_road, 600);
+                    animateNumber(document.getElementById('seaCount'), 0, data.dispatch.to_sea, 600);
+                    animateNumber(document.getElementById('roadCount'), 0, data.dispatch.to_road, 600);
+                    document.getElementById('seaPercent').innerText = data.dispatch.ratio;
+                    document.getElementById('roadPercent').innerText = (100 - data.dispatch.ratio).toFixed(1);
+                    document.getElementById('ratioBarSea').style.width = data.dispatch.ratio + "%";
+                    document.getElementById('ratioBarRoad').style.width = (100 - data.dispatch.ratio) + "%";
+                }, 100);
+            }
+        }
+        
+        async function initMap(data) {
+            const centerLat = (data.start_lat + data.end_lat) / 2;
+            const centerLon = (data.start_lon + data.end_lon) / 2;
+            if (mapInstance) { mapInstance.remove(); trafficLayers.clear(); }
+            if (typeof L === 'undefined') return;
+            mapInstance = L.map('map').setView([centerLat, centerLon], 7);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OSM', subdomains: 'abcd' }).addTo(mapInstance);
+            try {
+                const response = await fetch('/static/taiwan_freeway.geojson');
+                const geojson = await response.json();
+                geojson.features.forEach(feature => {
+                    const layer = L.geoJSON(feature, { style: { color: '#ccc', weight: 4 } }).addTo(mapInstance);
+                    trafficLayers.set(feature.properties.id, layer);
+                });
+            } catch(e) { console.error("載入路網失敗:", e); }
+            setTimeout(() => loadTrafficLight(), 1000);
+            if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
+            trafficUpdateInterval = setInterval(loadTrafficLight, 60000);
+        }
+        
+        async function loadTrafficLight() {
+            if (!mapInstance) return;
+            try {
+                const res = await fetch("/api/traffic");
+                const speedData = await res.json();
+                let totalSpeed = 0, congested = 0, smooth = 0;
+                speedData.forEach(item => {
+                    const layer = trafficLayers.get(item.id);
+                    if (layer) {
+                        const color = item.speed >= 60 ? "#27ae60" : (item.speed >= 35 ? "#f39c12" : "#e74c3c");
+                        layer.setStyle({ color: color, weight: 5 });
+                        totalSpeed += item.speed;
+                        if (item.speed < 35) congested++;
+                        if (item.speed >= 60) smooth++;
+                    }
+                });
+                const avgSpeed = speedData.length > 0 ? (totalSpeed / speedData.length).toFixed(1) : 0;
+                const statsDiv = document.getElementById("trafficStats");
+                if (statsDiv) statsDiv.innerHTML = `<div class="stats-row"><div class="stat-item"><div class="stat-value">${avgSpeed}</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value" style="color:#e74c3c">${congested}</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value" style="color:#27ae60">${smooth}</div><div class="stat-label">順暢路段</div></div></div>`;
+            } catch(e) { console.error("載入即時路況失敗:", e); }
+        }
+        
+        function drawResultCharts(data) {
+            new Chart(document.getElementById("costChart"), { type: 'bar', data: { labels: ['公路', '海運'], datasets: [{ label: '運費', data: [data.road.freight, data.sea.freight], backgroundColor: 'rgba(0,119,182,0.7)' }, { label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: 'rgba(0,180,216,0.7)' }, { label: '社會成本', data: [data.road.social, data.sea.social], backgroundColor: 'rgba(72,202,228,0.7)' }, { label: 'VSL風險', data: [data.road.risk, data.sea.risk], backgroundColor: 'rgba(144,224,239,0.7)' }] }, options: { responsive: true } });
+            new Chart(document.getElementById("carbonChart"), { type: 'bar', data: { labels: ['公路', '海運'], datasets: [{ label: '碳排放 (kg CO2e)', data: [data.road.carbon, data.sea.carbon], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }] }, options: { responsive: true } });
+        }
+        
+        // 初始化艙位
+        loadCapacityInfo();
+    </script>
 </body>
 </html>

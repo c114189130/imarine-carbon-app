@@ -10,6 +10,10 @@ DATA_DIR.mkdir(exist_ok=True)
 APP_TITLE = "iMarine 智慧海運碳排管理系統"
 SECRET_KEY = "change-me-in-production"
 
+# 在 config.py 中加入艙位設定
+TOTAL_CAPACITY_TEU = 1700  # 總艙位 1700 TEU
+REMAINING_CAPACITY_TEU = 566  # 剩餘約 1/3
+
 # TDX API 憑證（請填入你的）
 TDX_CLIENT_ID = "你的App ID"
 TDX_CLIENT_SECRET = "你的App Key"

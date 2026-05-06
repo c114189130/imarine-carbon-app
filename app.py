@@ -30,7 +30,7 @@ from optimization_model import compare_modes, calculate_optimal_transfer_ratio
 from services.certificate_service import build_certificate_pdf, generate_certificate_id
 from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
-from services.booking_service import get_available_capacity, book_capacity, get_route_summary
+from services.booking_service import get_available_capacity, get_total_capacity, book_capacity, get_route_summary
 from services.carbon_service import get_esg_report, VSL
 from services.traffic_service import TrafficService
 
@@ -75,18 +75,15 @@ def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, ti
     """
     reasons = []
     
-    # 規則1：特殊貨物強制海運
     if cargo_type == "special":
         reasons.append("⚠️ 危險品/特殊貨物，依法規強制採海運")
         return "sea", 95, reasons
     
-    # 規則2：海運是否來得及
-    sea_total_hours = ship_schedule.get("eta_hours", 24) + 12  # 航行+裝卸
+    sea_total_hours = ship_schedule.get("eta_hours", 24) + 12
     if sea_total_hours > time_requirement_hours:
         reasons.append(f"⏱️ 海運需 {sea_total_hours} 小時，超過需求時限 ({time_requirement_hours} 小時)")
         return "road", 85, reasons
     
-    # 規則3：公路壅塞程度
     if road_condition.get("level") == "high":
         reasons.append(f"🚨 國道嚴重壅塞（機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），建議改走海運")
         return "sea", 90, reasons
@@ -94,7 +91,6 @@ def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, ti
         reasons.append(f"⚠️ 國道車多（壅塞機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），海運為較穩定選擇")
         return "sea", 75, reasons
     
-    # 規則4：船期緊急程度
     if ship_schedule.get("eta_hours", 24) <= 8:
         reasons.append(f"🚢 船舶 {ship_schedule['eta_hours']} 小時內出發，艙位充足，建議海運")
         return "sea", 92, reasons
@@ -102,12 +98,10 @@ def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, ti
         reasons.append(f"⏳ 船舶 {ship_schedule['eta_hours']} 小時後出發，可考慮海運")
         return "sea", 70, reasons
     
-    # 規則5：船期太久
     if ship_schedule.get("eta_hours", 24) > 36:
         reasons.append(f"⏰ 船舶 {ship_schedule['eta_hours']} 小時後才出發，時效考量建議公路")
         return "road", 80, reasons
     
-    # 規則6：ESG導向預設海運
     reasons.append("🌱 基於 ESG 永續發展目標，優先推薦低碳海運")
     return "sea", 88, reasons
 
@@ -134,7 +128,6 @@ def calculate_ai_scores(road_data, ship_data, containers):
     return score_sea, score_road
 
 def smart_dispatch(containers, road_data, ship_data, cargo_type="normal"):
-    # 特殊貨物強制海運
     if cargo_type == "special":
         return {
             "to_sea": containers,
@@ -229,16 +222,10 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
     road_condition = traffic_service.summarize_traffic()
     ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
     
-    # AI 決策引擎
     ai_mode, ai_score, ai_reasons = ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, time_requirement)
     
-    # AI 壅塞預測
     congestion_prediction = traffic_service.predict_congestion("NH1")
-    
-    # 事故風險預測
     accident_risk = traffic_service.predict_accident_risk(road_distance, road_condition["level"])
-    
-    # 運輸時間預測
     road_time_pred = traffic_service.predict_travel_time(road_distance, "road", road_condition["level"])
     sea_time_pred = traffic_service.predict_travel_time(sea_distance, "sea", road_condition["level"])
 
@@ -263,7 +250,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
     road_total = road_freight + road_time + road_social + road_risk + road_carbon_externality
     sea_total = sea_freight + sea_time + sea_social + sea_risk + sea_carbon_externality
 
-    # AI 決策決定最佳模式
     best_mode = ai_mode
     if best_mode == "海運":
         social_savings = road_total - sea_total
@@ -279,10 +265,8 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
     optimization = compare_modes(base_distance, containers)
     optimal_ratio = calculate_optimal_transfer_ratio(base_distance, containers)
     
-    # ESG 報告
     esg_report = get_esg_report(road_carbon, sea_carbon, containers, base_distance)
     
-    # 艙位資訊
     route_key = f"{p1['code']}-{p2['code']}"
     available_capacity = get_available_capacity(route_key)
 
@@ -369,22 +353,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
 def index():
     return render_template("index.html", app_title=APP_TITLE)
 
-@app.route("/input")
-def input_page():
-    return render_template("input.html", ports=PORTS, app_title=APP_TITLE)
-
-@app.route("/result")
-def result_page():
-    return render_template("result.html", app_title=APP_TITLE)
-
-@app.route("/booking")
-def booking_page():
-    return render_template("booking.html", app_title=APP_TITLE)
-
-@app.route("/certificate_page")
-def certificate_page():
-    return render_template("certificate.html", app_title=APP_TITLE)
-
 @app.route("/history_page")
 def history_page():
     return render_template("history.html", app_title=APP_TITLE)
@@ -409,7 +377,7 @@ def congestion_prediction():
 def get_capacity(start, end):
     route_key = f"{start}-{end}"
     available = get_available_capacity(route_key)
-    total = 809
+    total = get_total_capacity(route_key)
     return jsonify({"available": available, "total": total, "utilization": round((total - available) / total * 100, 1)})
 
 @app.route("/api/book", methods=["POST"])
