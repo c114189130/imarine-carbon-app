@@ -1,16 +1,84 @@
-<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>貨櫃指派 - {{ app_title }}</title><link rel="stylesheet" href="/static/style.css"></head><body>
-<nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div></nav>
-<div class="container"><div class="hero"><h1>🚢 智慧藍色公路運輸決策</h1><p style="color:white;">輸入貨物需求，AI 推薦最佳方案</p></div>
-<div class="card" style="max-width:600px;margin:0 auto;">
-<div class="form-group"><label>🚀 起始港</label><select id="startPort" onchange="updateEnd()"><option value="">請選擇</option><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option><option value="taipei">汐止調度場(台北)</option></select></div>
-<div class="form-group"><label>🏁 目的港</label><select id="endPort"><option>請先選起始港</option></select></div>
-<div class="form-group"><label>📅 預計貨到港口日期</label><input type="date" id="targetDate"></div>
-<div class="form-group"><label>📦 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="cold_chain">冷鏈貨物</option><option value="dangerous">危險品</option></select></div>
-<div class="form-group"><label>🔢 貨櫃數量 (FEU)</label><input type="number" id="containers" value="100" min="1" max="5000"></div>
-<button class="btn btn-primary" onclick="go()" style="width:100%;padding:15px;">🚀 AI 分析</button></div></div>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>貨櫃指派 - {{ app_title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="navbar-brand">🌊 {{ app_title }}</div>
+    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div>
+</nav>
+<div class="container">
+    <div class="hero">
+        <h1>🚢 智慧藍色公路運輸決策</h1>
+        <p style="color:white;">輸入貨物需求，AI 推薦最佳方案</p>
+    </div>
+    <div class="card" style="max-width:600px;margin:0 auto;">
+        <div class="form-group">
+            <label>🚀 起始港</label>
+            <select id="startPort" onchange="updateEnd()">
+                <option value="">請選擇</option>
+                <option value="kaohsiung">高雄港</option>
+                <option value="taichung">台中港</option>
+                <option value="taipei">汐止調度場(台北)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>🏁 目的港</label>
+            <select id="endPort"><option>請先選起始港</option></select>
+        </div>
+        <div class="form-group">
+            <label>📅 預計貨到港口日期</label>
+            <input type="date" id="targetDate">
+        </div>
+        <div class="form-group">
+            <label>📦 貨物類型</label>
+            <select id="cargoType">
+                <option value="normal">一般貨物</option>
+                <option value="cold_chain">冷鏈貨物</option>
+                <option value="dangerous">危險品</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>🔢 貨櫃數量 (FEU)</label>
+            <input type="number" id="containers" value="100" min="1" max="5000">
+        </div>
+        <button class="btn btn-primary" onclick="go()" style="width:100%;padding:15px;">🚀 AI 分析</button>
+    </div>
+</div>
 <script>
 var pts=[{v:"kaohsiung",l:"高雄港"},{v:"taichung",l:"台中港"},{v:"taipei",l:"汐止調度場(台北)"}];
-function updateEnd(){var sv=document.getElementById("startPort").value,es=document.getElementById("endPort");es.innerHTML='<option value="">請選擇</option>';if(!sv)return;pts.forEach(function(p){if(p.v!==sv){var o=document.createElement("option");o.value=p.v;o.textContent=p.l;es.appendChild(o);}});}
-function go(){var s=document.getElementById("startPort").value,e=document.getElementById("endPort").value,c=document.getElementById("containers").value,td=document.getElementById("targetDate").value,ct=document.getElementById("cargoType").value;if(!s||!e||!c||c<=0||c>5000){alert("請完整填寫");return;}localStorage.setItem("start",s);localStorage.setItem("end",e);localStorage.setItem("containers",c);localStorage.setItem("unit","FEU");localStorage.setItem("targetDate",td);localStorage.setItem("cargoType",ct);location.href="/result";}
+function updateEnd(){
+    var sv=document.getElementById("startPort").value;
+    var es=document.getElementById("endPort");
+    es.innerHTML='<option value="">請選擇</option>';
+    if(!sv)return;
+    pts.forEach(function(p){
+        if(p.v!==sv){
+            var o=document.createElement("option");
+            o.value=p.v;o.textContent=p.l;
+            es.appendChild(o);
+        }
+    });
+}
+function go(){
+    var s=document.getElementById("startPort").value;
+    var e=document.getElementById("endPort").value;
+    var c=document.getElementById("containers").value;
+    var td=document.getElementById("targetDate").value;
+    var ct=document.getElementById("cargoType").value;
+    if(!s||!e||!c||c<=0||c>5000){alert("請完整填寫");return;}
+    localStorage.setItem("start",s);
+    localStorage.setItem("end",e);
+    localStorage.setItem("containers",c);
+    localStorage.setItem("unit","FEU");
+    localStorage.setItem("targetDate",td);
+    localStorage.setItem("cargoType",ct);
+    location.href="/result";
+}
 document.getElementById("targetDate").value=new Date(Date.now()+7*86400000).toISOString().split('T')[0];
-</script></body></html>
+</script>
+</body>
+</html>

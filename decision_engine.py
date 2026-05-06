@@ -1,4 +1,3 @@
-from datetime import datetime
 from config import CARGO_TYPES
 
 
@@ -11,7 +10,7 @@ class DecisionEngine:
 
         cargo = CARGO_TYPES.get(cargo_type, CARGO_TYPES["normal"])
 
-        # 1. 貨物類型優先級
+        # 1. 貨物類型
         if cargo_type == "dangerous":
             scores["sea"] += 40
             reasons.append("🛑 危險品優先海運（安全考量）")
@@ -19,7 +18,7 @@ class DecisionEngine:
             scores["sea"] += 20
             reasons.append("❄️ 冷鏈貨物建議海運（穩定環境）")
 
-        # 2. 能否趕上船
+        # 2. 能否趕船
         if ship_data.get("can_catch", False):
             scores["sea"] += 30
             reasons.append("✅ 貨物可趕上最近船班")
@@ -37,21 +36,20 @@ class DecisionEngine:
             scores["road"] += 15
             reasons.append(f"⏱ 陸拖明顯較快（{road_time}h vs {sea_time}h）")
 
-        # 4. 壅塞程度
+        # 4. 壅塞
         if road_data.get("level") == "high":
             scores["sea"] += 20
             reasons.append("🚦 公路壅塞，海運優勢明顯")
 
-        # 5. 成本比較（加分項）
+        # 5. 成本
         if ship_data.get("cost_savings", 0) > 0:
             scores["sea"] += 10
             reasons.append(f"💰 海運節省 NT$ {ship_data['cost_savings']:,.0f}")
 
-        # 6. 碳排放
+        # 6. ESG
         scores["sea"] += 10
         reasons.append("🌱 海運碳排放僅公路 1/3")
 
-        # 決定
         if scores["sea"] >= scores["road"]:
             mode = "sea"
         else:

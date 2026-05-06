@@ -2,48 +2,47 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Carbon Certificate - {{ app_title }}</title>
+    <title>碳排認證 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-brand">🌊 {{ app_title }}</div>
-        <div class="navbar-links"><a href="/">Home</a></div>
-    </nav>
-    <div class="container">
-        <div class="card" style="max-width:500px;margin:0 auto;">
-            <h2>📄 Carbon Reduction Certificate</h2>
-            <div class="form-group">
-                <label>🏢 Company Name</label>
-                <input type="text" id="companyName" placeholder="Enter company name">
-            </div>
-            <button class="btn btn-primary" onclick="generate()" style="width:100%;">✅ Generate Certificate</button>
-            <div id="result" style="margin-top:1rem;"></div>
+<nav class="navbar">
+    <div class="navbar-brand">🌊 {{ app_title }}</div>
+    <div class="navbar-links"><a href="/">🏠 首頁</a></div>
+</nav>
+<div class="container">
+    <div class="card" style="max-width:500px;margin:0 auto;">
+        <h2>📄 Carbon Reduction Certificate</h2>
+        <div class="form-group">
+            <label>🏢 Company Name</label>
+            <input type="text" id="companyName" placeholder="Enter company name">
         </div>
+        <button class="btn btn-primary" onclick="generate()" style="width:100%;">✅ Generate Certificate</button>
+        <div id="result" style="margin-top:1rem;"></div>
     </div>
-    <script>
-        function generate(){
-            var name = document.getElementById("companyName").value;
-            var rid = localStorage.getItem("recordId");
-            if(!name){alert("Please enter company name");return;}
-            fetch("/certificate",{
-                method:"POST",headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({company_name:name,record_id:rid})
-            })
-            .then(function(r){return r.json();})
-            .then(function(d){
-                if(d.error){alert(d.error);return;}
-                document.getElementById("result").innerHTML = 
-                    '<div style="text-align:center;">'+
-                    '<h3>✅ Certificate Ready</h3>'+
-                    '<p>Company: '+d.company_name+'</p>'+
-                    '<p>Certificate ID: '+d.cert_id+'</p>'+
-                    '<p>Route: '+d.route+'</p>'+
-                    '<p>Carbon Saved: '+Number(d.carbon_improvement).toLocaleString()+' kg CO2e</p>'+
-                    '<a class="btn btn-primary" href="/download_certificate/'+d.cert_id+'">📄 Download PDF</a>'+
-                    '</div>';
-            });
-        }
-    </script>
+</div>
+<script>
+function generate(){
+    var name = document.getElementById("companyName").value;
+    var rid = localStorage.getItem("recordId") || "";
+    if(!name){alert("Please enter company name");return;}
+    if(!rid){alert("No record found. Please calculate first.");return;}
+    fetch("/certificate",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({company_name:name,record_id:rid})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.error){alert(d.error);return;}
+        document.getElementById("result").innerHTML =
+            '<div style="text-align:center;">'+
+            '<h3>✅ Certificate Ready</h3>'+
+            '<p>Company: '+d.company_name+'</p>'+
+            '<p>ID: '+d.cert_id+'</p>'+
+            '<p>Route: '+d.route+'</p>'+
+            '<a class="btn btn-primary" href="/download_certificate/'+d.cert_id+'">📄 Download PDF</a></div>';
+    });
+}
+</script>
 </body>
 </html>

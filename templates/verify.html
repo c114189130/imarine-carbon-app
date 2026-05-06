@@ -6,29 +6,22 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-brand">🌊 {{ app_title }}</div>
-        <div class="navbar-links">
-            <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-        </div>
-    </nav>
-    <div class="container">
-        <div class="card" style="max-width:600px;margin:0 auto;text-align:center">
-            {% if valid %}
-            <h2>✅ 證書驗證成功</h2>
-            <p>證書編號：{{ cert.cert_id }}</p>
-            <p>公司名稱：{{ cert.company_name }}</p>
-            <p>減碳量：{{ cert.record.carbon_improvement }} kg CO2e</p>
-            <p>減碳比例：{{ cert.record.reduction_pct }}%</p>
-            <p>核發時間：{{ cert.issued_at }}</p>
-            <p>本證書由 iMarine 碳排認證中心核發</p>
-            {% else %}
-            <h2>❌ 證書驗證失敗</h2>
-            <p>查無此證書編號，請確認輸入是否正確</p>
-            {% endif %}
-            <button class="btn btn-primary" onclick="location.href='/'">返回首頁</button>
-        </div>
+<nav class="navbar">
+    <div class="navbar-brand">🌊 {{ app_title }}</div>
+    <div class="navbar-links"><a href="/">🏠</a></div>
+</nav>
+<div class="container">
+    <div class="card" style="max-width:600px;margin:0 auto;text-align:center;">
+        {% if valid %}
+        <h2>✅ 證書驗證成功</h2>
+        <p>證書編號：{{ cert.cert_id }}</p>
+        <p>公司名稱：{{ cert.company_name }}</p>
+        <p>減碳量：{{ cert.record.ci }} kg CO2e</p>
+        {% else %}
+        <h2>❌ 查無此證書</h2>
+        {% endif %}
+        <a href="/" class="btn btn-primary">返回首頁</a>
     </div>
+</div>
 </body>
 </html>

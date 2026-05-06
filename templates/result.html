@@ -1,43 +1,36 @@
-<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title>
-<link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/></head>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
 <body onload="calculate()">
 <nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div></nav>
 <div class="loading-overlay" id="loading"><div class="loading-container"><div class="loading-spinner"></div><div>AI 分析中...</div></div></div>
 <div class="container" id="main" style="display:none;">
 
-<!-- KPI 卡片 -->
-<div class="stats-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:2rem;">
-<div class="stat-card"><h3 id="kpiCarbon">0</h3><p>減碳量 (kg) ↓</p></div>
-<div class="stat-card"><h3 id="kpiVSL">0</h3><p>VSL節省 (NT$) ↑</p></div>
-<div class="stat-card"><h3 id="kpiSDG">0</h3><p>ESG/SDG 分數 ↑</p></div>
-<div class="stat-card"><h3 id="kpiConfidence">0</h3><p>AI 信心度 %</p></div>
-<div class="stat-card"><h3 id="kpiDecision">-</h3><p>推薦方案</p></div>
-</div>
-
-<div class="card"><div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div><p style="margin-top:0.5rem;">AI 預測路況：<strong id="kpiPredicted">-</strong></p></div>
-
-<!-- AI 評分條 -->
-<div class="card"><h3>🧠 AI 決策評分</h3>
-<div style="display:flex;align-items:center;gap:1rem;margin:0.5rem 0;"><span style="width:60px;">🚢 海運</span><div style="flex:1;background:#ddd;border-radius:10px;height:25px;"><div id="scoreSea" style="background:#0077b6;height:100%;border-radius:10px;width:0%;transition:width 1s;"></div></div><span id="scoreSeaText">0</span></div>
-<div style="display:flex;align-items:center;gap:1rem;margin:0.5rem 0;"><span style="width:60px;">🚛 公路</span><div style="flex:1;background:#ddd;border-radius:10px;height:25px;"><div id="scoreRoad" style="background:#e67e22;height:100%;border-radius:10px;width:0%;transition:width 1s;"></div></div><span id="scoreRoadText">0</span></div></div>
+<div class="card" style="text-align:center;"><div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div></div>
 
 <div class="card"><h3>📊 成本比較</h3><table class="cost-table"><thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead><tbody>
 <tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
 <tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
-<tr><td>⏱ 預估時間</td><td id="roadEta">-</td><td id="seaEta">-</td></tr>
 <tr style="font-weight:bold;"><td>📊 總成本(含碳費)</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr></tbody></table></div>
 
-<div class="card success-card"><h3>🌱 ESG 永續指標</h3><div style="display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;text-align:center;">
+<div class="card success-card"><h3>🌱 ESG 永續指標</h3>
+<div style="display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;text-align:center;">
 <div><div style="font-size:2rem;font-weight:bold;" id="carbonSaved">-</div>減碳量 (kg)</div>
 <div><div style="font-size:2rem;font-weight:bold;" id="carbonPct">-</div>減碳比例</div>
 <div><div style="font-size:2rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值</div>
 <div><div style="font-size:2rem;font-weight:bold;" id="vslSaved">-</div>VSL 節省</div>
 <div><div style="font-size:2rem;font-weight:bold;" id="sdgScore">-</div>SDG 分數</div></div>
-<div style="margin-top:1rem;text-align:center;"><small>貢獻 SDG 9·11·13·14 | 事故風險：<strong id="accidentRisk">-</strong> | 可用艙位：<strong id="bookingAvail">-</strong></small></div></div>
+<div style="margin-top:1rem;text-align:center;"><small>可用艙位：<strong id="bookingAvail">-</strong></small></div></div>
 
-<div class="card"><h3>🛣️ 即時國道路況（1968 動畫）</h3><div id="map" style="height:500px;border-radius:12px;"></div></div>
+<div class="card"><h3>🛣️ 即時國道路況</h3><div id="map" style="height:500px;border-radius:12px;"></div></div>
 <div class="card gradient-card"><h3>🚢 可用船班</h3><div id="shipList"></div></div>
 <div class="card"><h3>💡 AI 決策原因</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
 <div class="action-buttons"><button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button><button class="btn btn-primary" onclick="goCert()">📄 英文證書</button></div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="/static/app.js"></script></body></html>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
