@@ -72,3 +72,39 @@ function goCert(){
     if(currentResult) localStorage.setItem("recordId",currentResult.record_id);
     location.href="/certificate_page";
 }
+// ... (前面的 calculate, show 函數保持不變)
+
+// ========== 地圖路段更新 ==========
+function updateFreewayMap() {
+    fetch("/api/traffic_segments")
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        data.forEach(function(seg){
+            var el = document.getElementById("seg-"+seg.id);
+            if(el){
+                var color = seg.level === "low" ? "#27ae60" : (seg.level === "medium" ? "#f39c12" : "#e74c3c");
+                el.style.background = color;
+                el.title = seg.name + " (" + (seg.dir==="north"?"北上":"南下") + "): " + seg.speed + " km/h";
+            }
+        });
+    });
+}
+
+// 頁面載入時產生路段 DOM
+function buildSegmentUI() {
+    var container = document.getElementById("freewaySegments");
+    if(!container) return;
+    var html = "";
+    for(var hw in FREEWAY_SEGMENTS){
+        html += '<h4>'+FREEWAY_SEGMENTS[hw].name+'</h4><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:1rem;">';
+        FREEWAY_SEGMENTS[hw].segments.forEach(function(seg){
+            html += '<div id="seg-'+seg.id+'" style="flex:1;min-width:60px;height:30px;background:#999;border-radius:4px;cursor:pointer;" title="'+seg.name+'"></div>';
+        });
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    updateFreewayMap();
+    setInterval(updateFreewayMap, 60000);
+}
+
+// 在 show() 函數最後呼叫 buildSegmentUI()
