@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title><link rel="stylesheet" href="/static/style.css"></head>
+<head>
+    <meta charset="UTF-8">
+    <title>計算結果 - {{ app_title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
 <body onload="calculate()">
-<nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a><a href="/history_page">📊</a></div></nav>
+<nav class="navbar">
+    <div class="navbar-brand">🌊 {{ app_title }}</div>
+    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a><a href="/history_page">📊</a></div>
+</nav>
 
-<div class="loading-overlay" id="loading"><div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">計算最佳方案中...</div></div></div>
+<div class="loading-overlay" id="loading">
+    <div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">計算最佳方案中...</div></div>
+</div>
 
 <div class="container" id="main" style="display:none;">
 
@@ -13,13 +24,13 @@
     <p id="routeInfo" style="color:#888;margin-top:1rem;"></p>
 </div>
 
-<div class="card fade-in"><h3>📊 成本比較（含碳費）</h3><table class="cost-table">
+<div class="card fade-in"><h3>📊 海轉 vs 陸拖 成本比較（含碳費）</h3>
+<table class="cost-table">
 <thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
 <tbody>
-<tr><td>💰 運費+規費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
+<tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
 <tr><td>🏛️ 碳費</td><td id="roadCarbonFee">-</td><td id="seaCarbonFee">-</td></tr>
 <tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
-<tr><td>⏱ 陸拖ETA</td><td id="roadEta">-</td><td>依船班</td></tr>
 <tr style="font-weight:bold;background:#fff3e0;"><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
 </tbody></table></div>
 
@@ -30,17 +41,11 @@
 <div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值 (NT$)</div>
 </div></div>
 
-<div class="card fade-in"><h3>🛣️ 即時國道路況</h3><p id="congestion" style="font-size:1.3rem;text-align:center;"></p></div>
+<!-- 國道路況地圖 -->
+<div class="card fade-in"><h3>🛣️ 即時國道路況 <span style="font-size:0.8rem;">（🟢順暢 🟡車多 🔴壅塞）</span></h3>
+<div class="map-container" id="map" style="height:450px;"></div></div>
 
 <div class="card gradient-card fade-in"><h3>🚢 可用船班（立昌輪:二、五 | 立揚輪:三、六）</h3><div id="shipList"></div></div>
-
-<!-- 在船班區塊之後加入 -->
-<div class="card fade-in">
-    <h3>🛣️ 即時國道路況 <span style="font-size:0.8rem;color:#888;">（🟢順暢 🟡車多 🔴壅塞）</span></h3>
-    <div id="freewaySegments"></div>
-</div>
-
-<div class="card fade-in" style="background:#f0f8ff;"><h3>🗺️ 路線</h3><p id="routeText" style="line-height:2;"></p></div>
 
 <div class="card fade-in"><h3>💡 決策說明</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
 
