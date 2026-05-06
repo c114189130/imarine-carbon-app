@@ -1,64 +1,50 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <title>計算結果 - {{ app_title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <!-- ✅ Leaflet CSS 一定要先載入 -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 </head>
 <body onload="calculate()">
-<nav class="navbar">
-    <div class="navbar-brand">🌊 {{ app_title }}</div>
-    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a><a href="/history_page">📊</a></div>
-</nav>
-
-<div class="loading-overlay" id="loading">
-    <div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">計算最佳方案中...</div></div>
-</div>
-
+<nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div></nav>
+<div class="loading-overlay" id="loading"><div class="loading-container"><div class="loading-spinner"></div><div>計算中...</div></div></div>
 <div class="container" id="main" style="display:none;">
 
-<div class="card fade-in" style="text-align:center;">
-    <div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div>
-    <p id="routeInfo" style="color:#888;margin-top:1rem;"></p>
+<!-- KPI 卡片 -->
+<div class="stats-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem;">
+<div class="stat-card"><h3 id="kpiCarbon">0</h3><p>減碳量 (kg)</p></div>
+<div class="stat-card"><h3 id="kpiVSL">0</h3><p>VSL節省 (NT$)</p></div>
+<div class="stat-card"><h3 id="kpiScore">0</h3><p>AI評分</p></div>
+<div class="stat-card"><h3 id="kpiMode">-</h3><p>推薦模式</p></div>
 </div>
 
-<div class="card fade-in"><h3>📊 海轉 vs 陸拖 成本比較（含碳費）</h3>
-<table class="cost-table">
-<thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
+<div class="card"><div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div></div>
+
+<div class="card"><h3>📊 成本比較</h3>
+<table class="cost-table"><thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead>
 <tbody>
 <tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
-<tr><td>🏛️ 碳費</td><td id="roadCarbonFee">-</td><td id="seaCarbonFee">-</td></tr>
 <tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
-<tr style="font-weight:bold;background:#fff3e0;"><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
+<tr><td>📊 總成本</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr>
 </tbody></table></div>
 
-<div class="card success-card fade-in"><h3>🌱 減碳效益</h3>
-<div style="display:flex;gap:2rem;justify-content:center;text-align:center;flex-wrap:wrap;">
-<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonSaved">-</div>減碳量 (kg CO2e)</div>
-<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonPct">-</div>減碳比例 (%)</div>
-<div><div style="font-size:2.5rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值 (NT$)</div>
+<div class="card success-card"><h3>🌱 減碳 & VSL</h3>
+<div style="display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;">
+<div>減碳比例: <strong id="carbonPct">-</strong></div>
+<div>碳權價值: <strong id="carbonCredit">-</strong></div>
+<div>VSL節省: <strong id="vslSaved">-</strong></div>
+<div>事故風險: <strong id="accidentRisk">-</strong></div>
+<div>訂位狀態: <strong id="bookingStatus">-</strong></div>
 </div></div>
 
-<!-- ✅ 地圖容器：一定要有高度 -->
-<div class="card fade-in"><h3>🛣️ 即時國道路況地圖 <span style="font-size:0.8rem;">（🟢順暢 🟡車多 🔴壅塞）</span></h3>
-<div id="map" style="height:500px;border-radius:12px;"></div></div>
+<div class="card"><h3>🛣️ 即時路況地圖</h3><div id="map" style="height:500px;border-radius:12px;"></div></div>
 
-<div class="card gradient-card fade-in"><h3>🚢 可用船班（立昌輪:二、五 | 立揚輪:三、六）</h3><div id="shipList"></div></div>
+<div class="card gradient-card"><h3>🚢 可用船班</h3><div id="shipList"></div></div>
 
-<div class="card fade-in"><h3>💡 決策說明</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
+<div class="card"><h3>💡 AI 決策原因</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
 
-<div class="action-buttons fade-in">
-    <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button>
-    <button class="btn btn-primary" onclick="goCert()">📄 英文證書</button>
-</div></div>
-
-<footer class="footer"><div class="footer-bottom">© 2024 iMarine</div></footer>
-
-<!-- ✅ Leaflet JS 在 app.js 之前載入 -->
+<div class="action-buttons"><button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button><button class="btn btn-primary" onclick="goCert()">📄 英文證書</button></div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- ✅ 你的 app.js -->
 <script src="/static/app.js"></script>
 </body>
 </html>
