@@ -18,33 +18,32 @@ ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
 
 
-# ========== 國道路段定義 ==========
+# ========== 國道路段 ==========
 FREEWAY_DEFINITION = [
-    {"id": "NH1-N-1", "name": "基隆-台北(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-N-2", "name": "台北-桃園(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-N-3", "name": "桃園-新竹(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-N-4", "name": "新竹-台中(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-N-5", "name": "台中-台南(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-N-6", "name": "台南-高雄(北)", "hw": "NH1", "dir": "north"},
-    {"id": "NH1-S-1", "name": "高雄-台南(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH1-S-2", "name": "台南-台中(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH1-S-3", "name": "台中-新竹(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH1-S-4", "name": "新竹-桃園(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH1-S-5", "name": "桃園-台北(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH1-S-6", "name": "台北-基隆(南)", "hw": "NH1", "dir": "south"},
-    {"id": "NH3-N-1", "name": "基隆-台北(北)", "hw": "NH3", "dir": "north"},
-    {"id": "NH3-N-2", "name": "台北-新竹(北)", "hw": "NH3", "dir": "north"},
-    {"id": "NH3-N-3", "name": "新竹-台中(北)", "hw": "NH3", "dir": "north"},
-    {"id": "NH3-N-4", "name": "台中-台南(北)", "hw": "NH3", "dir": "north"},
-    {"id": "NH3-N-5", "name": "台南-屏東(北)", "hw": "NH3", "dir": "north"},
-    {"id": "NH3-S-1", "name": "屏東-台南(南)", "hw": "NH3", "dir": "south"},
-    {"id": "NH3-S-2", "name": "台南-台中(南)", "hw": "NH3", "dir": "south"},
-    {"id": "NH3-S-3", "name": "台中-新竹(南)", "hw": "NH3", "dir": "south"},
-    {"id": "NH3-S-4", "name": "新竹-台北(南)", "hw": "NH3", "dir": "south"},
-    {"id": "NH3-S-5", "name": "台北-基隆(南)", "hw": "NH3", "dir": "south"},
+    {"id": "NH1-N-1", "name": "國一 基隆-台北(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-N-2", "name": "國一 台北-桃園(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-N-3", "name": "國一 桃園-新竹(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-N-4", "name": "國一 新竹-台中(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-N-5", "name": "國一 台中-台南(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-N-6", "name": "國一 台南-高雄(北)", "hw": "NH1", "dir": "north"},
+    {"id": "NH1-S-1", "name": "國一 高雄-台南(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH1-S-2", "name": "國一 台南-台中(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH1-S-3", "name": "國一 台中-新竹(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH1-S-4", "name": "國一 新竹-桃園(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH1-S-5", "name": "國一 桃園-台北(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH1-S-6", "name": "國一 台北-基隆(南)", "hw": "NH1", "dir": "south"},
+    {"id": "NH3-N-1", "name": "國三 基隆-台北(北)", "hw": "NH3", "dir": "north"},
+    {"id": "NH3-N-2", "name": "國三 台北-新竹(北)", "hw": "NH3", "dir": "north"},
+    {"id": "NH3-N-3", "name": "國三 新竹-台中(北)", "hw": "NH3", "dir": "north"},
+    {"id": "NH3-N-4", "name": "國三 台中-台南(北)", "hw": "NH3", "dir": "north"},
+    {"id": "NH3-N-5", "name": "國三 台南-屏東(北)", "hw": "NH3", "dir": "north"},
+    {"id": "NH3-S-1", "name": "國三 屏東-台南(南)", "hw": "NH3", "dir": "south"},
+    {"id": "NH3-S-2", "name": "國三 台南-台中(南)", "hw": "NH3", "dir": "south"},
+    {"id": "NH3-S-3", "name": "國三 台中-新竹(南)", "hw": "NH3", "dir": "south"},
+    {"id": "NH3-S-4", "name": "國三 新竹-台北(南)", "hw": "NH3", "dir": "south"},
+    {"id": "NH3-S-5", "name": "國三 台北-基隆(南)", "hw": "NH3", "dir": "south"},
 ]
 
-# 路段經緯度（簡化版，用於地圖繪製）
 SEGMENT_COORDS = {
     "NH1-N-1": [[25.15,121.75],[25.05,121.55]],
     "NH1-N-2": [[25.05,121.55],[24.98,121.22]],
@@ -71,33 +70,27 @@ SEGMENT_COORDS = {
 }
 
 
-# ================= TDX API =================
+# ================= TDX =================
 def get_tdx_token():
-    if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET:
-        return None
+    if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET: return None
     try:
         r = requests.post(
             "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
             data={"grant_type":"client_credentials","client_id":TDX_CLIENT_ID,"client_secret":TDX_CLIENT_SECRET},
-            timeout=TIMEOUT
-        )
-        if r.status_code == 200:
-            return r.json()["access_token"]
-    except:
-        pass
+            timeout=TIMEOUT)
+        if r.status_code==200: return r.json()["access_token"]
+    except: pass
     return None
 
 
 def get_highway_traffic():
     token = get_tdx_token()
-    if not token:
-        return _fallback_traffic()
+    if not token: return _fallback_traffic()
     try:
         r = requests.get(
             "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON",
-            headers={"authorization":f"Bearer {token}"}, timeout=TIMEOUT
-        )
-        if r.status_code == 200:
+            headers={"authorization":f"Bearer {token}"}, timeout=TIMEOUT)
+        if r.status_code==200:
             data = r.json()
             segments = {}
             for item in data.get("Data",[]):
@@ -114,8 +107,7 @@ def get_highway_traffic():
             for key, speeds in segments.items():
                 result[key] = round(sum(speeds)/len(speeds),1) if speeds else 55
             return result
-    except:
-        pass
+    except: pass
     return _fallback_traffic()
 
 
@@ -123,35 +115,40 @@ def _fallback_traffic():
     result = {}
     for hw in ["NH1","NH3"]:
         for d in ["north","south"]:
-            result[f"{hw}-{d}"] = random.randint(30,90)
+            result[f"{hw}-{d}"] = random.randint(35, 85)
     return result
 
 
-# ================= 船班 =================
-def find_ships(start_code, end_code, target_date, containers_feu):
-    ships = SHIP_SCHEDULE.get(start_code, [])
+# ================= 一整年船班查詢 =================
+def find_ships(start_code, end_code, target_date, containers_feu, year=2026):
+    """從一整年船班中查詢"""
+    all_ships = generate_year_schedule(start_code, end_code, year)
     candidates = []
-    for days_back in range(7, -1, -1):
-        check = target_date - timedelta(days=days_back)
-        wd = check.weekday()
-        for ship in ships:
-            if ship["dest"] != end_code: continue
-            if wd not in ship["weekdays"]: continue
-            etd = check.replace(hour=ship["etd_hour"], minute=0)
-            eta = etd + timedelta(hours=ship["hours"])
-            if eta <= target_date + timedelta(hours=12):
-                remaining = random.randint(int(ship["capacity_feu"]*0.2), int(ship["capacity_feu"]*0.95))
-                wname = ["一","二","三","四","五","六","日"][wd]
-                candidates.append({
-                    "ship": f"{ship['name']}({ship['en']})",
-                    "weekday": f"週{wname}",
-                    "etd": etd.strftime("%m/%d %H:%M"),
-                    "eta": eta.strftime("%m/%d %H:%M"),
-                    "hours": ship["hours"],
-                    "capacity": ship["capacity_feu"],
-                    "available": remaining,
-                    "fits": remaining >= containers_feu
-                })
+    for s in all_ships:
+        try:
+            etd_dt = datetime.strptime(s["etd"], "%Y/%m/%d %H:%M")
+            eta_dt = datetime.strptime(s["eta"], "%Y/%m/%d %H:%M")
+        except:
+            continue
+        # ETD 必須在 target_date 之前，ETA 必須在 target_date + 12h 之前
+        if eta_dt <= target_date + timedelta(hours=12):
+            # 動態亂數剩餘艙位
+            remaining = random.randint(
+                max(0, int(s["capacity_feu"]*0.1)),
+                int(s["capacity_feu"]*0.9)
+            )
+            wname = ["一","二","三","四","五","六","日"][etd_dt.weekday()]
+            candidates.append({
+                "ship": s["ship"],
+                "weekday": f"週{wname}",
+                "etd": etd_dt.strftime("%m/%d %H:%M"),
+                "eta": eta_dt.strftime("%m/%d %H:%M"),
+                "hours": s["hours"],
+                "capacity": s["capacity_feu"],
+                "available": remaining,
+                "fits": remaining >= containers_feu
+            })
+    # 只取最近 4 筆
     return candidates[:4]
 
 
@@ -171,11 +168,14 @@ def calculate_result(start, end, containers, unit, target_date_str):
     traffic_data = get_highway_traffic()
     nh1_n = traffic_data.get("NH1-north",55)
     nh1_s = traffic_data.get("NH1-south",55)
-    avg_speed = (nh1_n + nh1_s) / 2
+    nh3_n = traffic_data.get("NH3-north",55)
+    nh3_s = traffic_data.get("NH3-south",55)
+    avg_speed = (nh1_n + nh1_s + nh3_n + nh3_s) / 4
+
     cfactor = 1.0
-    if avg_speed >= 60: cong_level = "low"
-    elif avg_speed >= 35: cong_level = "medium"; cfactor = 1.2
-    else: cong_level = "high"; cfactor = 1.5
+    if avg_speed >= 60: cong_text = "順暢"
+    elif avg_speed >= 35: cong_text = "車多"; cfactor = 1.2
+    else: cong_text = "壅塞"; cfactor = 1.5
 
     road_hours = round(rkm / ROAD_SPEED_KMH * cfactor, 1)
 
@@ -183,18 +183,17 @@ def calculate_result(start, end, containers, unit, target_date_str):
     except: target_dt = datetime.now() + timedelta(days=7)
 
     now = datetime.now()
-    road_eta = now + timedelta(hours=road_hours)
-    road_ok = road_eta <= target_dt + timedelta(hours=12)
+    road_eta_dt = now + timedelta(hours=road_hours)
+    road_ok = road_eta_dt <= target_dt + timedelta(hours=12)
 
     ship_list = find_ships(p1["code"], end, target_dt, cf)
-    best_ship = ship_list[0] if ship_list else None
-    sea_ok = best_ship is not None and best_ship["fits"]
+    valid_ships = [s for s in ship_list if s["fits"]]
+    best_ship = valid_ships[0] if valid_ships else None
+    sea_ok = best_ship is not None
 
-    # 碳排
     road_carbon = EMISSION_FACTORS["road"] * rkm * cf
     sea_carbon = EMISSION_FACTORS["sea"] * skm * cf + PORT_HANDLING_EMISSION * cf * 2
 
-    # 成本
     road_cost = TRANSPORT_COST_RATES["road"] * rkm * cf + ROAD_TOLL_RATE * rkm * cf
     sea_cost = TRANSPORT_COST_RATES["sea"] * skm * cf + PORT_HANDLING_FEE * cf
     road_carbon_fee = road_carbon * CARBON_PRICE_PER_KG
@@ -206,21 +205,26 @@ def calculate_result(start, end, containers, unit, target_date_str):
     carbon_pct = round(carbon_saved/road_carbon*100,1) if road_carbon>0 else 0
     carbon_credit = round(carbon_saved * CARBON_PRICE_PER_KG, 2)
 
-    # ===== 修正決策邏輯：有船班就推薦海運 =====
     reasons = []
     if sea_ok:
-        decision = "海轉（藍色公路）"
-        reasons.append("✅ 船班可於目標日前抵達")
-        reasons.append(f"💰 海運作業費 NT$ {sea_cost:,.0f} vs 陸拖 NT$ {road_cost:,.0f}")
-        reasons.append(f"🌱 海運減碳 {carbon_saved:.0f} kg CO2e（-{carbon_pct}%）")
+        decision = "🚢 海轉（藍色公路）"
+        reasons.append(f"✅ 船班可於 {target_date_str} 前抵達 {p2['name']}")
+        reasons.append(f"⏱ 海運僅需 {best_ship['hours']} 小時，陸拖約需 {road_hours} 小時（{cong_text}）")
+        reasons.append(f"💰 海運總成本 NT$ {sea_full:,.0f} vs 陸拖 NT$ {road_full:,.0f}，節省 NT$ {abs(road_full-sea_full):,.0f}")
+        reasons.append(f"🌱 海運碳排放 {sea_carbon:.0f} kg CO2e，陸拖 {road_carbon:.0f} kg CO2e，減少 {carbon_saved:.0f} kg（-{carbon_pct}%）")
         reasons.append(f"💵 碳權價值約 NT$ {carbon_credit:,.0f}")
+        reasons.append(f"📦 可用艙位 {best_ship['available']} FEU（總容量 {best_ship['capacity']} FEU），需求 {cf:.0f} FEU ✅")
     elif road_ok:
-        decision = "陸拖（公路運輸）"
-        reasons.append("❌ 無合適船班可於目標日前抵達，建議陸拖")
-        reasons.append(f"💰 陸拖作業費 NT$ {road_cost:,.0f}")
+        decision = "🚛 陸拖（公路運輸）"
+        reasons.append(f"❌ 目標日前無合適船班或艙位不足")
+        if ship_list: reasons.append(f"⚠️ 最近船班艙位僅 {ship_list[0]['available']} FEU，不足 {cf:.0f} FEU")
+        reasons.append(f"⏱ 陸拖約需 {road_hours} 小時（{cong_text}），預計 {road_eta_dt.strftime('%m/%d %H:%M')} 抵達")
+        reasons.append(f"💰 陸拖總成本 NT$ {road_full:,.0f}")
+        reasons.append(f"💡 建議調整到貨日或減少數量以使用藍色公路")
     else:
-        decision = "無法滿足（建議調整目標日）"
-        reasons.append("❌ 海陸方案皆無法於目標日前抵達")
+        decision = "⚠️ 無法滿足"
+        reasons.append(f"❌ 無船班且陸拖無法於目標日前抵達")
+        reasons.append(f"💡 建議延後到貨日至 {(now + timedelta(days=5)).strftime('%Y-%m-%d')} 以後")
 
     rec = {
         "id": datetime.now().strftime("%Y%m%d%H%M%S")+uuid4().hex[:4],
@@ -228,6 +232,7 @@ def calculate_result(start, end, containers, unit, target_date_str):
         "start": p1["name"], "end": p2["name"],
         "containers": containers, "unit": unit, "cf": round(cf,1),
         "target": target_date_str, "rkm": rkm, "skm": skm,
+        "road_hours": road_hours, "road_eta": road_eta_dt.strftime("%m/%d %H:%M"),
         "rc": round(road_carbon,2), "sc": round(sea_carbon,2),
         "ci": round(carbon_saved,2), "rp": carbon_pct, "cc": carbon_credit,
         "decision": decision, "rf": round(road_cost), "sf": round(sea_cost),
@@ -237,9 +242,11 @@ def calculate_result(start, end, containers, unit, target_date_str):
     return {
         "record_id": rec["id"],
         "start_name": p1["name"], "end_name": p2["name"],
+        "start_lat": p1["lat"], "start_lon": p1["lon"],
+        "end_lat": p2["lat"], "end_lon": p2["lon"],
         "containers": cdisp, "target_date": target_date_str,
         "road_km": rkm, "sea_km": skm, "road_hours": road_hours,
-        "road_eta": road_eta.strftime("%m/%d %H:%M"),
+        "road_eta": road_eta_dt.strftime("%m/%d %H:%M"),
         "road_ok": road_ok, "sea_ok": sea_ok,
         "road": {"freight":round(road_cost),"carbon_fee":round(road_carbon_fee),"carbon":round(road_carbon,2),"total":round(road_full)},
         "sea": {"freight":round(sea_cost),"carbon_fee":round(sea_carbon_fee),"carbon":round(sea_carbon,2),"total":round(sea_full)},
@@ -248,10 +255,9 @@ def calculate_result(start, end, containers, unit, target_date_str):
         "carbon_credit": carbon_credit,
         "decision": decision,
         "reasons": reasons,
-        "traffic": {"avg":avg_speed,"congestion":cong_level,"congestion_text":"順暢" if cong_level=="low" else ("車多" if cong_level=="medium" else "壅塞")},
+        "traffic": {"nh1_n":nh1_n,"nh1_s":nh1_s,"nh3_n":nh3_n,"nh3_s":nh3_s,"avg":round(avg_speed,1),"congestion":cong_text},
         "ships": ship_list,
-        "start_lat": p1["lat"], "start_lon": p1["lon"],
-        "end_lat": p2["lat"], "end_lon": p2["lon"],
+        "valid_ships": valid_ships,
     }
 
 
@@ -301,14 +307,10 @@ def api_traffic_segments():
     for seg in FREEWAY_DEFINITION:
         key = f"{seg['hw']}-{seg['dir']}"
         base = traffic.get(key, 55)
-        speed = max(20, min(100, int(base) + random.randint(-10,10)))
+        speed = max(20, min(100, int(base) + random.randint(-8,8)))
         level = "low" if speed>=60 else ("medium" if speed>=35 else "high")
         coords = SEGMENT_COORDS.get(seg["id"], [[25,121],[25,121]])
-        result.append({
-            "id": seg["id"], "name": seg["name"], "hw": seg["hw"],
-            "dir": seg["dir"], "speed": speed, "level": level,
-            "coords": coords
-        })
+        result.append({"id":seg["id"],"name":seg["name"],"hw":seg["hw"],"dir":seg["dir"],"speed":speed,"level":level,"coords":coords})
     return jsonify(result)
 
 @app.route("/calculate", methods=["POST"])
