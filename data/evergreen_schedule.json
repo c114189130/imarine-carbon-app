@@ -1,33 +1,10 @@
 {
     "KHH": {
         "port_name": "高雄港",
-        "ships": [
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5021B", "route": "TBS", "etd": "03/01 08:00", "eta": "03/02 09:30", "hours": 25.5, "available": 320, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "FRI"},
-            {"name": "UNI-PROSPER", "name_zh": "立福輸", "voyage": "E5022B", "route": "TBS", "etd": "03/04 17:00", "eta": "03/05 13:30", "hours": 20.5, "available": 280, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "TUE"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5023B", "route": "TBS", "etd": "03/05 10:00", "eta": "03/06 04:30", "hours": 18.5, "available": 350, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "WED"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5024B", "route": "TBS", "etd": "03/09 22:00", "eta": "03/10 15:00", "hours": 17.0, "available": 400, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "SUN"},
-            {"name": "UNI-PROSPER", "name_zh": "立福輸", "voyage": "E5025B", "route": "TBS", "etd": "03/11 20:00", "eta": "03/12 22:00", "hours": 26.0, "available": 300, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "TUE"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5026B", "route": "TBS", "etd": "03/12 08:00", "eta": "03/13 10:00", "hours": 26.0, "available": 250, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "WED"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5027B", "route": "TBS", "etd": "03/15 14:00", "eta": "03/16 17:30", "hours": 27.5, "available": 380, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "SAT"},
-            {"name": "UNI-PROSPER", "name_zh": "立福輸", "voyage": "E5028B", "route": "TBS", "etd": "03/19 01:00", "eta": "03/20 00:30", "hours": 23.5, "available": 450, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "WED"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5029B", "route": "TBS", "etd": "03/19 11:00", "eta": "03/20 22:30", "hours": 35.5, "available": 200, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "WED"},
-            {"name": "UNI-PROMOTE", "name_zh": "立福輸", "voyage": "E5030B", "route": "TBS", "etd": "03/22 19:00", "eta": "03/23 09:00", "hours": 14.0, "available": 150, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "SAT"},
-            {"name": "UNI-PROSPER", "name_zh": "立福輸", "voyage": "E5031B", "route": "TBS", "etd": "03/25 23:00", "eta": "03/26 13:00", "hours": 14.0, "available": 500, "capacity": 500, "destination": "台中港", "dest_code": "TXG", "schedule_day": "TUE"}
-        ]
+        "ships": [{"name": "Evergreen TBS2", "eta_hours": 18, "available": 320, "destination": "台中港", "route": "TBS2", "eta": "FRI"}]
     },
     "TXG": {
         "port_name": "台中港",
-        "ships": [
-            {"name": "EVERGREEN V-201", "name_zh": "長榮虛擬", "voyage": "V201A", "route": "TBN", "etd": "03/02 08:00", "eta": "03/02 18:00", "hours": 10.0, "available": 200, "capacity": 300, "destination": "汐止調度場", "dest_code": "TPE", "schedule_day": "MON"},
-            {"name": "EVERGREEN V-202", "name_zh": "長榮虛擬", "voyage": "V202A", "route": "TBN", "etd": "03/04 08:00", "eta": "03/04 18:00", "hours": 10.0, "available": 250, "capacity": 300, "destination": "汐止調度場", "dest_code": "TPE", "schedule_day": "WED"},
-            {"name": "EVERGREEN V-203", "name_zh": "長榮虛擬", "voyage": "V203A", "route": "TBN", "etd": "03/06 08:00", "eta": "03/06 18:00", "hours": 10.0, "available": 180, "capacity": 300, "destination": "汐止調度場", "dest_code": "TPE", "schedule_day": "FRI"}
-        ]
-    },
-    "TPE": {
-        "port_name": "汐止調度場",
-        "ships": [
-            {"name": "EVERGREEN V-301", "name_zh": "長榮虛擬", "voyage": "V301A", "route": "TBS", "etd": "03/03 06:00", "eta": "03/04 06:00", "hours": 24.0, "available": 300, "capacity": 400, "destination": "高雄港", "dest_code": "KHH", "schedule_day": "TUE"},
-            {"name": "EVERGREEN V-302", "name_zh": "長榮虛擬", "voyage": "V302A", "route": "TBS", "etd": "03/06 06:00", "eta": "03/07 06:00", "hours": 24.0, "available": 350, "capacity": 400, "destination": "高雄港", "dest_code": "KHH", "schedule_day": "FRI"}
-        ]
+        "ships": [{"name": "Evergreen TBS", "eta_hours": 24, "available": 560, "destination": "高雄港", "route": "TBS", "eta": "THU"}]
     }
 }

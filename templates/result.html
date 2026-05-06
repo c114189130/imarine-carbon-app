@@ -1,36 +1,110 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-<head><meta charset="UTF-8"><title>結果 - {{ app_title }}</title>
-<link rel="stylesheet" href="/static/style.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>指派結果 - {{ app_title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body onload="calculate()">
-<nav class="navbar"><div class="navbar-brand">🌊 {{ app_title }}</div><div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div></nav>
-<div class="loading-overlay" id="loading"><div class="loading-container"><div class="loading-spinner"></div><div>AI 分析中...</div></div></div>
-<div class="container" id="main" style="display:none;">
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/booking">🎟️ 艙位訂票</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
+    </nav>
 
-<div class="card" style="text-align:center;"><div id="decisionBadge" style="display:inline-block;color:white;padding:12px 35px;border-radius:30px;font-size:1.5rem;font-weight:bold;"></div></div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">正在分析最佳運輸方案...</div>
+            <div class="loading-steps">
+                <div class="step" id="step1">⏳ 1. 讀取貨櫃需求</div>
+                <div class="step" id="step2">⏳ 2. 匯入航港/公路資料</div>
+                <div class="step" id="step3">⏳ 3. 整合碳排與成本參數</div>
+                <div class="step" id="step4">⏳ 4. 海轉/陸轉可行性判斷</div>
+                <div class="step" id="step5">⏳ 5. 方案計算與比較</div>
+                <div class="step" id="step6">⏳ 6. AI 智慧決策</div>
+            </div>
+        </div>
+    </div>
 
-<div class="card"><h3>📊 成本比較</h3><table class="cost-table"><thead><tr><th>項目</th><th>🚛 陸拖</th><th>🚢 海轉</th></tr></thead><tbody>
-<tr><td>💰 作業費</td><td id="roadFreight">-</td><td id="seaFreight">-</td></tr>
-<tr><td>🌱 碳排放</td><td id="roadCarbon">-</td><td id="seaCarbon">-</td></tr>
-<tr style="font-weight:bold;"><td>📊 總成本(含碳費)</td><td id="roadTotal">-</td><td id="seaTotal">-</td></tr></tbody></table></div>
+    <div class="container" id="content" style="display:none">
+        <div id="result"></div>
+        
+        <!-- AI 壅塞預測 -->
+        <div class="card" id="congestionPrediction">
+            <h3>🔮 AI 壅塞預測</h3>
+            <div class="stats-row">
+                <div class="stat-item"><div class="stat-value">分析中...</div><div class="stat-label">預測路況</div></div>
+            </div>
+        </div>
+        
+        <!-- 事故風險 -->
+        <div class="card" id="accidentRisk" style="text-align:center">
+            <span class="badge">分析中...</span>
+        </div>
 
-<div class="card success-card"><h3>🌱 ESG 永續指標</h3>
-<div style="display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;text-align:center;">
-<div><div style="font-size:2rem;font-weight:bold;" id="carbonSaved">-</div>減碳量 (kg)</div>
-<div><div style="font-size:2rem;font-weight:bold;" id="carbonPct">-</div>減碳比例</div>
-<div><div style="font-size:2rem;font-weight:bold;" id="carbonCredit">-</div>碳權價值</div>
-<div><div style="font-size:2rem;font-weight:bold;" id="vslSaved">-</div>VSL 節省</div>
-<div><div style="font-size:2rem;font-weight:bold;" id="sdgScore">-</div>SDG 分數</div></div>
-<div style="margin-top:1rem;text-align:center;"><small>可用艙位：<strong id="bookingAvail">-</strong></small></div></div>
+        <div class="card fade-in">
+            <div class="card-header"><h3>🗺️ 國道即時路網</h3><span class="badge">TDX 即時 API</span></div>
+            <div id="trafficStats" class="traffic-stats">
+                <div class="stats-row">
+                    <div class="stat-item"><div class="stat-value">-</div><div class="stat-label">平均車速</div></div>
+                    <div class="stat-item"><div class="stat-value">-</div><div class="stat-label">壅塞路段</div></div>
+                    <div class="stat-item"><div class="stat-value">-</div><div class="stat-label">順暢路段</div></div>
+                </div>
+            </div>
+            <div id="map" class="map-container"></div>
+            <div class="legend">
+                <span><span class="color-dot green"></span> 順暢 >60km/h</span>
+                <span><span class="color-dot orange"></span> 車多 35-60km/h</span>
+                <span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span>
+            </div>
+        </div>
 
-<div class="card"><h3>🛣️ 即時國道路況</h3><div id="map" style="height:500px;border-radius:12px;"></div></div>
-<div class="card gradient-card"><h3>🚢 可用船班</h3><div id="shipList"></div></div>
-<div class="card"><h3>💡 AI 決策原因</h3><ul id="reasonsList" style="line-height:2;"></ul></div>
-<div class="action-buttons"><button class="btn btn-outline" onclick="location.href='/input'">🔄 重新計算</button><button class="btn btn-primary" onclick="goCert()">📄 英文證書</button></div>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/app.js"></script>
+        <div class="card fade-in gradient-card">
+            <div class="card-header"><h3>🚢 長榮海運「藍色公路」即時船期</h3><span class="badge light">TBS / TBS2 航線</span></div>
+            <div class="ship-info-grid">
+                <div class="ship-info-item"><div class="info-label">🚢 船名</div><div class="info-value" id="shipName">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📍 航線</div><div class="info-value" id="shipRoute">-</div></div>
+                <div class="ship-info-item"><div class="info-label">🎯 目的地</div><div class="info-value" id="shipDest">-</div></div>
+                <div class="ship-info-item"><div class="info-label">⏰ 預計到港</div><div class="info-value" id="shipEta">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📦 可用艙位</div><div class="info-value" id="shipCapacity">-</div></div>
+                <div class="ship-info-item"><div class="info-label">📅 每週航班</div><div class="info-value" id="shipSchedule">-</div></div>
+            </div>
+        </div>
+
+        <div class="card fade-in success-card">
+            <div class="card-header"><h3>🧠 AI 智慧指派建議</h3><span class="badge">AI 即時決策</span></div>
+            <div id="dispatchResult">分析中...</div>
+        </div>
+
+        <div class="card fade-in">
+            <div class="card-header"><h3>📊 優化模型分析</h3><span class="badge">學術模型</span></div>
+            <p class="model-desc">目標函數：<strong>Min Z = 運輸成本 + 碳排放成本 + 事故成本 + 時間成本</strong></p>
+            <div id="optimizationResult">計算中...</div>
+            <div class="research-conclusion">
+                <p class="conclusion-title">🧠 研究結論</p>
+                <p>本研究建構結合高速公路流量與港口船期之貨櫃運輸指派模型，納入碳排放與事故外部成本，以最小化整體社會成本為目標。</p>
+            </div>
+        </div>
+
+        <div class="chart-container fade-in"><h3>💰 成本結構比較</h3><canvas id="costChart"></canvas></div>
+        <div class="chart-container fade-in"><h3>🌍 碳排放比較</h3><canvas id="carbonChart"></canvas></div>
+
+        <div class="action-buttons">
+            <button class="btn btn-success" onclick="goToCertificate()">📄 產生碳排認證</button>
+            <button class="btn btn-outline" onclick="location.href='/input'">🔄 重新指派</button>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>calculate();</script>
 </body>
 </html>

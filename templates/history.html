@@ -1,37 +1,49 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>歷史記錄 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body onload="loadHistory()">
-<nav class="navbar">
-    <div class="navbar-brand">🌊 {{ app_title }}</div>
-    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div>
-</nav>
-<div class="container">
-    <h1>📊 歷史記錄</h1>
-    <div class="card">
-        <table class="cost-table" style="width:100%;">
-            <thead><tr><th>時間</th><th>起點</th><th>終點</th><th>貨櫃</th><th>最佳方案</th><th>減碳量</th></tr></thead>
-            <tbody id="historyBody"><tr><td colspan="6">載入中...</td></tr></tbody>
-        </table>
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/booking">🎟️ 艙位訂票</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>📊 貨櫃指派歷史記錄</h1>
+        <div class="chart-container fade-in"><canvas id="historyChart"></canvas></div>
+        <div class="card fade-in">
+            <div style="overflow-x:auto">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>起點</th>
+                            <th>終點</th>
+                            <th>貨櫃數</th>
+                            <th>距離</th>
+                            <th>海運碳排</th>
+                            <th>最佳方案</th>
+                            <th>減碳量</th>
+                            <th>減碳比例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="9">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-</div>
-<script>
-function loadHistory(){
-    fetch("/get_history")
-    .then(function(r){return r.json();})
-    .then(function(data){
-        var tb = document.getElementById("historyBody");
-        tb.innerHTML = "";
-        if(data.length===0){tb.innerHTML='<tr><td colspan="6">無記錄</td></tr>';return;}
-        data.reverse().forEach(function(r){
-            tb.innerHTML += '<tr><td>'+r.date+'</td><td>'+r.start+'</td><td>'+r.end+'</td><td>'+r.containers+'</td><td>'+r.decision+'</td><td>'+(r.ci||0)+' kg</td></tr>';
-        });
-    });
-}
-</script>
+    <script src="/static/app.js"></script>
 </body>
 </html>

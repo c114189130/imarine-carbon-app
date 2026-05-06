@@ -1,38 +1,98 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>儀表板 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .kpi-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--deep-twilight), var(--bright-teal-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--french-blue);
+            margin-top: 0.5rem;
+        }
+    </style>
 </head>
-<body onload="loadDash()">
-<nav class="navbar">
-    <div class="navbar-brand">🌊 {{ app_title }}</div>
-    <div class="navbar-links"><a href="/">🏠</a><a href="/input">🚢</a></div>
-</nav>
-<div class="container">
-    <h1>📈 儀表板</h1>
-    <div class="stats-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
-        <div class="stat-card"><h3 id="totalCO2">0</h3><p>總減碳量 (kg)</p></div>
-        <div class="stat-card"><h3 id="avgPct">0%</h3><p>平均減碳比例</p></div>
-        <div class="stat-card"><h3 id="totalCount">0</h3><p>總次數</p></div>
-        <div class="stat-card"><h3 id="seaRate">0%</h3><p>海運推薦率</p></div>
+<body onload="loadDashboard()">
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/booking">🎟️ 艙位訂票</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>📈 碳排放儀表板</h1>
+        
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value" id="totalReduction">-</div>
+                <div class="kpi-label">總減碳量 (kg CO2e)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="avgReduction">-</div>
+                <div class="kpi-label">平均減碳比例</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="totalCount">-</div>
+                <div class="kpi-label">總指派次數</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="seaRate">-</div>
+                <div class="kpi-label">海運推薦率</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="totalVS LSaved">-</div>
+                <div class="kpi-label">人命價值節省 (NTD)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="totalCarbonCredit">-</div>
+                <div class="kpi-label">碳權價值 (NTD)</div>
+            </div>
+        </div>
+        
+        <div class="chart-container fade-in">
+            <h3>📉 減碳趨勢</h3>
+            <canvas id="trendChart"></canvas>
+        </div>
+        
+        <div class="chart-container fade-in">
+            <h3>🥧 運輸模式分佈</h3>
+            <canvas id="modeChart"></canvas>
+        </div>
+        
+        <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-</div>
-<script>
-function loadDash(){
-    fetch("/get_history")
-    .then(function(r){return r.json();})
-    .then(function(data){
-        if(data.length===0)return;
-        var total=0,sea=0;
-        data.forEach(function(d){total+=d.ci||0;if(d.decision&&d.decision.indexOf("sea")>=0)sea++;});
-        document.getElementById("totalCO2").innerText=total.toLocaleString();
-        document.getElementById("avgPct").innerText=(data.reduce(function(s,d){return s+(d.rp||0);},0)/data.length).toFixed(1)+"%";
-        document.getElementById("totalCount").innerText=data.length;
-        document.getElementById("seaRate").innerText=Math.round(sea/data.length*100)+"%";
-    });
-}
-</script>
+    <script src="/static/app.js"></script>
 </body>
 </html>

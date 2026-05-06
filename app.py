@@ -1,315 +1,504 @@
 import os
-import random
+import math
 import requests
-from datetime import datetime, timedelta
+import random
+from datetime import datetime
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request, send_file
 
-from config import *
+from config import (
+    APP_TITLE,
+    CERTIFICATE_FILE,
+    CARGO_VALUE,
+    HISTORY_FILE,
+    INTEREST_RATE,
+    MAX_HISTORY_RECORDS,
+    PORTS,
+    PORT_HANDLING_EMISSION_PER_CONTAINER,
+    ROAD_SPEED_KMH,
+    RISK_COST_RATES,
+    SECRET_KEY,
+    SEA_SPEED_KMH,
+    SOCIAL_COST_OF_CARBON,
+    SOCIAL_COST_RATES,
+    TRANSPORT_COST_RATES,
+    EMISSION_FACTORS,
+    TDX_CLIENT_ID,
+    TDX_CLIENT_SECRET,
+)
+from optimization_model import compare_modes, calculate_optimal_transfer_ratio
 from services.certificate_service import build_certificate_pdf, generate_certificate_id
+from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
-from ai_engine import ai_predictor
-from decision_engine import decision_engine
-from ship_booking import booking_system
+from services.booking_service import get_available_capacity, book_capacity, get_route_summary
+from services.carbon_service import get_esg_report, VSL
+from services.traffic_service import TrafficService
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
-TIMEOUT = 8
+
+schedule_service = ScheduleService()
+traffic_service = TrafficService(app_id=TDX_CLIENT_ID, app_key=TDX_CLIENT_SECRET)
 
 ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
 
-FREEWAY_DEFINITION = [
-    {"id":"NH1-N-1","name":"國一 基隆-台北(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-N-2","name":"國一 台北-桃園(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-N-3","name":"國一 桃園-新竹(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-N-4","name":"國一 新竹-台中(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-N-5","name":"國一 台中-台南(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-N-6","name":"國一 台南-高雄(北)","hw":"NH1","dir":"north"},
-    {"id":"NH1-S-1","name":"國一 高雄-台南(南)","hw":"NH1","dir":"south"},
-    {"id":"NH1-S-2","name":"國一 台南-台中(南)","hw":"NH1","dir":"south"},
-    {"id":"NH1-S-3","name":"國一 台中-新竹(南)","hw":"NH1","dir":"south"},
-    {"id":"NH1-S-4","name":"國一 新竹-桃園(南)","hw":"NH1","dir":"south"},
-    {"id":"NH1-S-5","name":"國一 桃園-台北(南)","hw":"NH1","dir":"south"},
-    {"id":"NH1-S-6","name":"國一 台北-基隆(南)","hw":"NH1","dir":"south"},
-    {"id":"NH3-N-1","name":"國三 基隆-台北(北)","hw":"NH3","dir":"north"},
-    {"id":"NH3-N-2","name":"國三 台北-新竹(北)","hw":"NH3","dir":"north"},
-    {"id":"NH3-N-3","name":"國三 新竹-台中(北)","hw":"NH3","dir":"north"},
-    {"id":"NH3-N-4","name":"國三 台中-台南(北)","hw":"NH3","dir":"north"},
-    {"id":"NH3-N-5","name":"國三 台南-屏東(北)","hw":"NH3","dir":"north"},
-    {"id":"NH3-S-1","name":"國三 屏東-台南(南)","hw":"NH3","dir":"south"},
-    {"id":"NH3-S-2","name":"國三 台南-台中(南)","hw":"NH3","dir":"south"},
-    {"id":"NH3-S-3","name":"國三 台中-新竹(南)","hw":"NH3","dir":"south"},
-    {"id":"NH3-S-4","name":"國三 新竹-台北(南)","hw":"NH3","dir":"south"},
-    {"id":"NH3-S-5","name":"國三 台北-基隆(南)","hw":"NH3","dir":"south"},
-]
+# ================= 輔助函數 =================
+def haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-SEGMENT_COORDS = {
-    "NH1-N-1":[[25.15,121.75],[25.05,121.55]],"NH1-N-2":[[25.05,121.55],[24.98,121.22]],
-    "NH1-N-3":[[24.98,121.22],[24.82,120.97]],"NH1-N-4":[[24.82,120.97],[24.15,120.68]],
-    "NH1-N-5":[[24.15,120.68],[23.00,120.38]],"NH1-N-6":[[23.00,120.38],[22.62,120.30]],
-    "NH1-S-1":[[22.62,120.30],[23.00,120.38]],"NH1-S-2":[[23.00,120.38],[24.15,120.68]],
-    "NH1-S-3":[[24.15,120.68],[24.82,120.97]],"NH1-S-4":[[24.82,120.97],[24.98,121.22]],
-    "NH1-S-5":[[24.98,121.22],[25.05,121.55]],"NH1-S-6":[[25.05,121.55],[25.15,121.75]],
-    "NH3-N-1":[[25.13,121.78],[24.98,121.55]],"NH3-N-2":[[24.98,121.55],[24.78,120.95]],
-    "NH3-N-3":[[24.78,120.95],[24.20,120.62]],"NH3-N-4":[[24.20,120.62],[22.70,120.35]],
-    "NH3-N-5":[[22.70,120.35],[22.60,120.32]],"NH3-S-1":[[22.60,120.32],[22.70,120.35]],
-    "NH3-S-2":[[22.70,120.35],[24.20,120.62]],"NH3-S-3":[[24.20,120.62],[24.78,120.95]],
-    "NH3-S-4":[[24.78,120.95],[24.98,121.55]],"NH3-S-5":[[24.98,121.55],[25.13,121.78]],
-}
+def estimate_route_distance(base_distance_km, mode):
+    multiplier = 1.22 if mode == "road" else 1.08
+    return round(base_distance_km * multiplier, 2)
 
+def calculate_financing_time_cost(distance_km, mode, containers, time_sensitivity=0.3):
+    hours = distance_km / (ROAD_SPEED_KMH if mode == "road" else SEA_SPEED_KMH)
+    sensitivity_multiplier = 1 + time_sensitivity * 2
+    value_per_hour = (CARGO_VALUE * INTEREST_RATE) / (365 * 24)
+    return value_per_hour * hours * containers * sensitivity_multiplier
 
-def get_tdx_token():
-    if not TDX_CLIENT_ID or not TDX_CLIENT_SECRET:
-        return None
-    try:
-        r = requests.post(
-            "https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token",
-            data={"grant_type":"client_credentials","client_id":TDX_CLIENT_ID,"client_secret":TDX_CLIENT_SECRET},
-            timeout=TIMEOUT)
-        if r.status_code == 200:
-            return r.json()["access_token"]
-    except:
-        pass
+# ================= AI 決策引擎 =================
+def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, time_requirement_hours=48):
+    """
+    AI 多層決策引擎
+    決策優先順序：
+    1. 特殊貨 → 海運（強制）
+    2. 海運來不及 → 公路
+    3. 公路壅塞 → 海運
+    4. 船快開 → 海運
+    5. 船太久 → 公路
+    6. 預設 → 海運（ESG導向）
+    """
+    reasons = []
+    
+    # 規則1：特殊貨物強制海運
+    if cargo_type == "special":
+        reasons.append("⚠️ 危險品/特殊貨物，依法規強制採海運")
+        return "sea", 95, reasons
+    
+    # 規則2：海運是否來得及
+    sea_total_hours = ship_schedule.get("eta_hours", 24) + 12  # 航行+裝卸
+    if sea_total_hours > time_requirement_hours:
+        reasons.append(f"⏱️ 海運需 {sea_total_hours} 小時，超過需求時限 ({time_requirement_hours} 小時)")
+        return "road", 85, reasons
+    
+    # 規則3：公路壅塞程度
+    if road_condition.get("level") == "high":
+        reasons.append(f"🚨 國道嚴重壅塞（機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），建議改走海運")
+        return "sea", 90, reasons
+    elif road_condition.get("level") == "medium":
+        reasons.append(f"⚠️ 國道車多（壅塞機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），海運為較穩定選擇")
+        return "sea", 75, reasons
+    
+    # 規則4：船期緊急程度
+    if ship_schedule.get("eta_hours", 24) <= 8:
+        reasons.append(f"🚢 船舶 {ship_schedule['eta_hours']} 小時內出發，艙位充足，建議海運")
+        return "sea", 92, reasons
+    elif ship_schedule.get("eta_hours", 24) <= 16:
+        reasons.append(f"⏳ 船舶 {ship_schedule['eta_hours']} 小時後出發，可考慮海運")
+        return "sea", 70, reasons
+    
+    # 規則5：船期太久
+    if ship_schedule.get("eta_hours", 24) > 36:
+        reasons.append(f"⏰ 船舶 {ship_schedule['eta_hours']} 小時後才出發，時效考量建議公路")
+        return "road", 80, reasons
+    
+    # 規則6：ESG導向預設海運
+    reasons.append("🌱 基於 ESG 永續發展目標，優先推薦低碳海運")
+    return "sea", 88, reasons
+
+def calculate_ai_scores(road_data, ship_data, containers):
+    score_sea = 3.5
+    congestion_scores = {"low": 0, "medium": 2, "high": 5}
+    score_sea += congestion_scores.get(road_data.get("level", "low"), 0) * 0.6
+
+    eta_hours = ship_data.get("eta_hours", 24)
+    if eta_hours <= 6:
+        score_sea += 3
+    elif eta_hours <= 12:
+        score_sea += 1.5
+    elif eta_hours <= 24:
+        score_sea += 0.8
+
+    if ship_data.get("available", 0) >= containers:
+        score_sea += 2
+    elif ship_data.get("available", 0) >= containers * 0.5:
+        score_sea += 1
+
+    score_sea = min(10, round(score_sea, 1))
+    score_road = min(10, round(max(2, 10 - score_sea + 1.5), 1))
+    return score_sea, score_road
+
+def smart_dispatch(containers, road_data, ship_data, cargo_type="normal"):
+    # 特殊貨物強制海運
+    if cargo_type == "special":
+        return {
+            "to_sea": containers,
+            "to_road": 0,
+            "ratio": 100,
+            "score_sea": 10,
+            "score_road": 0,
+            "action": "🌊 強制海運（危險品/特殊貨）",
+            "suggestion": f"全部 {containers} FEU 指派給長榮海運",
+            "reasons": ["⚠️ 危險品/特殊貨物，依法規強制採海運"]
+        }
+    
+    score_sea, score_road = calculate_ai_scores(road_data, ship_data, containers)
+    total = score_sea + score_road
+    ratio = 0.5 if total == 0 else max(0.2, min(0.8, score_sea / total))
+
+    to_sea = int(round(containers * ratio))
+    to_road = containers - to_sea
+    available = ship_data.get("available", containers)
+    if to_sea > available:
+        to_sea = available
+        to_road = containers - to_sea
+
+    reasons = []
+    if road_data.get("level") == "high":
+        reasons.append(f"🚨 國道路況壅塞，平均時速 {road_data['avg_speed']} km/h，海運吸引力提高")
+    elif road_data.get("level") == "medium":
+        reasons.append(f"⚠️ 國道路況偏慢，平均時速 {road_data['avg_speed']} km/h")
+    else:
+        reasons.append(f"✅ 國道路況順暢，平均時速 {road_data['avg_speed']} km/h")
+
+    reasons.append(f"🚢 {ship_data['name']} 預計 {ship_data['eta_hours']} 小時後可銜接，尚有 {ship_data.get('available', 0)} FEU 艙位")
+
+    if ratio >= 0.6:
+        action = "🌊 建議以海運為主"
+        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU，可兼顧成本與容量"
+    elif ratio <= 0.4:
+        action = "🚛 建議以公路為主"
+        suggestion = f"公路 {to_road} FEU、海運 {to_sea} FEU，較適合當前條件"
+    else:
+        action = "⚖️ 建議混合派遣"
+        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU，維持彈性"
+
+    return {
+        "to_sea": to_sea,
+        "to_road": to_road,
+        "ratio": round((to_sea / containers) * 100, 1) if containers else 0,
+        "score_sea": score_sea,
+        "score_road": score_road,
+        "action": action,
+        "suggestion": suggestion,
+        "reasons": reasons,
+    }
+
+# ================= 歷史記錄 =================
+def load_history():
+    return read_json(HISTORY_FILE, [])
+
+def save_history(record):
+    history = load_history()
+    history.append(record)
+    history = history[-MAX_HISTORY_RECORDS:]
+    write_json(HISTORY_FILE, history)
+
+def load_certificates():
+    return read_json(CERTIFICATE_FILE, [])
+
+def save_certificate(certificate):
+    rows = load_certificates()
+    rows.append(certificate)
+    write_json(CERTIFICATE_FILE, rows)
+
+def get_history_record(record_id):
+    for record in load_history():
+        if record["id"] == record_id:
+            return record
     return None
 
-
-def get_highway_traffic():
-    token = get_tdx_token()
-    if not token:
-        now = datetime.now()
-        pred = ai_predictor.predict_congestion(now.weekday(), now.hour)
-        return {"NH1-north":random.randint(30,90),"NH1-south":random.randint(30,90),
-                "NH3-north":random.randint(30,90),"NH3-south":random.randint(30,90),
-                "predicted_level":pred["level"],"predicted_prob":pred["probability"]}
-    try:
-        r = requests.get(
-            "https://tdx.transportdata.tw/api/basic/v2/Road/Traffic/Live/VD/Freeway?$format=JSON",
-            headers={"authorization":f"Bearer {token}"},timeout=TIMEOUT)
-        if r.status_code == 200:
-            data = r.json()
-            segs = {}
-            for item in data.get("Data",[]):
-                if "Speed" not in item: continue
-                vd = item.get("VDID","")
-                sp = item["Speed"]
-                hw = "NH1" if ("NH1" in vd or "N1" in vd) else ("NH3" if ("NH3" in vd or "N3" in vd) else None)
-                if not hw: continue
-                d = "north" if "-N" in vd else "south"
-                k = f"{hw}-{d}"
-                if k not in segs: segs[k] = []
-                segs[k].append(sp)
-            result = {}
-            for k, speeds in segs.items():
-                result[k] = round(sum(speeds)/len(speeds),1) if speeds else 55
-            now = datetime.now()
-            pred = ai_predictor.predict_congestion(now.weekday(), now.hour)
-            result["predicted_level"] = pred["level"]
-            result["predicted_prob"] = pred["probability"]
-            return result
-    except:
-        pass
-    now = datetime.now()
-    pred = ai_predictor.predict_congestion(now.weekday(), now.hour)
-    return {"NH1-north":55,"NH1-south":55,"NH3-north":55,"NH3-south":55,
-            "predicted_level":pred["level"],"predicted_prob":pred["probability"]}
-
-
-def find_ships(start_code, end_code, target_date, year=2026):
-    all_ships = generate_year_schedule(start_code, end_code, year)
-    candidates = []
-    for s in all_ships:
-        try:
-            etd_dt = datetime.strptime(s["etd"],"%Y/%m/%d %H:%M")
-            eta_dt = datetime.strptime(s["eta"],"%Y/%m/%d %H:%M")
-        except:
-            continue
-        if etd_dt > target_date: continue
-        if etd_dt < target_date - timedelta(days=7): continue
-        if eta_dt <= target_date + timedelta(hours=12):
-            remaining = booking_system.get_remaining(start_code, end_code)
-            candidates.append({
-                "ship":s["ship"],"etd":etd_dt.strftime("%m/%d %H:%M"),
-                "eta":eta_dt.strftime("%m/%d %H:%M"),"hours":s["hours"],
-                "capacity":s["capacity_feu"],"available":remaining,"fits":True})
-    return candidates[:4]
-
-
-def calculate_result(start, end, containers, unit, target_date_str, cargo_type="normal"):
-    cf = float(containers) * TEU_TO_FEU if unit == "TEU" else float(containers)
-    cdisp = f"{containers} TEU ({cf:.1f} FEU)" if unit == "TEU" else f"{containers} FEU"
-    p1, p2 = PORTS[start], PORTS[end]
-    route = ROUTES.get((start,end),{"road_km":200,"sea_km":160})
-    rkm, skm = route["road_km"], route["sea_km"]
-
-    traffic = get_highway_traffic()
-    avg = (traffic.get("NH1-north",55)+traffic.get("NH1-south",55)+
-           traffic.get("NH3-north",55)+traffic.get("NH3-south",55))/4
-    pred_level = traffic.get("predicted_level","medium")
-    pred_prob = traffic.get("predicted_prob",0.5)
-
-    now = datetime.now()
-    road_eta = ai_predictor.predict_eta(rkm,"road",pred_level)
-    sea_eta = ai_predictor.predict_eta(skm,"sea")
-
-    try:
-        target_dt = datetime.strptime(target_date_str,"%Y-%m-%d")
-    except:
-        target_dt = now + timedelta(days=7)
-
-    ships = find_ships(p1["code"],end,target_dt)
-    best_ship = ships[0] if ships else None
-    can_catch = best_ship is not None
-
-    accident_risk = ai_predictor.predict_accident_risk(rkm,pred_level,now.hour>=22 or now.hour<=5)
-
-    rc = EMISSION_FACTORS["road"] * rkm * cf
-    sc = EMISSION_FACTORS["sea"] * skm * cf + PORT_HANDLING_EMISSION * cf * 2
-    rcost = TRANSPORT_COST_RATES["road"] * rkm * cf + ROAD_TOLL_RATE * rkm * cf
-    scost = TRANSPORT_COST_RATES["sea"] * skm * cf + PORT_HANDLING_FEE * cf
-    rfull = rcost + rc * CARBON_PRICE_PER_KG
-    sfull = scost + sc * CARBON_PRICE_PER_KG
-    csaved = rc - sc
-    cpct = round(csaved/rc*100,1) if rc>0 else 0
-    ccredit = round(csaved*CARBON_PRICE_PER_KG,2)
-    vsl_saved = round((ACCIDENT_RATE["road"]-ACCIDENT_RATE["sea"])*rkm*cf*VSL/1_000_000)
-
-    time_est = {"road_time":road_eta,"sea_time":sea_eta}
-    ship_data = {"can_catch":can_catch,"cost_savings":rfull-sfull}
-    road_data = {"level":pred_level,"probability":pred_prob}
-    decision = decision_engine.evaluate(cargo_type,road_data,ship_data,time_est,cf)
-
-    sdg_score = round(min(100,cpct*1.5+ccredit/100),1)
-
-    rec = {"id":datetime.now().strftime("%Y%m%d%H%M%S")+uuid4().hex[:4],
-           "date":now.strftime("%Y-%m-%d %H:%M:%S"),"start":p1["name"],"end":p2["name"],
-           "containers":containers,"unit":unit,"cf":round(cf,1),"target":target_date_str,
-           "rkm":rkm,"skm":skm,"rc":round(rc,2),"sc":round(sc,2),"ci":round(csaved,2),
-           "rp":cpct,"cc":ccredit,"decision":decision["mode"],"rf":round(rcost),"sf":round(scost),
-           "vsl":vsl_saved,"sdg":sdg_score}
-    save_history(rec)
-
-    return {"record_id":rec["id"],"start_name":p1["name"],"end_name":p2["name"],
-            "start_lat":p1["lat"],"start_lon":p1["lon"],"end_lat":p2["lat"],"end_lon":p2["lon"],
-            "containers":cdisp,"target_date":target_date_str,"road_km":rkm,"sea_km":skm,
-            "road_eta":road_eta,"sea_eta":sea_eta,
-            "road":{"freight":round(rcost),"carbon":round(rc,2),"total":round(rfull)},
-            "sea":{"freight":round(scost),"carbon":round(sc,2),"total":round(sfull)},
-            "carbon_saved":round(csaved,2),"carbon_pct":cpct,"carbon_credit":ccredit,
-            "vsl_saved":vsl_saved,"accident_risk":accident_risk,
-            "decision":"🚢 海轉（藍色公路）" if decision["mode"]=="sea" else "🚛 陸拖（公路運輸）",
-            "confidence":decision["confidence"],"reasons":decision["reasons"],"scores":decision["scores"],
-            "traffic":{"avg":round(avg,1),"predicted_level":pred_level,"predicted_prob":pred_prob,
-                       "text":"順暢" if pred_level=="low" else("車多" if pred_level=="medium" else"壅塞")},
-            "ships":ships,"sdg_score":sdg_score,"sdg_indicators":SDG_INDICATORS,
-            "booking_available":booking_system.get_remaining(start,end)}
-
-
-# 資料存取
-def load_history(): return read_json(HISTORY_FILE,[])
-def save_history(r):
-    h=load_history();h.append(r);write_json(HISTORY_FILE,h[-MAX_HISTORY_RECORDS:])
-def load_certs(): return read_json(CERTIFICATE_FILE,[])
-def save_cert(c):
-    rows=load_certs();rows.append(c);write_json(CERTIFICATE_FILE,rows)
-def get_hist(rid):
-    for r in load_history():
-        if r["id"]==rid: return r
-    return None
-def get_cert(cid):
-    for c in load_certs():
-        if c["cert_id"]==cid: return c
+def get_certificate(cert_id):
+    for cert in load_certificates():
+        if cert["cert_id"] == cert_id:
+            return cert
     return None
 
+def build_calculation_result(start, end, containers, cargo_type="normal", time_requirement=48):
+    p1 = PORTS[start]
+    p2 = PORTS[end]
+    base_distance = haversine_distance(p1["lat"], p1["lon"], p2["lat"], p2["lon"])
+    road_distance = estimate_route_distance(base_distance, "road")
+    sea_distance = estimate_route_distance(base_distance, "sea")
 
-# 路由
+    road_condition = traffic_service.summarize_traffic()
+    ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
+    
+    # AI 決策引擎
+    ai_mode, ai_score, ai_reasons = ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, time_requirement)
+    
+    # AI 壅塞預測
+    congestion_prediction = traffic_service.predict_congestion("NH1")
+    
+    # 事故風險預測
+    accident_risk = traffic_service.predict_accident_risk(road_distance, road_condition["level"])
+    
+    # 運輸時間預測
+    road_time_pred = traffic_service.predict_travel_time(road_distance, "road", road_condition["level"])
+    sea_time_pred = traffic_service.predict_travel_time(sea_distance, "sea", road_condition["level"])
+
+    road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
+    sea_carbon = EMISSION_FACTORS["sea"] * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
+
+    road_freight = TRANSPORT_COST_RATES["road"] * road_distance * containers
+    sea_freight = TRANSPORT_COST_RATES["sea"] * sea_distance * containers
+
+    road_time = calculate_financing_time_cost(road_distance, "road", containers)
+    sea_time = calculate_financing_time_cost(sea_distance, "sea", containers)
+
+    road_social = SOCIAL_COST_RATES["road"] * road_distance * containers
+    sea_social = SOCIAL_COST_RATES["sea"] * sea_distance * containers
+
+    road_risk = RISK_COST_RATES["road"] * road_distance * containers
+    sea_risk = RISK_COST_RATES["sea"] * sea_distance * containers
+
+    road_carbon_externality = road_carbon * SOCIAL_COST_OF_CARBON
+    sea_carbon_externality = sea_carbon * SOCIAL_COST_OF_CARBON
+
+    road_total = road_freight + road_time + road_social + road_risk + road_carbon_externality
+    sea_total = sea_freight + sea_time + sea_social + sea_risk + sea_carbon_externality
+
+    # AI 決策決定最佳模式
+    best_mode = ai_mode
+    if best_mode == "海運":
+        social_savings = road_total - sea_total
+        carbon_improvement = road_carbon - sea_carbon
+        baseline = road_carbon
+    else:
+        social_savings = sea_total - road_total
+        carbon_improvement = sea_carbon - road_carbon
+        baseline = sea_carbon
+
+    reduction_pct = (carbon_improvement / baseline * 100) if baseline > 0 else 0
+    dispatch = smart_dispatch(containers, road_condition, ship_schedule, cargo_type)
+    optimization = compare_modes(base_distance, containers)
+    optimal_ratio = calculate_optimal_transfer_ratio(base_distance, containers)
+    
+    # ESG 報告
+    esg_report = get_esg_report(road_carbon, sea_carbon, containers, base_distance)
+    
+    # 艙位資訊
+    route_key = f"{p1['code']}-{p2['code']}"
+    available_capacity = get_available_capacity(route_key)
+
+    record = {
+        "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "start": p1["name"],
+        "end": p2["name"],
+        "containers": containers,
+        "cargo_type": cargo_type,
+        "base_distance": round(base_distance, 2),
+        "road_distance": round(road_distance, 2),
+        "sea_distance": round(sea_distance, 2),
+        "road_carbon": round(road_carbon, 2),
+        "sea_carbon": round(sea_carbon, 2),
+        "carbon_improvement": round(carbon_improvement, 2),
+        "reduction_pct": round(reduction_pct, 1),
+        "best_mode": best_mode,
+        "ai_score": ai_score,
+        "social_savings": round(social_savings),
+        "road_total": round(road_total),
+        "sea_total": round(sea_total),
+    }
+    save_history(record)
+
+    return {
+        "record_id": record["id"],
+        "distance": round(base_distance, 2),
+        "road_distance": round(road_distance, 2),
+        "sea_distance": round(sea_distance, 2),
+        "containers": containers,
+        "start_name": p1["name"],
+        "end_name": p2["name"],
+        "start_lat": p1["lat"],
+        "start_lon": p1["lon"],
+        "end_lat": p2["lat"],
+        "end_lon": p2["lon"],
+        "road": {
+            "freight": round(road_freight),
+            "time": round(road_time),
+            "social": round(road_social),
+            "risk": round(road_risk),
+            "carbon": round(road_carbon, 2),
+            "carbon_externality": round(road_carbon_externality),
+            "total": round(road_total),
+        },
+        "sea": {
+            "freight": round(sea_freight),
+            "time": round(sea_time),
+            "social": round(sea_social),
+            "risk": round(sea_risk),
+            "carbon": round(sea_carbon, 2),
+            "carbon_externality": round(sea_carbon_externality),
+            "total": round(sea_total),
+        },
+        "best_mode": best_mode,
+        "ai_score": ai_score,
+        "ai_reasons": ai_reasons,
+        "social_savings": round(social_savings),
+        "carbon_improvement": round(carbon_improvement, 2),
+        "reduction_pct": round(reduction_pct, 1),
+        "recommendation": f"AI 決策引擎推薦 {best_mode}，信心分數 {ai_score} 分。可減少 {carbon_improvement:.0f} kg CO2e，約 {reduction_pct:.1f}%",
+        "road_condition": {
+            "level": road_condition["level"],
+            "level_text": "🟢 順暢" if road_condition["level"] == "low" else "🟡 車多" if road_condition["level"] == "medium" else "🔴 壅塞",
+            "avg_speed": road_condition["avg_speed"],
+            "congestion_probability": road_condition.get("congestion_probability", 0),
+            "peak_window": road_condition.get("peak_window", ""),
+        },
+        "congestion_prediction": congestion_prediction,
+        "accident_risk": accident_risk,
+        "road_time_prediction": road_time_pred,
+        "sea_time_prediction": sea_time_pred,
+        "ship_schedule": ship_schedule,
+        "dispatch": dispatch,
+        "optimization": optimization,
+        "optimal_transfer_ratio": optimal_ratio,
+        "esg_report": esg_report,
+        "available_capacity": available_capacity,
+    }
+
+# ================= 路由 =================
 @app.route("/")
 def index():
     return render_template("index.html", app_title=APP_TITLE)
 
 @app.route("/input")
 def input_page():
-    return render_template("input.html", ports=PORTS, cargo_types=CARGO_TYPES, app_title=APP_TITLE)
+    return render_template("input.html", ports=PORTS, app_title=APP_TITLE)
 
 @app.route("/result")
 def result_page():
     return render_template("result.html", app_title=APP_TITLE)
 
+@app.route("/booking")
+def booking_page():
+    return render_template("booking.html", app_title=APP_TITLE)
+
 @app.route("/certificate_page")
-def cert_page():
+def certificate_page():
     return render_template("certificate.html", app_title=APP_TITLE)
 
 @app.route("/history_page")
-def hist_page():
+def history_page():
     return render_template("history.html", app_title=APP_TITLE)
 
 @app.route("/dashboard")
-def dash_page():
+def dashboard_page():
     return render_template("dashboard.html", app_title=APP_TITLE)
 
 @app.route("/get_history")
-def api_hist():
+def get_history():
     return jsonify(load_history())
 
-@app.route("/api/traffic_segments")
-def api_traffic_segments():
-    traffic = get_highway_traffic()
-    result = []
-    for seg in FREEWAY_DEFINITION:
-        k = f"{seg['hw']}-{seg['dir']}"
-        base = traffic.get(k,55)
-        speed = max(20,min(100,int(base)+random.randint(-8,8)))
-        level = "low" if speed>=60 else ("medium" if speed>=35 else "high")
-        coords = SEGMENT_COORDS.get(seg["id"],[[25,121],[25,121]])
-        result.append({"id":seg["id"],"name":seg["name"],"hw":seg["hw"],"dir":seg["dir"],
-                       "speed":speed,"level":level,"coords":coords})
+@app.route("/api/traffic")
+def api_traffic():
+    return jsonify(traffic_service.get_live_traffic_speed())
+
+@app.route("/api/congestion-prediction")
+def congestion_prediction():
+    return jsonify(traffic_service.predict_congestion("NH1"))
+
+@app.route("/api/capacity/<start>/<end>")
+def get_capacity(start, end):
+    route_key = f"{start}-{end}"
+    available = get_available_capacity(route_key)
+    total = 809
+    return jsonify({"available": available, "total": total, "utilization": round((total - available) / total * 100, 1)})
+
+@app.route("/api/book", methods=["POST"])
+def book():
+    data = request.get_json()
+    start = data.get("start")
+    end = data.get("end")
+    containers = data.get("containers", 1)
+    company_name = data.get("company_name", "")
+    cargo_type = data.get("cargo_type", "normal")
+    
+    route_key = f"{start}-{end}"
+    result = book_capacity(route_key, containers, cargo_type, company_name)
     return jsonify(result)
 
 @app.route("/calculate", methods=["POST"])
-def calc():
-    d = request.get_json(silent=True) or {}
-    s = d.get("start")
-    e = d.get("end")
-    c = d.get("containers")
-    u = d.get("unit","FEU")
-    td = d.get("target_date","")
-    ct = d.get("cargo_type","normal")
-    if s not in PORTS or e not in PORTS: return jsonify({"error":"港口無效"}),400
-    if s==e: return jsonify({"error":"起終點相同"}),400
-    try: c=int(c)
-    except: return jsonify({"error":"數量錯誤"}),400
-    if c<=0 or c>5000: return jsonify({"error":"數量需1~5000"}),400
-    try: return jsonify(calculate_result(s,e,c,u,td,ct))
-    except Exception as ex: return jsonify({"error":str(ex)}),500
+def calculate():
+    data = request.get_json(silent=True) or {}
+    start = data.get("start")
+    end = data.get("end")
+    containers = data.get("containers")
+    cargo_type = data.get("cargo_type", "normal")
+    time_requirement = data.get("time_requirement", 48)
+
+    if start not in PORTS or end not in PORTS:
+        return jsonify({"error": "港口代碼無效"}), 400
+    if start == end:
+        return jsonify({"error": "起點與終點不可相同"}), 400
+
+    try:
+        containers = int(containers)
+    except (TypeError, ValueError):
+        return jsonify({"error": "貨櫃數量格式錯誤"}), 400
+
+    if containers <= 0 or containers > 5000:
+        return jsonify({"error": "貨櫃數量需介於 1 到 5000 之間"}), 400
+
+    return jsonify(build_calculation_result(start, end, containers, cargo_type, time_requirement))
 
 @app.route("/certificate", methods=["POST"])
-def create_cert():
-    d = request.get_json(silent=True) or {}
-    rid = d.get("record_id")
-    cn = (d.get("company_name") or "").strip()
-    if not cn: return jsonify({"error":"請輸入公司名稱"}),400
-    if not rid: return jsonify({"error":"缺少ID"}),400
-    rec = get_hist(rid)
-    if not rec: return jsonify({"error":"查無記錄"}),404
-    cid = generate_certificate_id()
-    cert = {"cert_id":cid,"company_name":cn,"issued_at":datetime.now().strftime("%Y-%m-%d"),
-            "record_id":rid,"record":rec}
-    save_cert(cert)
-    return jsonify({"cert_id":cid,"company_name":cn,"route":f"{rec['start']}→{rec['end']}","ci":rec["ci"]})
+def create_certificate():
+    data = request.get_json(silent=True) or {}
+    record_id = data.get("record_id")
+    company_name = (data.get("company_name") or "").strip()
 
-@app.route("/download_certificate/<cert_id>")
-def download_cert(cert_id):
-    cert = get_cert(cert_id)
-    if not cert: return jsonify({"error":"查無"}),404
-    buf = build_certificate_pdf(cert, lang="en")
-    return send_file(buf, as_attachment=True, download_name=f"certificate_{cert_id}.pdf", mimetype="application/pdf")
+    if not company_name:
+        return jsonify({"error": "請輸入公司名稱"}), 400
+    if not record_id:
+        return jsonify({"error": "缺少計算紀錄 ID"}), 400
+
+    record = get_history_record(record_id)
+    if not record:
+        return jsonify({"error": "查無對應的計算紀錄"}), 404
+
+    cert_id = generate_certificate_id()
+    certificate = {
+        "cert_id": cert_id,
+        "company_name": company_name,
+        "issued_at": datetime.now().strftime("%Y-%m-%d"),
+        "record_id": record_id,
+        "record": record,
+    }
+    save_certificate(certificate)
+
+    return jsonify({
+        "cert_id": cert_id,
+        "company_name": company_name,
+        "issued_at": certificate["issued_at"],
+        "route": f"{record['start']} → {record['end']}",
+        "containers": record["containers"],
+        "carbon_improvement": record["carbon_improvement"],
+        "reduction_pct": record["reduction_pct"],
+    })
+
+@app.route("/download_certificate/<cert_id>/<lang>")
+def download_certificate(cert_id, lang):
+    certificate = get_certificate(cert_id)
+    if not certificate:
+        return jsonify({"error": "查無證書"}), 404
+
+    lang = "en" if lang == "en" else "zh"
+    pdf_buffer = build_certificate_pdf(certificate, lang=lang)
+    filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
+    return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
 @app.route("/verify/<cert_id>")
-def verify(cert_id):
-    cert = get_cert(cert_id)
-    return render_template("verify.html", valid=bool(cert), cert=cert, app_title=APP_TITLE)
-
+def verify_certificate(cert_id):
+    certificate = get_certificate(cert_id)
+    return render_template("verify.html", valid=bool(certificate), cert=certificate, app_title=APP_TITLE)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)

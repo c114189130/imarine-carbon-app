@@ -1,27 +1,39 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <title>證書驗證 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<nav class="navbar">
-    <div class="navbar-brand">🌊 {{ app_title }}</div>
-    <div class="navbar-links"><a href="/">🏠</a></div>
-</nav>
-<div class="container">
-    <div class="card" style="max-width:600px;margin:0 auto;text-align:center;">
-        {% if valid %}
-        <h2>✅ 證書驗證成功</h2>
-        <p>證書編號：{{ cert.cert_id }}</p>
-        <p>公司名稱：{{ cert.company_name }}</p>
-        <p>減碳量：{{ cert.record.ci }} kg CO2e</p>
-        {% else %}
-        <h2>❌ 查無此證書</h2>
-        {% endif %}
-        <a href="/" class="btn btn-primary">返回首頁</a>
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/booking">🎟️ 艙位訂票</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="card fade-in" style="max-width:600px; margin:0 auto; text-align:center">
+            {% if valid %}
+                <h2>✅ 證書驗證成功</h2>
+                <hr>
+                <p><strong>證書編號：</strong>{{ cert.cert_id }}</p>
+                <p><strong>公司名稱：</strong>{{ cert.company_name }}</p>
+                <p><strong>運輸路線：</strong>{{ cert.record.start }} → {{ cert.record.end }}</p>
+                <p><strong>貨櫃數量：</strong>{{ cert.record.containers }} FEU</p>
+                <p><strong>減碳量：</strong>{{ cert.record.carbon_improvement }} kg CO2e</p>
+                <p><strong>減碳比例：</strong>{{ cert.record.reduction_pct }}%</p>
+                <p><strong>核發時間：</strong>{{ cert.issued_at }}</p>
+                <hr>
+                <p>本證書由 iMarine 智慧海運碳排認證中心核發</p>
+            {% else %}
+                <h2>❌ 證書驗證失敗</h2>
+                <p>查無此證書編號，請確認輸入是否正確</p>
+            {% endif %}
+            <button class="btn btn-primary" onclick="location.href='/'">返回首頁</button>
+        </div>
     </div>
-</div>
 </body>
 </html>

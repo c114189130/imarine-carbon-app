@@ -1,51 +1,498 @@
-var currentResult=null,mapInstance=null,trafficLines={};
-function fm(v){return"NT$ "+Number(v||0).toLocaleString();}
-function calculate(){
-    var s=localStorage.getItem("start"),e=localStorage.getItem("end"),c=localStorage.getItem("containers"),u=localStorage.getItem("unit")||"FEU",td=localStorage.getItem("targetDate")||"",ct=localStorage.getItem("cargoType")||"normal";
-    if(!s||!e||!c){alert("請先填資料");location.href="/input";return;}
-    fetch("/calculate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({start:s,end:e,containers:c,unit:u,target_date:td,cargo_type:ct})})
-    .then(r=>r.json()).then(d=>{if(d.error)throw Error(d.error);currentResult=d;show(d);drawMap(d);animKPIs(d);document.getElementById("loading").style.display="none";document.getElementById("main").style.display="block";}).catch(e=>{document.getElementById("loading").innerHTML='<div class="loading-container"><div style="color:#e74c3c">'+e.message+'</div><button class="btn btn-primary" onclick="location.href=\'/input\'">返回</button></div>';});
+let currentResult = null;
+let mapInstance = null;
+let trafficLayers = new Map();
+let trafficUpdateInterval = null;
+
+function formatCurrency(v) {
+    const value = Number(v ?? 0);
+    return "NT$ " + value.toLocaleString();
 }
-function animKPIs(d){
-    var items=[{id:"kpiCarbon",v:d.carbon_saved},{id:"kpiVSL",v:d.vsl_saved},{id:"kpiSDG",v:d.sdg_score},{id:"kpiConfidence",v:d.confidence}];
-    items.forEach(function(item){animVal(item.id,0,item.v,1200);});
-    document.getElementById("kpiDecision").innerText=d.decision;
-    document.getElementById("kpiPredicted").innerText=d.traffic.text+" ("+Math.round(d.traffic.predicted_prob*100)+"%)";
+
+function animateValue(el, start, end, duration = 800, decimals = 0) {
+    if (!el) return;
+    const range = end - start;
+    const inc = range / (duration / 16);
+    let current = start;
+    const timer = setInterval(() => {
+        current += inc;
+        if ((inc > 0 && current >= end) || (inc < 0 && current <= end)) {
+            current = end;
+            clearInterval(timer);
+        }
+        el.textContent = decimals > 0 ? current.toFixed(decimals) : Math.round(current);
+    }, 16);
 }
-function animVal(id,s,e,dur){var el=document.getElementById(id);if(!el)return;var rng=e-s,stp=rng/(dur/16),cur=s,tmr=setInterval(function(){cur+=stp;if((stp>0&&cur>=e)||(stp<0&&cur<=e)){cur=e;clearInterval(tmr);}el.innerText=Math.round(cur).toLocaleString();if(id==="kpiSDG")el.innerText=cur.toFixed(1);},16);}
-function show(d){
-    document.getElementById("decisionBadge").innerText=d.decision;
-    document.getElementById("decisionBadge").style.background=d.decision.indexOf("海轉")>=0?"#0077b6":"#e67e22";
-    document.getElementById("roadFreight").innerText=fm(d.road.freight);
-    document.getElementById("seaFreight").innerText=fm(d.sea.freight);
-    document.getElementById("roadCarbon").innerText=Number(d.road.carbon).toLocaleString()+" kg";
-    document.getElementById("seaCarbon").innerText=Number(d.sea.carbon).toLocaleString()+" kg";
-    document.getElementById("roadTotal").innerText=fm(d.road.total);
-    document.getElementById("seaTotal").innerText=fm(d.sea.total);
-    document.getElementById("carbonSaved").innerText=Number(d.carbon_saved).toLocaleString();
-    document.getElementById("carbonPct").innerText=d.carbon_pct+"%";
-    document.getElementById("carbonCredit").innerText=fm(d.carbon_credit);
-    document.getElementById("vslSaved").innerText=fm(d.vsl_saved);
-    document.getElementById("accidentRisk").innerText=d.accident_risk;
-    document.getElementById("sdgScore").innerText=d.sdg_score;
-    document.getElementById("bookingAvail").innerText=d.booking_available+" FEU";
-    document.getElementById("roadEta").innerText=d.road_eta+"h";
-    document.getElementById("seaEta").innerText=d.sea_eta+"h";
-    var sh="";if(d.ships&&d.ships.length>0){d.ships.forEach(function(s){sh+='<div style="background:rgba(255,255,255,0.15);padding:0.8rem;border-radius:10px;margin:0.3rem 0;">✅ '+s.ship+'<br>ETD '+s.etd+' → ETA '+s.eta+'（'+s.hours+'h）| 剩餘 '+s.available+' FEU</div>';});}else{sh='<p style="color:#ff6b6b;">⚠️ 暫無可用船班</p>';}
-    document.getElementById("shipList").innerHTML=sh;
-    var re="";d.reasons.forEach(function(r){re+='<li>'+r+'</li>';});document.getElementById("reasonsList").innerHTML=re;
-    document.getElementById("scoreSea").style.width=(d.scores.sea)+"%";
-    document.getElementById("scoreRoad").style.width=(d.scores.road)+"%";
-    document.getElementById("scoreSeaText").innerText="海運 "+d.scores.sea;
-    document.getElementById("scoreRoadText").innerText="公路 "+d.scores.road;
+
+function updateLoadingStep(step) {
+    const steps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
+    const texts = ['1. 讀取貨櫃需求', '2. 匯入航港/公路資料', '3. 整合碳排與成本參數', '4. 海轉/陸轉可行性判斷', '5. 方案計算與比較', '6. AI 智慧決策'];
+    for (let i = 0; i < steps.length; i++) {
+        const el = document.getElementById(steps[i]);
+        if (el) {
+            if (i < step) {
+                el.classList.add('completed');
+                el.innerHTML = el.innerHTML.replace('⏳', '✅');
+            } else if (i === step) {
+                el.classList.add('active');
+            }
+        }
+    }
+    const loadingText = document.getElementById('loadingText');
+    if (loadingText && step < texts.length) {
+        loadingText.innerText = texts[step];
+    }
 }
-function drawMap(data){
-    if(mapInstance){mapInstance.remove();mapInstance=null;trafficLines={};}
-    if(typeof L==='undefined')return;
-    mapInstance=L.map('map').setView([23.5,120.8],7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(mapInstance);
-    L.marker([data.start_lat,data.start_lon]).addTo(mapInstance).bindPopup('<b>📍 '+data.start_name+'</b>').openPopup();
-    L.marker([data.end_lat,data.end_lon]).addTo(mapInstance).bindPopup('<b>🏁 '+data.end_name+'</b>');
-    fetch("/api/traffic_segments").then(r=>r.json()).then(segs=>{segs.forEach(s=>{var color=s.level==="low"?"#27ae60":(s.level==="medium"?"#f39c12":"#e74c3c");var latlngs=s.coords.map(c=>[c[0],c[1]]);var line=L.polyline(latlngs,{color:color,weight:5,opacity:0.9,dashArray:"10,10"}).addTo(mapInstance);line.bindPopup('<b>'+s.name+'</b><br>'+s.speed+' km/h');trafficLines[s.id]=line;});Object.values(trafficLines).forEach(line=>{var offset=0;setInterval(function(){offset=(offset+1)%20;line.setStyle({dashOffset:offset});},80);});});
+
+function goToResult() {
+    const start = document.getElementById("start").value;
+    const end = document.getElementById("end").value;
+    const containers = document.getElementById("containers").value;
+    const cargoType = document.getElementById("cargoType").value;
+    const timeRequirement = document.getElementById("timeRequirement").value;
+    
+    if (!containers || containers <= 0) {
+        alert("請輸入貨櫃數量");
+        return;
+    }
+    localStorage.setItem("start", start);
+    localStorage.setItem("end", end);
+    localStorage.setItem("containers", containers);
+    localStorage.setItem("cargoType", cargoType);
+    localStorage.setItem("timeRequirement", timeRequirement);
+    window.location = "/result";
 }
-function goCert(){if(currentResult)localStorage.setItem("recordId",currentResult.record_id);location.href="/certificate_page";}
+
+function calculate() {
+    const start = localStorage.getItem("start");
+    const end = localStorage.getItem("end");
+    const containers = localStorage.getItem("containers");
+    const cargoType = localStorage.getItem("cargoType") || "normal";
+    const timeRequirement = localStorage.getItem("timeRequirement") || 48;
+    
+    if (!start || !end || !containers) {
+        alert("請先返回輸入頁面填寫資料");
+        window.location = "/input";
+        return;
+    }
+    
+    updateLoadingStep(0);
+    
+    fetch("/calculate", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start, end, containers, cargo_type: cargoType, time_requirement: parseInt(timeRequirement) })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        currentResult = data;
+        displayResults(data);
+        drawCharts(data);
+        initMapAndTraffic(data);
+        document.getElementById("loadingOverlay").style.display = "none";
+        document.getElementById("content").style.display = "block";
+    })
+    .catch(err => {
+        console.error(err);
+        const overlay = document.getElementById("loadingOverlay");
+        if (overlay) {
+            overlay.innerHTML = '<div class="loading-container"><div style="color:#e74c3c">計算失敗：' + err.message + '</div><button class="btn btn-primary" onclick="location.href=\'/input\'">返回重新輸入</button></div>';
+        }
+    });
+}
+
+function displayResults(data) {
+    const road = data.road;
+    const sea = data.sea;
+    
+    // AI 決策理由顯示
+    let aiReasonsHtml = '';
+    if (data.ai_reasons && data.ai_reasons.length > 0) {
+        aiReasonsHtml = '<div class="card" style="background:var(--light-cyan)"><h3>🧠 AI 決策邏輯</h3><ul>';
+        data.ai_reasons.forEach(r => { aiReasonsHtml += `<li>${r}</li>`; });
+        aiReasonsHtml += '</ul></div>';
+    }
+    
+    // ESG 報告顯示
+    let esgHtml = '';
+    if (data.esg_report) {
+        esgHtml = `
+            <div class="card">
+                <h3>🌱 ESG 永續報告</h3>
+                <div class="benefit-grid">
+                    <div class="benefit-card carbon">
+                        <div class="benefit-icon">🌱</div>
+                        <div class="benefit-value">${data.esg_report.carbon_saved.toLocaleString()} kg</div>
+                        <div class="benefit-label">減碳量</div>
+                        <div class="benefit-sub">減少 ${data.esg_report.carbon_reduction_pct}%</div>
+                    </div>
+                    <div class="benefit-card vsl">
+                        <div class="benefit-icon">💰</div>
+                        <div class="benefit-value">NT$ ${data.esg_report.carbon_credit_value.toLocaleString()}</div>
+                        <div class="benefit-label">碳權價值</div>
+                        <div class="benefit-sub">碳定價 NT$0.3/kg</div>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🌳</div>
+                        <div class="benefit-value">${data.esg_report.trees_planted.toLocaleString()} 棵</div>
+                        <div class="benefit-label">相當於種樹</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <div class="result-card">
+            <div><h3>📊 AI 多因子決策分析報告</h3></div>
+            <div>
+                <p>🚢 ${data.start_name} → 🏁 ${data.end_name}</p>
+                <p>📏 距離：<span class="result-value">${Number(data.distance).toLocaleString()}</span> 公里</p>
+                <p>📦 貨櫃數量：<span class="result-value">${Number(data.containers).toLocaleString()}</span> FEU</p>
+                <p>🎯 AI 信心分數：<span class="result-value">${data.ai_score || 85}</span> 分</p>
+            </div>
+            <div class="recommendation-box">
+                🤖 <strong>AI 推薦方案：${data.best_mode}</strong><br>
+                ${data.recommendation}
+            </div>
+        </div>
+        ${aiReasonsHtml}
+        ${esgHtml}
+        <div class="card">
+            <h3>💰 總體社會成本分析</h3>
+            <table class="cost-table">
+                <thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead>
+                <tbody>
+                    <tr>}<strong>💰 運費</strong></td><td>${formatCurrency(road.freight)}</td><td>${formatCurrency(sea.freight)}</td><td>${formatCurrency(road.freight - sea.freight)}</td></tr>
+                    <tr>}<strong>⏳ 時間成本</strong></td><td>${formatCurrency(road.time)}</td><td>${formatCurrency(sea.time)}</td><td>${formatCurrency(road.time - sea.time)}</td></tr>
+                    <tr>}<strong>🏛️ 社會成本</strong></td><td>${formatCurrency(road.social)}</td><td>${formatCurrency(sea.social)}</td><td class="savings-number">${formatCurrency(road.social - sea.social)}</td></tr>
+                    <tr>}<strong>⚠️ VSL風險</strong></td><td>${formatCurrency(road.risk)}</td><td>${formatCurrency(sea.risk)}</td><td class="savings-number">${formatCurrency(road.risk - sea.risk)}</td></tr>
+                    <tr style="background:var(--light-cyan);font-weight:bold">}<strong>📊 總成本</strong></td><td>${formatCurrency(road.total)}</td><td>${formatCurrency(sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    document.getElementById("result").innerHTML = html;
+    
+    // AI 壅塞預測顯示
+    if (data.congestion_prediction) {
+        const cp = data.congestion_prediction;
+        const congestionDiv = document.getElementById("congestionPrediction");
+        if (congestionDiv) {
+            congestionDiv.innerHTML = `
+                <div class="stats-row">
+                    <div class="stat-item"><div class="stat-value">${cp.level === 'high' ? '🔴 壅塞' : cp.level === 'medium' ? '🟡 車多' : '🟢 順暢'}</div><div class="stat-label">預測路況</div></div>
+                    <div class="stat-item"><div class="stat-value">${(cp.probability * 100).toFixed(0)}%</div><div class="stat-label">壅塞機率</div></div>
+                    <div class="stat-item"><div class="stat-value">${cp.peak_window || '-'}</div><div class="stat-label">尖峰時段</div></div>
+                </div>
+            `;
+        }
+    }
+    
+    // 事故風險顯示
+    if (data.accident_risk) {
+        const riskDiv = document.getElementById("accidentRisk");
+        if (riskDiv) {
+            const riskPercent = (data.accident_risk * 100).toFixed(3);
+            riskDiv.innerHTML = `<span class="badge ${data.accident_risk > 0.01 ? 'warning' : 'success'}">⚠️ 事故風險：${riskPercent}%</span>`;
+        }
+    }
+    
+    if (data.ship_schedule) {
+        if (document.getElementById("shipName")) document.getElementById("shipName").innerHTML = data.ship_schedule.name;
+        if (document.getElementById("shipRoute")) document.getElementById("shipRoute").innerHTML = data.ship_schedule.route || "TBS";
+        if (document.getElementById("shipDest")) document.getElementById("shipDest").innerHTML = data.ship_schedule.destination;
+        if (document.getElementById("shipEta")) document.getElementById("shipEta").innerHTML = data.ship_schedule.eta_hours + " 小時後";
+        if (document.getElementById("shipCapacity")) document.getElementById("shipCapacity").innerHTML = data.ship_schedule.available + " FEU";
+        if (document.getElementById("shipSchedule")) document.getElementById("shipSchedule").innerHTML = data.ship_schedule.eta === "FRI" ? "每週五、日" : "每週二、四、六";
+    }
+    
+    if (data.dispatch) {
+        const de = document.getElementById("dispatchResult");
+        if (de) {
+            let reasonsHtml = data.dispatch.reasons.map(r => `<li>${r}</li>`).join('');
+            de.innerHTML = `
+                <div class="dispatch-grid">
+                    <div class="score-section">
+                        <div class="score-card sea"><div class="score-number" id="scoreSea">0</div><div>🚢 海運分數</div></div>
+                        <div class="score-card road"><div class="score-number" id="scoreRoad">0</div><div>🚛 公路分數</div></div>
+                    </div>
+                    <div class="decision-section">
+                        <div class="action-box"><p class="action-title">${data.dispatch.action}</p><p>${data.dispatch.suggestion}</p></div>
+                        <div class="count-box"><div><span class="emoji">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> FEU</div><div><span class="emoji">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> FEU</div></div>
+                        <div class="ratio-bars">
+                            <div class="ratio-bar-container"><div id="ratioBarSea" class="ratio-bar-sea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div>
+                            <div class="ratio-bar-container"><div id="ratioBarRoad" class="ratio-bar-road" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div>
+                        </div>
+                        <div class="reason-box"><p class="reason-title">📌 詳細分析</p><ul>${reasonsHtml}</ul><hr><p class="why-sea">🌱 海運碳排放僅為公路的 1/3</p></div>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => {
+                animateValue(document.getElementById("scoreSea"), 0, data.dispatch.score_sea, 600, 1);
+                animateValue(document.getElementById("scoreRoad"), 0, data.dispatch.score_road, 600, 1);
+                animateValue(document.getElementById("seaCount"), 0, data.dispatch.to_sea, 600);
+                animateValue(document.getElementById("roadCount"), 0, data.dispatch.to_road, 600);
+                if (document.getElementById("seaPercent")) document.getElementById("seaPercent").innerText = data.dispatch.ratio;
+                if (document.getElementById("roadPercent")) document.getElementById("roadPercent").innerText = (100 - data.dispatch.ratio).toFixed(1);
+                if (document.getElementById("ratioBarSea")) document.getElementById("ratioBarSea").style.width = data.dispatch.ratio + "%";
+                if (document.getElementById("ratioBarRoad")) document.getElementById("ratioBarRoad").style.width = (100 - data.dispatch.ratio) + "%";
+            }, 100);
+        }
+    }
+    
+    if (data.optimization) {
+        const opt = data.optimization;
+        const optDiv = document.getElementById("optimizationResult");
+        if (optDiv) {
+            optDiv.innerHTML = `
+                <table class="cost-table">
+                    <thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead>
+                    <tbody>
+                        <tr>}<strong>運輸成本</strong></td><td>${formatCurrency(opt.road.transport)}</td>.<${formatCurrency(opt.sea.transport)}</td>.<${formatCurrency(opt.savings.transport)}</td></tr>
+                        <tr>}<strong>碳排成本</strong></td>.<${formatCurrency(opt.road.carbon)}</td>.<${formatCurrency(opt.sea.carbon)}</td>.<${formatCurrency(opt.savings.carbon)}</td></tr>
+                        <tr>}<strong>事故成本</strong></td>.<${formatCurrency(opt.road.accident)}</td>.<${formatCurrency(opt.sea.accident)}</td><td class="savings-number">${formatCurrency(opt.savings.accident)}</td></tr>
+                        <tr>}<strong>時間成本</strong></td>.<${formatCurrency(opt.road.time)}</td>.<${formatCurrency(opt.sea.time)}</td>.<${formatCurrency(opt.savings.time)}</td></tr>
+                        <tr style="background:var(--light-cyan);font-weight:bold">}<strong>總成本</strong></td>.<${formatCurrency(opt.road.total)}</td>.<${formatCurrency(opt.sea.total)}</td><td class="savings-number">${formatCurrency(opt.savings.total)}</td></tr>
+                    </tbody>
+                </table>
+                <div class="benefit-grid">
+                    <div class="benefit-card carbon"><div class="benefit-icon">🌱</div><div class="benefit-value">${Number(opt.carbon_reduction_kg).toLocaleString()} kg</div><div class="benefit-label">減碳量</div></div>
+                    <div class="benefit-card vsl"><div class="benefit-icon">🚸</div><div class="benefit-value">${formatCurrency(opt.vsl_saved)}</div><div class="benefit-label">人命價值節省</div><div class="benefit-sub">相當於減少 ${opt.deaths_reduced} 人死亡</div></div>
+                </div>
+            `;
+        }
+    }
+}
+
+async function initMapAndTraffic(data) {
+    const centerLat = (data.start_lat + data.end_lat) / 2;
+    const centerLon = (data.start_lon + data.end_lon) / 2;
+    
+    if (mapInstance) {
+        mapInstance.remove();
+        trafficLayers.clear();
+    }
+    
+    if (typeof L === 'undefined') {
+        console.error("Leaflet 未載入");
+        return;
+    }
+    
+    mapInstance = L.map('map').setView([centerLat, centerLon], 7);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+        subdomains: 'abcd'
+    }).addTo(mapInstance);
+    
+    try {
+        const response = await fetch('/static/taiwan_freeway.geojson');
+        const geojson = await response.json();
+        geojson.features.forEach(feature => {
+            const layer = L.geoJSON(feature, { style: { color: '#ccc', weight: 4, opacity: 0.7 } }).addTo(mapInstance);
+            trafficLayers.set(feature.properties.id, layer);
+        });
+        console.log("國道路網載入完成");
+    } catch(e) {
+        console.error("載入路網失敗:", e);
+    }
+    
+    setTimeout(() => loadTrafficLight(), 1000);
+    
+    if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
+    trafficUpdateInterval = setInterval(loadTrafficLight, 60000);
+}
+
+async function loadTrafficLight() {
+    if (!mapInstance) return;
+    
+    try {
+        const response = await fetch("/api/traffic");
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const speedData = await response.json();
+        
+        let totalSpeed = 0, congested = 0, smooth = 0, updated = 0;
+        speedData.forEach(item => {
+            const layer = trafficLayers.get(item.id);
+            if (layer) {
+                const color = item.speed >= 60 ? "#27ae60" : (item.speed >= 35 ? "#f39c12" : "#e74c3c");
+                layer.setStyle({ color: color, weight: 5, opacity: 0.9 });
+                totalSpeed += item.speed;
+                if (item.speed < 35) congested++;
+                if (item.speed >= 60) smooth++;
+                updated++;
+            }
+        });
+        
+        const avgSpeed = speedData.length > 0 ? (totalSpeed / speedData.length).toFixed(1) : 0;
+        const statsDiv = document.getElementById("trafficStats");
+        if (statsDiv) {
+            statsDiv.innerHTML = `
+                <div class="stats-row">
+                    <div class="stat-item"><div class="stat-value">${avgSpeed}</div><div class="stat-label">平均車速 (km/h)</div></div>
+                    <div class="stat-item"><div class="stat-value" style="color:#e74c3c">${congested}</div><div class="stat-label">壅塞路段</div></div>
+                    <div class="stat-item"><div class="stat-value" style="color:#27ae60">${smooth}</div><div class="stat-label">順暢路段</div></div>
+                </div>
+            `;
+        }
+        console.log("路況更新: " + updated + " 個路段, 平均車速 " + avgSpeed + " km/h");
+    } catch(error) {
+        console.error("載入即時路況失敗:", error);
+    }
+}
+
+function drawCharts(data) {
+    new Chart(document.getElementById("costChart"), {
+        type: 'bar',
+        data: {
+            labels: ['公路', '海運'],
+            datasets: [
+                { label: '運費', data: [data.road.freight, data.sea.freight], backgroundColor: 'rgba(0,119,182,0.7)' },
+                { label: '時間成本', data: [data.road.time, data.sea.time], backgroundColor: 'rgba(0,180,216,0.7)' },
+                { label: '社會成本', data: [data.road.social, data.sea.social], backgroundColor: 'rgba(72,202,228,0.7)' },
+                { label: 'VSL風險', data: [data.road.risk, data.sea.risk], backgroundColor: 'rgba(144,224,239,0.7)' }
+            ]
+        },
+        options: { responsive: true }
+    });
+    
+    new Chart(document.getElementById("carbonChart"), {
+        type: 'bar',
+        data: {
+            labels: ['公路', '海運'],
+            datasets: [{ label: '碳排放 (kg CO2e)', data: [data.road.carbon, data.sea.carbon], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }]
+        },
+        options: { responsive: true }
+    });
+}
+
+function generateCert() {
+    const name = document.getElementById("name").value;
+    if (!name) { alert("請輸入公司名稱"); return; }
+    
+    fetch("/certificate", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, carbon_saved: currentResult.carbon_improvement, reduction_pct: currentResult.reduction_pct, record_id: currentResult.record_id })
+    })
+    .then(res => res.json())
+    .then(data => {
+        localStorage.setItem("cert", JSON.stringify(data));
+        document.getElementById("certResult").innerHTML = `
+            <div class="card" style="text-align:center">
+                <h3>✅ 碳排認證已產生</h3>
+                <p>公司：${data.name}</p>
+                <p>編號：${data.cert_id}</p>
+                <p>日期：${data.date}</p>
+                <button class="btn btn-primary" onclick="downloadPDF('chinese')">📄 中文證書</button>
+                <button class="btn btn-primary" onclick="downloadPDF('english')">📄 English Certificate</button>
+            </div>
+        `;
+    });
+}
+
+function downloadPDF(lang) {
+    const cert = JSON.parse(localStorage.getItem("cert"));
+    if (!cert) { alert("請先產生認證"); return; }
+    const endpoint = lang === 'chinese' ? '/download_pdf_chinese' : '/download_pdf_english';
+    fetch(endpoint, { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cert) })
+        .then(res => res.blob())
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "certificate_" + cert.cert_id + "_" + lang + ".pdf";
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+}
+
+function goToCertificate() {
+    if (currentResult) {
+        localStorage.setItem("savedCO2", currentResult.carbon_improvement);
+        localStorage.setItem("reductionPct", currentResult.reduction_pct);
+    }
+    window.location = "/certificate_page";
+}
+
+function loadHistory() {
+    fetch("/get_history")
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById("historyBody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄</td></tr>';
+                return;
+            }
+            [...data].reverse().forEach(r => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${r.date}</td>
+                        <td>${r.start}</td>
+                        <td>${r.end}</td>
+                        <td>${r.containers}</td>
+                        <td>${r.base_distance} km</td>
+                        <td>${(r.sea_carbon || 0).toLocaleString()} kg</td>
+                        <td>${r.best_mode}</td>
+                        <td>${(r.carbon_improvement || 0).toLocaleString()} kg</td>
+                        <td>${r.reduction_pct || 0}%</td>
+                    </tr>
+                `;
+            });
+            drawHistoryChart(data);
+        });
+}
+
+function drawHistoryChart(history) {
+    const ctx = document.getElementById("historyChart");
+    if (!ctx) return;
+    const last7 = history.slice(-7);
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last7.map(h => h.date ? h.date.split(' ')[0] : ''),
+            datasets: [
+                { label: '公路碳排', data: last7.map(h => h.road_carbon || 0), borderColor: '#e74c3c', fill: true },
+                { label: '海運碳排', data: last7.map(h => h.sea_carbon || 0), borderColor: '#0077b6', fill: true }
+            ]
+        }
+    });
+}
+
+function loadDashboard() {
+    fetch("/get_history")
+        .then(res => res.json())
+        .then(data => {
+            if (data.length === 0) {
+                document.getElementById("totalReduction").innerText = "0";
+                document.getElementById("avgReduction").innerText = "0%";
+                document.getElementById("totalCount").innerText = "0";
+                document.getElementById("seaRate").innerText = "0%";
+                return;
+            }
+            const total = data.reduce((s, d) => s + (d.carbon_improvement || 0), 0);
+            const avg = data.reduce((s, d) => s + (d.reduction_pct || 0), 0) / data.length;
+            const seaCount = data.filter(d => d.best_mode === "海運").length;
+            
+            animateValue(document.getElementById("totalReduction"), 0, total, 1000);
+            document.getElementById("avgReduction").innerText = avg.toFixed(1) + "%";
+            document.getElementById("totalCount").innerText = data.length;
+            document.getElementById("seaRate").innerText = Math.round(seaCount / data.length * 100) + "%";
+            
+            new Chart(document.getElementById("trendChart"), {
+                type: 'line',
+                data: {
+                    labels: data.slice(-14).map(d => d.date ? d.date.split(' ')[0] : ''),
+                    datasets: [{ label: "減碳量 (kg)", data: data.slice(-14).map(d => d.carbon_improvement || 0), borderColor: "#0077b6", fill: true }]
+                }
+            });
+            
+            new Chart(document.getElementById("modeChart"), {
+                type: 'doughnut',
+                data: { labels: ["海運推薦", "公路推薦"], datasets: [{ data: [seaCount, data.length - seaCount], backgroundColor: ["#00b4d8", "#48cae4"] }] }
+            });
+        });
+}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>艙位訂票 - {{ app_title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">🌊 {{ app_title }}</div>
+        <div class="navbar-links">
+            <a href="/">🏠 首頁</a>
+            <a href="/input">🚢 開始指派</a>
+            <a href="/booking">🎟️ 艙位訂票</a>
+            <a href="/history_page">📊 歷史記錄</a>
+            <a href="/dashboard">📈 Dashboard</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="card fade-in">
+            <h2>🎟️ 藍色公路艙位訂票系統</h2>
+            <p style="color:var(--french-blue)">即時查詢可用艙位，完成訂票後可獲得碳排認證</p>
+            
+            <div class="form-group">
+                <label>📍 航線</label>
+                <select id="route">
+                    <option value="KHH-TXG">高雄港 → 台中港</option>
+                    <option value="TXG-KHH">台中港 → 高雄港</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>📦 貨櫃數量 (FEU)</label>
+                <input type="number" id="containers" min="1" value="10">
+            </div>
+            
+            <div class="form-group">
+                <label>🏢 公司名稱</label>
+                <input type="text" id="companyName" placeholder="請輸入公司名稱">
+            </div>
+            
+            <div class="card" style="background:var(--light-cyan); margin-bottom:1rem">
+                <h4>📊 即時艙位資訊</h4>
+                <div id="capacityInfo">
+                    <div class="capacity-bar"><div class="capacity-fill" id="capacityFill" style="width:0%"></div></div>
+                    <p id="capacityText">載入中...</p>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="bookTicket()" style="width:100%">🎟️ 立即訂票</button>
+            
+            <div id="bookingResult" style="margin-top:1.5rem"></div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadCapacity() {
+            const route = document.getElementById('route').value;
+            const [start, end] = route.split('-');
+            const response = await fetch(`/api/capacity/${start}/${end}`);
+            const data = await response.json();
+            
+            const fillPercent = data.utilization;
+            const fillColor = fillPercent > 80 ? '#e74c3c' : fillPercent > 50 ? '#f39c12' : '#27ae60';
+            
+            document.getElementById('capacityFill').style.width = fillPercent + '%';
+            document.getElementById('capacityFill').style.background = fillColor;
+            document.getElementById('capacityText').innerHTML = `
+                可用艙位：<strong>${data.available}</strong> / ${data.total} FEU<br>
+                使用率：${fillPercent}%
+                ${fillPercent > 80 ? '<span style="color:#e74c3c">⚠️ 艙位緊張！</span>' : ''}
+            `;
+        }
+        
+        async function bookTicket() {
+            const route = document.getElementById('route').value;
+            const [start, end] = route.split('-');
+            const containers = document.getElementById('containers').value;
+            const companyName = document.getElementById('companyName').value;
+            
+            if (!companyName) {
+                alert('請輸入公司名稱');
+                return;
+            }
+            
+            const response = await fetch('/api/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start, end, containers, company_name: companyName, cargo_type: 'normal' })
+            });
+            const result = await response.json();
+            
+            const resultDiv = document.getElementById('bookingResult');
+            if (result.success) {
+                resultDiv.innerHTML = `
+                    <div class="card" style="background:#d4edda; border-left:4px solid #27ae60">
+                        <h3>✅ 訂票成功！</h3>
+                        <p>訂位編號：<strong>${result.booking_id}</strong></p>
+                        <p>艙位使用：${result.feu_used} FEU</p>
+                        <p>剩餘艙位：${result.remaining} / ${result.total} FEU</p>
+                        <button class="btn btn-primary" onclick="location.href='/certificate_page'">📄 產生碳排認證</button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="card" style="background:#f8d7da; border-left:4px solid #e74c3c">
+                        <h3>❌ 訂票失敗</h3>
+                        <p>${result.error}</p>
+                        <button class="btn btn-outline" onclick="loadCapacity()">重新查詢</button>
+                    </div>
+                `;
+            }
+            loadCapacity();
+        }
+        
+        loadCapacity();
+        document.getElementById('route').addEventListener('change', loadCapacity);
+    </script>
+</body>
+</html>
