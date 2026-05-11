@@ -7,21 +7,13 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        /* ================= 動畫與樣式 ================= */
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
         .hero-section {
             background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
             background-size: 200% 200%;
@@ -32,90 +24,35 @@
             position: relative;
             overflow: hidden;
         }
-        .hero-title {
-            font-size: 3rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #fff, #caf0f8);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        .floating-ship {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            font-size: 80px;
-            opacity: 0.3;
-            animation: float 4s ease-in-out infinite;
-        }
-        .tab-container {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid var(--light-cyan);
-        }
-        .tab-btn {
-            background: none;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            color: var(--french-blue);
-            transition: all 0.3s;
-        }
-        .tab-btn.active {
-            color: var(--bright-teal-blue);
-            border-bottom: 3px solid var(--bright-teal-blue);
-        }
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .capacity-warning {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-        }
-        .booking-success {
-            background: #d4edda;
-            border-left: 4px solid #28a745;
-            padding: 1rem;
-            border-radius: 10px;
-        }
-        .booking-fail {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-            padding: 1rem;
-            border-radius: 10px;
-        }
-        .benefit-card {
-            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-            border-radius: 15px;
-            padding: 1rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        .benefit-card:hover {
-            transform: scale(1.03);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .kpi-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--bright-teal-blue);
-        }
-        .result-card {
-            background: linear-gradient(135deg, var(--deep-twilight), var(--bright-teal-blue));
-            color: white;
-            padding: 1.5rem;
-            border-radius: 20px;
-            margin-bottom: 1.5rem;
-        }
+        .hero-title { font-size: 2.5rem; font-weight: bold; background: linear-gradient(135deg, #fff, #caf0f8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .floating-ship { position: absolute; bottom: 20px; right: 20px; font-size: 80px; opacity: 0.3; animation: float 4s ease-in-out infinite; }
+        .step-container { display: flex; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap; }
+        .step { flex: 1; text-align: center; padding: 1rem; background: var(--light-cyan); border-radius: 15px; }
+        .step.active { background: linear-gradient(135deg, #0077b6, #00b4d8); color: white; }
+        .step-number { width: 30px; height: 30px; background: var(--bright-teal-blue); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
+        .step.active .step-number { background: white; color: #0077b6; }
+        
+        .result-box { background: #f0f8ff; border-radius: 15px; padding: 1.5rem; margin: 1rem 0; border-left: 5px solid #0077b6; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .comparison-table th, .comparison-table td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        .comparison-table th { background: var(--bright-teal-blue); color: white; }
+        .winning { background: #d4edda; font-weight: bold; }
+        .ship-card { background: white; border-radius: 15px; padding: 1rem; margin: 0.5rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .ship-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        .ship-card.selected { border-color: #0077b6; background: #e8f4f8; }
+        .capacity-bar { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin: 0.5rem 0; }
+        .capacity-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
+        .alert-critical { color: #e74c3c; font-weight: bold; }
+        .alert-warning { color: #f39c12; font-weight: bold; }
+        .btn-next { background: linear-gradient(135deg, #0077b6, #00b4d8); color: white; border: none; padding: 12px 30px; border-radius: 50px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 1rem; }
+        .btn-book { background: #27ae60; color: white; border: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; margin-top: 0.5rem; }
+        .booking-success { background: #d4edda; border-left: 4px solid #27ae60; padding: 1rem; border-radius: 10px; margin-top: 1rem; }
+        .booking-fail { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; border-radius: 10px; margin-top: 1rem; }
+        .reason-list { list-style: none; padding-left: 0; }
+        .reason-list li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+        .reason-list li:before { content: "✓"; color: #27ae60; margin-right: 10px; }
+        
+        @media (max-width: 768px) { .step-container { flex-direction: column; } .comparison-table { font-size: 0.8rem; } }
     </style>
 </head>
 <body>
@@ -133,252 +70,379 @@
         <div class="hero-section">
             <div class="floating-ship">🚢</div>
             <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
-            <div class="hero-subtitle" style="color:white; margin-top:1rem">
-                🤖 AI 多因子決策模型 | 🚛 即時路況 | 🚢 長榮海運 TBS/TBS2 | 🌱 ESG 碳排放最佳化
+            <div style="color:white; margin-top:1rem">🤖 AI 決策模型 | 🚛 即時路況預測 | 🚢 長榮海運 TBS/TBS2 | 🌱 ESG 碳排放最佳化</div>
+        </div>
+
+        <!-- 步驟指示器 -->
+        <div class="step-container">
+            <div class="step" id="step1">
+                <div class="step-number">1</div>
+                <div>📦 輸入貨櫃需求</div>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-number">2</div>
+                <div>🤖 AI 運算與推薦</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-number">3</div>
+                <div>🎟️ 選擇船班與訂倉</div>
             </div>
         </div>
 
-        <!-- 主要操作區 -->
-        <div class="card fade-in">
-            <div class="tab-container">
-                <button class="tab-btn active" onclick="switchTab('dispatch')">🚢 貨櫃指派</button>
-                <button class="tab-btn" onclick="switchTab('booking')">🎟️ 艙位訂票</button>
-                <button class="tab-btn" onclick="switchTab('records')">📋 訂票記錄</button>
-            </div>
+        <!-- ================= 步驟 1：輸入貨櫃需求 ================= -->
+        <div id="step1Panel" class="card">
+            <h3>📦 貨櫃運輸需求</h3>
+            <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
+            <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
+            <div class="form-group"><label>📦 貨櫃數量 (TEU)</label><input type="number" id="containers" min="1" value="50"></div>
+            <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="special">危險品/特殊貨物</option></select></div>
+            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-15"></div>
+            <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 AI 分析與推薦</button>
+        </div>
 
-            <!-- 指派 Tab -->
-            <div id="dispatchTab" class="tab-content active">
-                <h3>📦 貨櫃運輸指派</h3>
-                <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
-                <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
-                <div class="form-group"><label>📦 貨櫃數量 (TEU)</label><input type="number" id="containers" min="1" value="50"></div>
-                <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="special">危險品/特殊貨物</option></select></div>
-                <div class="form-group"><label>⏱️ 時效要求 (小時)</label><input type="number" id="timeRequirement" min="1" max="168" value="48"></div>
-                <button class="btn btn-primary" onclick="calculateAndDispatch()" style="width:100%">🚀 AI 智慧指派</button>
+        <!-- ================= 步驟 2：AI 推薦結果 ================= -->
+        <div id="step2Panel" style="display:none">
+            <div id="comparisonResult"></div>
+            <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
+                <button class="btn btn-outline" onclick="backToStep1()">← 修改需求</button>
+                <button class="btn btn-primary" id="goToBookingBtn" onclick="goToStep3()" style="display:none">🎟️ 查看船班與訂倉 →</button>
             </div>
+        </div>
 
-            <!-- 訂票 Tab -->
-            <div id="bookingTab" class="tab-content">
-                <h3>🎟️ 藍色公路艙位訂票</h3>
-                <div class="form-group"><label>📍 航線</label><select id="bookRoute" onchange="loadShips()"><option value="KHH-TXG">高雄港 → 台中港</option><option value="TXG-KHH">台中港 → 高雄港</option></select></div>
-                <div class="form-group"><label>🚢 船班選擇</label><select id="shipSelect" onchange="updateShipInfo()"><option value="">請先選擇航線</option></select></div>
-                <div id="shipInfo" style="background:var(--light-cyan); border-radius:15px; padding:1rem; margin-bottom:1rem"></div>
-                <div class="form-group"><label>🏢 公司名稱</label><input type="text" id="companyName" placeholder="請輸入公司名稱"></div>
-                <div class="form-group"><label>👤 聯絡人</label><input type="text" id="contactPerson" placeholder="請輸入聯絡人"></div>
-                <div class="form-group"><label>📞 電話</label><input type="text" id="phone" placeholder="請輸入電話"></div>
-                <div class="form-group"><label>📦 預訂貨櫃數量 (TEU)</label><input type="number" id="bookContainers" min="1" value="10"></div>
-                <button class="btn btn-primary" onclick="bookShipTicket()" style="width:100%">🎟️ 立即訂票</button>
-                <div id="bookingResult" style="margin-top:1rem"></div>
-            </div>
-
-            <!-- 訂票記錄 Tab -->
-            <div id="recordsTab" class="tab-content">
-                <h3>📋 客戶訂票記錄</h3>
-                <div class="form-group"><label>🔍 公司名稱篩選</label><input type="text" id="filterCompany" placeholder="輸入公司名稱篩選" onkeyup="loadBookings()"></div>
-                <div style="overflow-x:auto">
-                    <table class="history-table">
-                        <thead><tr><th>訂票時間</th><th>公司名稱</th><th>船班</th><th>航次</th><th>開航日</th><th>數量(TEU)</th><th>預計到港</th><th>狀態</th></tr></thead>
-                        <tbody id="bookingsTableBody"><tr><td colspan="8">載入中...</td></tr></tbody>
-                    </table>
+        <!-- ================= 步驟 3：船班選擇與訂倉 ================= -->
+        <div id="step3Panel" style="display:none">
+            <div class="card">
+                <h3>🚢 可用船班選擇</h3>
+                <div id="shipsList"></div>
+                <div style="margin-top:1rem">
+                    <div class="form-group"><label>🏢 公司名稱</label><input type="text" id="companyName" placeholder="請輸入公司名稱"></div>
+                    <div class="form-group"><label>👤 聯絡人</label><input type="text" id="contactPerson" placeholder="請輸入聯絡人"></div>
+                    <div class="form-group"><label>📞 電話</label><input type="text" id="phone" placeholder="請輸入電話"></div>
+                    <button class="btn btn-success" onclick="confirmBooking()" style="width:100%">✅ 確認訂倉</button>
                 </div>
+                <div id="bookingResult"></div>
             </div>
-        </div>
-
-        <!-- AI 決策結果區 -->
-        <div id="resultContainer" style="display:none">
-            <div class="result-card" id="resultHeader"></div>
-            <div id="esgCard"></div>
-            <div class="card" id="costTable"></div>
-            <div class="card"><div class="card-header"><h3>🗺️ 國道即時路網</h3></div><div id="trafficStats" class="traffic-stats"><div class="stats-row"><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value">-</div><div class="stat-label">順暢路段</div></div></div></div><div id="map" class="map-container"></div><div class="legend"><span><span class="color-dot green"></span> 順暢 >60km/h</span><span><span class="color-dot orange"></span> 車多 35-60km/h</span><span><span class="color-dot red"></span> 壅塞 &lt;35km/h</span></div></div>
-            <div class="card gradient-card" id="shipCard"></div>
-            <div class="card success-card" id="dispatchCard"></div>
-            <div class="chart-container"><h3>💰 成本結構比較</h3><canvas id="costChart"></canvas></div>
-            <div class="chart-container"><h3>🌍 碳排放比較</h3><canvas id="carbonChart"></canvas></div>
+            <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
+                <button class="btn btn-outline" onclick="backToStep2()">← 返回推薦結果</button>
+            </div>
         </div>
 
         <!-- Loading 動畫 -->
         <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); z-index:9999; justify-content:center; align-items:center">
-            <div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">AI 分析中...</div></div>
+            <div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">AI 分析中...</div><div class="loading-steps"><div class="step">⏳ 分析運輸路線</div><div class="step">⏳ 串接即時交通資料</div><div class="step">⏳ 查詢船期與艙位</div><div class="step">⏳ 計算碳排效益</div><div class="step">⏳ AI 決策分析</div></div></div>
         </div>
     </div>
 
-    <footer class="footer">
-        <div class="footer-content"><div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li></ul></div></div>
-        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System</p></div>
-    </footer>
+    <footer class="footer"><div class="footer-content"><div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li><li>國道歷史車速資料庫</li></ul></div></div><div class="footer-bottom"><p>© 2025 iMarine Carbon Management System</p></div></footer>
 
     <script>
-        let currentResult = null;
-        let mapInstance = null;
-        let trafficLayers = new Map();
-        let trafficUpdateInterval = null;
+        let currentComparison = null;
+        let selectedShip = null;
+        let currentRouteKey = null;
 
-        function formatCurrency(v) { return "NT$ " + (Number(v) || 0).toLocaleString(); }
-        function animateNumber(el, start, end, duration = 1000) {
-            if (!el) return;
-            const range = end - start;
-            const inc = range / (duration / 16);
-            let current = start;
-            const timer = setInterval(() => {
-                current += inc;
-                if ((inc > 0 && current >= end) || (inc < 0 && current <= end)) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                el.innerText = Math.round(current).toLocaleString();
-            }, 16);
+        // ================= 根據日期和時段預測車速 =================
+        // 從 Excel 數據歸納的時段平均車速 (km/h)
+        const SPEED_DATA = {
+            // 時段: [週一, 週二, 週三, 週四, 週五, 週六, 週日]
+            "凌晨(00-06)": [112.4, 112.2, 112.3, 112.2, 112.4, 112.5, 112.3],
+            "早上尖峰(06-12)": [127.2, 127.8, 128.2, 128.7, 127.7, 124.8, 117.5],
+            "下午(12-18)": [121.7, 122.4, 122.6, 122.9, 128.2, 122.6, 134.0],
+            "晚上(18-24)": [115.1, 115.3, 115.4, 115.7, 120.8, 116.8, 119.8]
+        };
+        
+        function getWeekdayIndex(date) {
+            const day = new Date(date).getDay();
+            // 星期日是 0，轉換成 6
+            return day === 0 ? 6 : day - 1;
+        }
+        
+        function getTimeSlot(hour) {
+            if (hour < 6) return "凌晨(00-06)";
+            if (hour < 12) return "早上尖峰(06-12)";
+            if (hour < 18) return "下午(12-18)";
+            return "晚上(18-24)";
+        }
+        
+        function predictRoadSpeed(departureDate, departureHour) {
+            const weekdayIdx = getWeekdayIndex(departureDate);
+            const timeSlot = getTimeSlot(departureHour);
+            const speeds = SPEED_DATA[timeSlot];
+            if (!speeds) return 120;
+            return speeds[weekdayIdx];
+        }
+        
+        function calculateTravelTime(distanceKm, speedKmh) {
+            return distanceKm / speedKmh;
         }
 
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            if (tab === 'dispatch') {
-                document.querySelector('.tab-btn:first-child').classList.add('active');
-                document.getElementById('dispatchTab').classList.add('active');
-            } else if (tab === 'booking') {
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                document.getElementById('bookingTab').classList.add('active');
-                loadShips();
-            } else {
-                document.querySelectorAll('.tab-btn')[2].classList.add('active');
-                document.getElementById('recordsTab').classList.add('active');
-                loadBookings();
-            }
-        }
-
-        async function loadShips() {
-            const route = document.getElementById('bookRoute').value;
-            const response = await fetch(`/api/ships/${route}`);
-            const ships = await response.json();
-            const select = document.getElementById('shipSelect');
-            select.innerHTML = '<option value="">請選擇船班</option>';
-            ships.forEach(ship => {
-                select.innerHTML += `<option value="${ship.sailing_date}" data-ship='${JSON.stringify(ship)}'>${ship.sailing_date} (${ship.sailing_day}) - ${ship.ship_name} - 剩餘 ${ship.remaining} TEU / ${ship.utilization}%</option>`;
-            });
-        }
-
-        function updateShipInfo() {
-            const select = document.getElementById('shipSelect');
-            const selectedOption = select.options[select.selectedIndex];
-            if (!selectedOption.value) return;
-            const shipData = JSON.parse(selectedOption.dataset.ship);
-            let alertColor = shipData.alert_class === 'critical' ? '#e74c3c' : (shipData.alert_class === 'warning' ? '#f39c12' : '#27ae60');
-            document.getElementById('shipInfo').innerHTML = `<div style="padding:1rem; border-radius:10px; background:#fff"><h4>🚢 ${shipData.ship_name} (${shipData.voyage_no})</h4><p>📅 開航日：${shipData.sailing_date} (${shipData.sailing_day})</p><p>📊 總艙位：${shipData.capacity} TEU</p><p>📦 市場預訂：${shipData.market_booked} TEU</p><p>👤 您已預訂：${shipData.user_booked} TEU</p><p><strong style="color:${alertColor}">⚠️ ${shipData.alert}</strong></p><div class="capacity-bar" style="height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden"><div class="capacity-fill" style="width:${shipData.utilization}%; height:100%; background:${shipData.utilization > 80 ? '#e74c3c' : shipData.utilization > 60 ? '#f39c12' : '#27ae60'}; transition:width 0.5s"></div></div><p style="margin-top:0.5rem">使用率：<strong>${shipData.utilization}%</strong> | 剩餘艙位：<strong>${shipData.remaining}</strong> TEU</p><p>📍 目的地：${shipData.eta_port} | 預計到港：${shipData.eta_time}</p></div>`;
-        }
-
-        async function bookShipTicket() {
-            const route = document.getElementById('bookRoute').value;
-            const select = document.getElementById('shipSelect');
-            const sailingDate = select.value;
-            const containers = parseInt(document.getElementById('bookContainers').value);
-            const companyName = document.getElementById('companyName').value;
-            const contactPerson = document.getElementById('contactPerson').value;
-            const phone = document.getElementById('phone').value;
-            if (!sailingDate) { alert('請選擇船班'); return; }
-            if (!companyName) { alert('請輸入公司名稱'); return; }
-            const response = await fetch('/api/book-ship', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ route_key: route, sailing_date: sailingDate, containers, company_name: companyName, contact_person: contactPerson, phone })
-            });
-            const result = await response.json();
-            const resultDiv = document.getElementById('bookingResult');
-            if (result.success) {
-                resultDiv.innerHTML = `<div class="booking-success"><h3>✅ 訂票成功！</h3><p>訂位編號：${result.booking_id}</p><p>船班：${result.ship_name} (${result.voyage_no})</p><p>${result.sailing_date} (${result.sailing_day})</p><p>預訂數量：${result.containers} TEU</p><p>剩餘艙位：${result.remaining} / ${result.capacity} TEU (${result.utilization}%)</p><p>📍 ${result.eta_port} | 預計到港：${result.eta_time}</p><button class="btn btn-primary" onclick="loadShips()">刷新艙位</button></div>`;
-                loadShips();
-                loadBookings();
-            } else {
-                resultDiv.innerHTML = `<div class="booking-fail"><h3>❌ 訂票失敗</h3><p>${result.error}</p><button class="btn btn-outline" onclick="loadShips()">重新查詢</button></div>`;
-            }
-        }
-
-        async function loadBookings() {
-            const filter = document.getElementById('filterCompany')?.value || '';
-            const url = filter ? `/api/bookings?company=${encodeURIComponent(filter)}` : '/api/bookings';
-            const response = await fetch(url);
-            const bookings = await response.json();
-            const tbody = document.getElementById('bookingsTableBody');
-            tbody.innerHTML = '';
-            bookings.slice().reverse().forEach(b => {
-                tbody.innerHTML += `<tr><td>${new Date(b.booking_time).toLocaleString()}</td><td>${b.company_name}</td><td>${b.ship_name}</td><td>${b.voyage_no}</td><td>${b.sailing_date} (${b.sailing_day})</td><td>${b.containers}</td><td>${b.eta_port} / ${new Date(b.eta_time).toLocaleString()}</td><td style="color:#27ae60">✅ ${b.status}</td></tr>`;
-            });
-        }
-
-        async function calculateAndDispatch() {
+        // ================= 比較計算 =================
+        async function calculateComparison() {
             const start = document.getElementById('start').value;
             const end = document.getElementById('end').value;
             const containers = parseInt(document.getElementById('containers').value);
             const cargoType = document.getElementById('cargoType').value;
-            const timeRequirement = parseInt(document.getElementById('timeRequirement').value);
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            const res = await fetch("/calculate", {
-                method: "POST", headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start, end, containers, cargo_type: cargoType, time_requirement: timeRequirement })
-            });
-            const data = await res.json();
-            if (data.error) { alert(data.error); document.getElementById('loadingOverlay').style.display = 'none'; return; }
-            currentResult = data;
-            document.getElementById('resultHeader').innerHTML = `<h3>📊 AI 決策結果</h3><p>🚢 ${data.start_name} → 🏁 ${data.end_name}</p><p>📏 距離：${data.distance.toLocaleString()} 公里</p><p>📦 貨櫃數量：${data.containers} TEU</p><p>🎯 AI 推薦：<strong style="font-size:1.5rem; color:#00b4d8">${data.best_mode}</strong></p><p>${data.recommendation}</p>`;
-            document.getElementById('esgCard').innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem"><div class="benefit-card"><div class="kpi-number" id="savedCO2Num">0</div><div>減碳量 (kg CO2e)</div><div style="font-size:0.8rem">🌱 ${data.reduction_pct}%</div></div><div class="benefit-card"><div class="kpi-number" id="carbonCreditNum">0</div><div>碳權價值 (NTD)</div></div><div class="benefit-card"><div class="kpi-number" id="vslNum">0</div><div>人命價值節省 (NTD)</div></div></div>`;
-            animateNumber(document.getElementById('savedCO2Num'), 0, data.carbon_improvement || 0, 1000);
-            animateNumber(document.getElementById('carbonCreditNum'), 0, data.esg_report?.carbon_credit_value || 0, 1000);
-            animateNumber(document.getElementById('vslNum'), 0, data.optimization?.vsl_saved || 0, 1000);
-            document.getElementById('costTable').innerHTML = `<h3>💰 總體社會成本分析</h3><table class="cost-table"><thead><tr><th>成本項目</th><th>🚛 公路</th><th>🚢 海運</th><th>節省</th></tr></thead><tbody><tr><td><strong>💰 運費</strong></td><td>${formatCurrency(data.road.freight)}</td><td>${formatCurrency(data.sea.freight)}</td><td>${formatCurrency(data.road.freight - data.sea.freight)}</td></tr><tr><td><strong>⏳ 時間成本</strong></td><td>${formatCurrency(data.road.time)}</td><td>${formatCurrency(data.sea.time)}</td><td>${formatCurrency(data.road.time - data.sea.time)}</td></tr><tr><td><strong>🏛️ 社會成本</strong></td><td>${formatCurrency(data.road.social)}</td><td>${formatCurrency(data.sea.social)}</td><td class="savings-number">${formatCurrency(data.road.social - data.sea.social)}</td></tr><tr><td><strong>⚠️ VSL風險</strong></td><td>${formatCurrency(data.road.risk)}</td><td>${formatCurrency(data.sea.risk)}</td><td class="savings-number">${formatCurrency(data.road.risk - data.sea.risk)}</td></tr><tr style="background:var(--light-cyan)"><td><strong>📊 總成本</strong></td><td>${formatCurrency(data.road.total)}</td><td>${formatCurrency(data.sea.total)}</td><td class="savings-number">${formatCurrency(data.social_savings)}</td></tr></tbody></table>`;
-            if (data.ship_schedule) document.getElementById('shipCard').innerHTML = `<div class="card-header"><h3>🚢 長榮海運即時船期</h3></div><div class="ship-info-grid"><div class="ship-info-item"><div class="info-label">🚢 船名</div><div class="info-value">${data.ship_schedule.name}</div></div><div class="ship-info-item"><div class="info-label">📍 目的地</div><div class="info-value">${data.ship_schedule.destination}</div></div><div class="ship-info-item"><div class="info-label">⏰ 預計到港</div><div class="info-value">${data.ship_schedule.eta_hours} 小時後</div></div><div class="ship-info-item"><div class="info-label">📦 可用艙位</div><div class="info-value">${data.ship_schedule.available} FEU</div></div></div>`;
-            if (data.dispatch) {
-                let reasonsHtml = data.dispatch.reasons.map(r => `<li>${r}</li>`).join('');
-                document.getElementById('dispatchCard').innerHTML = `<div class="card-header"><h3>🧠 AI 指派建議</h3></div><div class="dispatch-grid"><div class="score-section"><div class="score-card sea"><div class="score-number" id="scoreSea">0</div><div>🚢 海運分數</div></div><div class="score-card road"><div class="score-number" id="scoreRoad">0</div><div>🚛 公路分數</div></div></div><div class="decision-section"><div class="action-box"><p class="action-title">${data.dispatch.action}</p><p>${data.dispatch.suggestion}</p></div><div class="count-box"><div><span class="emoji">🚢</span><br><strong id="seaCount">${data.dispatch.to_sea}</strong> TEU</div><div><span class="emoji">🚛</span><br><strong id="roadCount">${data.dispatch.to_road}</strong> TEU</div></div><div class="ratio-bars"><div class="ratio-bar-container"><div id="ratioBarSea" class="ratio-bar-sea" style="width:0%">🚢 <span id="seaPercent">0</span>%</div></div><div class="ratio-bar-container"><div id="ratioBarRoad" class="ratio-bar-road" style="width:0%">🚛 <span id="roadPercent">0</span>%</div></div></div><div class="reason-box"><ul>${reasonsHtml}</ul></div></div></div>`;
-                setTimeout(() => {
-                    animateNumber(document.getElementById('scoreSea'), 0, data.dispatch.score_sea, 600);
-                    animateNumber(document.getElementById('scoreRoad'), 0, data.dispatch.score_road, 600);
-                    animateNumber(document.getElementById('seaCount'), 0, data.dispatch.to_sea, 600);
-                    animateNumber(document.getElementById('roadCount'), 0, data.dispatch.to_road, 600);
-                    document.getElementById('seaPercent').innerText = data.dispatch.ratio;
-                    document.getElementById('roadPercent').innerText = (100 - data.dispatch.ratio).toFixed(1);
-                    document.getElementById('ratioBarSea').style.width = data.dispatch.ratio + "%";
-                    document.getElementById('ratioBarRoad').style.width = (100 - data.dispatch.ratio) + "%";
-                }, 100);
+            const departureDate = document.getElementById('departureDate').value;
+            
+            // 取得今天日期，如果使用者沒選就用今天+3天
+            let actualDate = departureDate;
+            if (!actualDate) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 3);
+                actualDate = tomorrow.toISOString().split('T')[0];
             }
-            initMap(data);
-            document.getElementById('resultContainer').style.display = 'block';
-            document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // 預設出發時間為早上 8 點
+            const departureHour = 8;
+            
+            // 預測車速
+            const predictedSpeed = predictRoadSpeed(actualDate, departureHour);
+            
+            // 距離 (高雄港到台中港約 200 公里)
+            const distance = 200;
+            const roadTime = calculateTravelTime(distance, predictedSpeed);
+            
+            // 海運時間 (航行 8 小時 + 等船 4 小時 + 裝卸 4 小時 = 16 小時)
+            const seaTime = 16;
+            
+            // 碳排計算
+            const roadCarbon = 0.06 * distance * containers;
+            const seaCarbon = 0.02 * distance * containers;
+            const carbonSaved = roadCarbon - seaCarbon;
+            const reductionPct = (carbonSaved / roadCarbon * 100).toFixed(1);
+            
+            // 成本計算 (簡化)
+            const roadCost = 60 * distance * containers;
+            const seaCost = 30 * distance * containers;
+            const costSaved = roadCost - seaCost;
+            
+            // 事故風險
+            const roadRisk = 1.36 * distance * containers;
+            const seaRisk = 0.18 * distance * containers;
+            
+            // 判斷推薦
+            let recommendation = "";
+            let recommendMode = "";
+            let reasons = [];
+            
+            if (cargoType === "special") {
+                recommendMode = "sea";
+                recommendation = "危險品/特殊貨物，依法規強制採海運";
+                reasons.push("⚠️ 危險品/特殊貨物，依法規強制採海運");
+                reasons.push("🌊 海運對危險品有完善的安全管理機制");
+            } else if (predictedSpeed < 100) {
+                recommendMode = "sea";
+                recommendation = `預測出發時段車速僅 ${predictedSpeed} km/h，國道壅塞，建議改走海運`;
+                reasons.push(`🚨 預測車速 ${predictedSpeed} km/h，低於正常值，可能有塞車情形`);
+                reasons.push(`⏱️ 公路預估時間 ${roadTime.toFixed(1)} 小時，海運僅 ${seaTime} 小時`);
+                reasons.push(`💰 海運可節省成本 NT$ ${costSaved.toLocaleString()}`);
+                reasons.push(`🌱 海運可減少碳排放 ${carbonSaved.toFixed(0)} kg (${reductionPct}%)`);
+            } else if (seaTime + 4 < roadTime) {
+                recommendMode = "sea";
+                recommendation = `海運時間 (${seaTime} 小時) 優於公路 (${roadTime.toFixed(1)} 小時)，建議海運`;
+                reasons.push(`⏱️ 海運時間較公路快 ${(roadTime - seaTime).toFixed(1)} 小時`);
+                reasons.push(`💰 海運可節省成本 NT$ ${costSaved.toLocaleString()}`);
+            } else {
+                recommendMode = "road";
+                recommendation = `公路時間 (${roadTime.toFixed(1)} 小時) 可滿足需求，且成本較低`;
+                reasons.push(`✅ 預測車速 ${predictedSpeed} km/h，路況順暢`);
+                reasons.push(`💰 公路成本較海運節省 NT$ ${(-costSaved).toLocaleString()}`);
+                reasons.push(`⏱️ 公路時間 ${roadTime.toFixed(1)} 小時，可快速送達`);
+            }
+            
+            currentComparison = {
+                start, end, containers, cargoType,
+                departureDate: actualDate,
+                predictedSpeed, distance,
+                roadTime: roadTime.toFixed(1), seaTime,
+                roadCost, seaCost, costSaved,
+                roadCarbon: roadCarbon.toFixed(0), seaCarbon: seaCarbon.toFixed(0),
+                carbonSaved: carbonSaved.toFixed(0), reductionPct,
+                roadRisk: roadRisk.toFixed(0), seaRisk: seaRisk.toFixed(0),
+                recommendMode, recommendation, reasons
+            };
+            
+            // 顯示步驟 2 結果
+            displayComparisonResult();
+            
+            // 更新步驟指示器
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step1Panel').style.display = 'none';
+            document.getElementById('step2Panel').style.display = 'block';
+            document.getElementById('step3Panel').style.display = 'none';
+            
+            // 如果推薦海運，顯示下一步按鈕
+            const goToBookingBtn = document.getElementById('goToBookingBtn');
+            if (recommendMode === 'sea') {
+                goToBookingBtn.style.display = 'inline-block';
+            } else {
+                goToBookingBtn.style.display = 'none';
+            }
         }
-
-        function initMap(data) {
-            const centerLat = (data.start_lat + data.end_lat) / 2;
-            const centerLon = (data.start_lon + data.end_lon) / 2;
-            if (mapInstance) { mapInstance.remove(); trafficLayers.clear(); }
-            if (typeof L === 'undefined') return;
-            mapInstance = L.map('map').setView([centerLat, centerLon], 7);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OSM', subdomains: 'abcd' }).addTo(mapInstance);
-            fetch('/static/taiwan_freeway.geojson').then(r => r.json()).then(geojson => { geojson.features.forEach(f => { const layer = L.geoJSON(f, { style: { color: '#ccc', weight: 4 } }).addTo(mapInstance); trafficLayers.set(f.properties.id, layer); }); }).catch(e => console.error(e));
-            setTimeout(() => loadTrafficLight(), 1000);
-            if (trafficUpdateInterval) clearInterval(trafficUpdateInterval);
-            trafficUpdateInterval = setInterval(loadTrafficLight, 60000);
+        
+        function displayComparisonResult() {
+            const c = currentComparison;
+            let html = `
+                <div class="result-box">
+                    <h3>🤖 AI 分析結果</h3>
+                    <p><strong>📅 預估出發日期：</strong>${c.departureDate} 早上 8 點</p>
+                    <p><strong>🛣️ 預測國道車速：</strong><span style="font-size:1.5rem; font-weight:bold; color:${c.predictedSpeed < 100 ? '#e74c3c' : '#27ae60'}">${c.predictedSpeed} km/h</span></p>
+                    <p><strong>🎯 AI 推薦方案：</strong><span style="font-size:1.3rem; font-weight:bold; color:#0077b6">${c.recommendMode === 'sea' ? '🚢 海運' : '🚛 公路運輸'}</span></p>
+                    <p><strong>💡 推薦原因：</strong> ${c.recommendation}</p>
+                </div>
+                
+                <div class="result-box">
+                    <h3>📊 公路 vs 海運 完整比較</h3>
+                    <table class="comparison-table">
+                        <thead><tr><th>項目</th><th>🚛 公路運輸</th><th>🚢 海運運輸</th><th>差異</th></tr></thead>
+                        <tbody>
+                            <tr><td>⏱️ 預估時間</td><td>${c.roadTime} 小時</td><td>${c.seaTime} 小時</td><td class="${c.roadTime < c.seaTime ? 'winning' : ''}">${c.roadTime < c.seaTime ? '公路快' : '海運快'}</td></tr>
+                            <tr><td>💰 運輸成本</td><td>NT$ ${c.roadCost.toLocaleString()}</td><td>NT$ ${c.seaCost.toLocaleString()}</td><td class="${c.costSaved > 0 ? 'winning' : ''}">${c.costSaved > 0 ? `海運省 NT$ ${c.costSaved.toLocaleString()}` : `公路省 NT$ ${(-c.costSaved).toLocaleString()}`}</td></tr>
+                            <tr><td>🌱 碳排放</td><td>${c.roadCarbon} kg CO2e</td><td>${c.seaCarbon} kg CO2e</td><td class="winning">海運減少 ${c.carbonSaved} kg (${c.reductionPct}%)</td></tr>
+                            <tr><td>⚠️ 事故風險成本</td><td>NT$ ${parseInt(c.roadRisk).toLocaleString()}</td><td>NT$ ${parseInt(c.seaRisk).toLocaleString()}</td><td class="winning">海運風險較低</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="result-box">
+                    <h3>📝 AI 決策理由詳解</h3>
+                    <ul class="reason-list">
+                        ${c.reasons.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            document.getElementById('comparisonResult').innerHTML = html;
         }
-
-        async function loadTrafficLight() {
-            if (!mapInstance) return;
-            try {
-                const res = await fetch("/api/traffic");
-                const speedData = await res.json();
-                let totalSpeed = 0, congested = 0, smooth = 0;
-                speedData.forEach(item => {
-                    const layer = trafficLayers.get(item.id);
-                    if (layer) {
-                        const color = item.speed >= 60 ? "#27ae60" : (item.speed >= 35 ? "#f39c12" : "#e74c3c");
-                        layer.setStyle({ color: color, weight: 5 });
-                        totalSpeed += item.speed;
-                        if (item.speed < 35) congested++;
-                        if (item.speed >= 60) smooth++;
-                    }
-                });
-                const avgSpeed = speedData.length > 0 ? (totalSpeed / speedData.length).toFixed(1) : 0;
-                document.getElementById('trafficStats').innerHTML = `<div class="stats-row"><div class="stat-item"><div class="stat-value">${avgSpeed}</div><div class="stat-label">平均車速</div></div><div class="stat-item"><div class="stat-value" style="color:#e74c3c">${congested}</div><div class="stat-label">壅塞路段</div></div><div class="stat-item"><div class="stat-value" style="color:#27ae60">${smooth}</div><div class="stat-label">順暢路段</div></div></div>`;
-            } catch(e) { console.error(e); }
+        
+        // ================= 步驟 3：載入船班 =================
+        async function goToStep3() {
+            const routeKey = currentComparison.start === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
+            currentRouteKey = routeKey;
+            
+            // 載入船班
+            const response = await fetch(`/api/ships/${routeKey}`);
+            const ships = await response.json();
+            
+            let shipsHtml = '<div style="display:grid; gap:1rem">';
+            ships.forEach(ship => {
+                const utilization = ship.utilization;
+                let alertHtml = '';
+                let alertClass = '';
+                if (utilization > 90) {
+                    alertHtml = '<span class="alert-critical">🚨 即將滿艙</span>';
+                    alertClass = 'critical';
+                } else if (utilization > 80) {
+                    alertHtml = '<span class="alert-warning">🔴 艙位緊張</span>';
+                    alertClass = 'warning';
+                } else {
+                    alertHtml = '<span style="color:#27ae60">🟢 艙位充足</span>';
+                }
+                
+                const fillColor = utilization > 80 ? '#e74c3c' : (utilization > 60 ? '#f39c12' : '#27ae60');
+                
+                shipsHtml += `
+                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}')" id="ship_${ship.sailing_date.replace(/-/g, '')}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
+                            <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div>
+                            <div>📅 ${ship.sailing_date} (${ship.sailing_day})</div>
+                            <div>${alertHtml}</div>
+                        </div>
+                        <div class="capacity-bar"><div class="capacity-fill" style="width:${utilization}%; background:${fillColor}"></div></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:0.5rem">
+                            <span>📊 總艙位：${ship.capacity} TEU</span>
+                            <span>📦 剩餘：${ship.remaining} TEU</span>
+                            <span>📈 使用率：${utilization}%</span>
+                        </div>
+                        <div style="margin-top:0.5rem; font-size:0.9rem; color:#666">
+                            🚢 預計到港：${ship.eta_time}
+                        </div>
+                    </div>
+                `;
+            });
+            shipsHtml += '</div>';
+            document.getElementById('shipsList').innerHTML = shipsHtml;
+            
+            // 更新步驟指示器
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.add('active');
+            document.getElementById('step1Panel').style.display = 'none';
+            document.getElementById('step2Panel').style.display = 'none';
+            document.getElementById('step3Panel').style.display = 'block';
         }
-
-        new Chart(document.getElementById("costChart"), { type: 'bar', data: { labels: ['公路', '海運'], datasets: [{ label: '運費', data: [0, 0], backgroundColor: 'rgba(0,119,182,0.7)' }, { label: '時間成本', data: [0, 0], backgroundColor: 'rgba(0,180,216,0.7)' }, { label: '社會成本', data: [0, 0], backgroundColor: 'rgba(72,202,228,0.7)' }, { label: 'VSL風險', data: [0, 0], backgroundColor: 'rgba(144,224,239,0.7)' }] }, options: { responsive: true } });
-        new Chart(document.getElementById("carbonChart"), { type: 'bar', data: { labels: ['公路', '海運'], datasets: [{ label: '碳排放 (kg CO2e)', data: [0, 0], backgroundColor: ['rgba(231,76,60,0.7)', 'rgba(46,204,113,0.7)'] }] }, options: { responsive: true } });
+        
+        function selectShip(sailingDate) {
+            // 清除所有選取
+            document.querySelectorAll('.ship-card').forEach(card => card.classList.remove('selected'));
+            document.getElementById(`ship_${sailingDate.replace(/-/g, '')}`).classList.add('selected');
+            selectedShip = sailingDate;
+        }
+        
+        async function confirmBooking() {
+            if (!selectedShip) {
+                alert('請先選擇船班');
+                return;
+            }
+            const companyName = document.getElementById('companyName').value;
+            if (!companyName) {
+                alert('請輸入公司名稱');
+                return;
+            }
+            const containers = currentComparison.containers;
+            const contactPerson = document.getElementById('contactPerson').value;
+            const phone = document.getElementById('phone').value;
+            
+            const response = await fetch('/api/book-ship', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    route_key: currentRouteKey,
+                    sailing_date: selectedShip,
+                    containers: containers,
+                    company_name: companyName,
+                    contact_person: contactPerson,
+                    phone: phone
+                })
+            });
+            const result = await response.json();
+            
+            const resultDiv = document.getElementById('bookingResult');
+            if (result.success) {
+                resultDiv.innerHTML = `
+                    <div class="booking-success">
+                        <h3>✅ 訂倉成功！</h3>
+                        <p>訂位編號：<strong>${result.booking_id}</strong></p>
+                        <p>船班：${result.ship_name} (${result.voyage_no})</p>
+                        <p>開航日：${result.sailing_date} (${result.sailing_day})</p>
+                        <p>預訂數量：${result.containers} TEU</p>
+                        <p>剩餘艙位：${result.remaining} / ${result.capacity} TEU (${result.utilization}%)</p>
+                        <p>📍 預計到港：${result.eta_time}</p>
+                        <button class="btn btn-primary" onclick="location.href='/certificate_page'">📄 產生碳排認證</button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div class="booking-fail"><h3>❌ 訂倉失敗</h3><p>${result.error}</p><button class="btn btn-outline" onclick="location.reload()">重新查詢</button></div>`;
+            }
+        }
+        
+        function backToStep1() {
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step1Panel').style.display = 'block';
+            document.getElementById('step2Panel').style.display = 'none';
+            document.getElementById('step3Panel').style.display = 'none';
+        }
+        
+        function backToStep2() {
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step1Panel').style.display = 'none';
+            document.getElementById('step2Panel').style.display = 'block';
+            document.getElementById('step3Panel').style.display = 'none';
+        }
     </script>
 </body>
 </html>
