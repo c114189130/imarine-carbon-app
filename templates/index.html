@@ -29,29 +29,32 @@
         .step-number { width: 30px; height: 30px; background: var(--bright-teal-blue); color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
         .step.active .step-number { background: white; color: #0077b6; }
         
-        .result-box { background: #f0f8ff; border-radius: 15px; padding: 1.5rem; margin: 1rem 0; border-left: 5px solid #0077b6; }
+        .result-box { background: #f0f8ff; border-radius: 15px; padding: 1.5rem; margin: 1rem 0; }
+        .score-box { background: linear-gradient(135deg, #e8f4f8, #d4eaf7); border-radius: 15px; padding: 1rem; margin: 1rem 0; }
+        .score-bar { height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin: 0.5rem 0; }
+        .score-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
         .comparison-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
         .comparison-table th, .comparison-table td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
         .comparison-table th { background: var(--bright-teal-blue); color: white; }
         .winning { background: #d4edda; font-weight: bold; }
         .sea-recommend { background: #d4edda; border-left: 5px solid #27ae60; }
-        .road-recommend { background: #fff3cd; border-left: 5px solid #ffc107; }
+        
+        .green-index { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: bold; }
+        .green-aaa { background: #2e7d32; color: white; }
+        .green-a { background: #43a047; color: white; }
+        .green-b { background: #ffb74d; color: #333; }
         
         .ship-card { background: white; border-radius: 15px; padding: 1rem; margin: 0.8rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
         .ship-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
         .ship-card.selected { border-color: #0077b6; background: #e8f4f8; }
         .capacity-bar { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin: 0.5rem 0; }
         .capacity-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
-        .alert-critical { color: #e74c3c; font-weight: bold; }
-        .alert-warning { color: #f39c12; font-weight: bold; }
         
-        .btn-next { background: linear-gradient(135deg, #0077b6, #00b4d8); color: white; border: none; padding: 12px 30px; border-radius: 50px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 1rem; }
-        .btn-book { background: #27ae60; color: white; border: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; }
+        .btn-next { background: linear-gradient(135deg, #0077b6, #00b4d8); color: white; border: none; padding: 12px 30px; border-radius: 50px; cursor: pointer; font-size: 1rem; font-weight: bold; }
         .booking-success { background: #d4edda; border-left: 4px solid #27ae60; padding: 1rem; border-radius: 10px; margin-top: 1rem; }
         .booking-fail { background: #f8d7da; border-left: 4px solid #dc3545; padding: 1rem; border-radius: 10px; margin-top: 1rem; }
         .reason-list { list-style: none; padding-left: 0; }
-        .reason-list li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
-        .reason-list li:before { content: "✓"; color: #27ae60; margin-right: 10px; }
+        .reason-list li { padding: 0.5rem 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 0.5rem; }
         
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; }
         .loading-container { background: white; border-radius: 20px; padding: 2rem; text-align: center; }
@@ -75,7 +78,8 @@
         <div class="hero-section">
             <div class="floating-ship">🚢</div>
             <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
-            <div style="color:white; margin-top:0.5rem">🤖 AI 決策 | 🚛 國道車速預測 | 🚢 長榮海運 TBS/TBS2 | 🌱 ESG 減碳</div>
+            <div style="color:white; margin-top:0.5rem">🤖 AI 多目標決策 | 📊 ESG 永續評分 | 🚛 國道車速預測 | 🚢 長榮海運 TBS/TBS2</div>
+            <div style="color:rgba(255,255,255,0.9); margin-top:0.5rem; font-size:0.9rem">🌱 本平台優先考量低碳與永續運輸，協助企業符合未來碳費制度與 ESG 供應鏈要求</div>
         </div>
 
         <!-- 步驟指示器 -->
@@ -102,7 +106,8 @@
             <div class="form-group"><label>📦 貨櫃數量 (TEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="special">危險品/特殊貨物</option></select></div>
             <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-16"></div>
-            <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 AI 分析與推薦</button>
+            <div class="form-group"><label>⏱️ 時效要求 (小時)</label><input type="number" id="timeRequirement" min="1" max="72" value="24"><span style="font-size:0.8rem"> 希望幾小時內送達</span></div>
+            <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 AI 多目標決策分析</button>
         </div>
 
         <!-- 步驟 2 -->
@@ -136,13 +141,13 @@
         <div id="loadingOverlay" style="display:none">
             <div class="loading-container">
                 <div class="loading-spinner"></div>
-                <div class="loading-text">AI 分析中...</div>
+                <div class="loading-text">AI 多目標決策分析中...</div>
                 <div class="loading-steps">
                     <div>⏳ 分析運輸路線</div>
                     <div>⏳ 串接即時交通資料</div>
                     <div>⏳ 查詢船期與艙位</div>
-                    <div>⏳ 計算碳排效益</div>
-                    <div>⏳ AI 決策分析</div>
+                    <div>⏳ 計算碳排與成本</div>
+                    <div>⏳ AI 多目標評分決策</div>
                 </div>
             </div>
         </div>
@@ -152,7 +157,7 @@
         <div class="footer-content">
             <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li><li>國道歷史車速資料庫</li></ul></div>
         </div>
-        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System</p></div>
+        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 🌱 本平台優先考量低碳與永續運輸</p></div>
     </footer>
 
     <script>
@@ -161,20 +166,21 @@
         let currentRouteKey = null;
         let shipsData = [];
 
-        // ================= 國道車速預測（從 Excel 數據）=================
-        // 時段: 0=凌晨,1=早上尖峰,2=下午,3=晚上
+        // 公路距離 (高雄港 ↔ 台中港)
+        const ROAD_DISTANCE = 215;
+
+        // ================= 國道車速預測 =================
         const SPEED_MATRIX = {
-            //    週一   週二   週三   週四   週五   週六   週日
-            "0": [112.4, 112.2, 112.3, 112.2, 112.4, 112.5, 112.3],  // 凌晨
-            "1": [127.2, 127.8, 128.2, 128.7, 127.7, 124.8, 117.5],  // 早上尖峰 06-12
-            "2": [121.7, 122.4, 122.6, 122.9, 128.2, 122.6, 134.0],  // 下午 12-18
-            "3": [115.1, 115.3, 115.4, 115.7, 120.8, 116.8, 119.8]   // 晚上 18-24
+            "0": [112.4, 112.2, 112.3, 112.2, 112.4, 112.5, 112.3],
+            "1": [127.2, 127.8, 128.2, 128.7, 127.7, 124.8, 117.5],
+            "2": [121.7, 122.4, 122.6, 122.9, 128.2, 122.6, 134.0],
+            "3": [115.1, 115.3, 115.4, 115.7, 120.8, 116.8, 119.8]
         };
 
         function getWeekdayIndex(dateStr) {
             const d = new Date(dateStr);
             const day = d.getDay();
-            return day === 0 ? 6 : day - 1;  // 週日變 6
+            return day === 0 ? 6 : day - 1;
         }
 
         function getTimeSlot(hour) {
@@ -187,101 +193,162 @@
         function predictRoadSpeed(dateStr, hour) {
             const weekdayIdx = getWeekdayIndex(dateStr);
             const slot = getTimeSlot(hour);
-            const speed = SPEED_MATRIX[slot][weekdayIdx];
-            return Math.round(speed);
+            return SPEED_MATRIX[slot][weekdayIdx];
         }
 
-        // ================= 主要計算 =================
+        // 綠色指數評級
+        function getGreenGrade(greenIndex) {
+            if (greenIndex >= 90) return { grade: "AAA", text: "AAA 綠色供應鏈", class: "green-aaa" };
+            if (greenIndex >= 70) return { grade: "A", text: "A 級永續運輸", class: "green-a" };
+            if (greenIndex >= 50) return { grade: "B", text: "B 級合格", class: "green-b" };
+            return { grade: "C", text: "C 級待改善", class: "green-b" };
+        }
+
+        // ================= AI 多目標決策 =================
         async function calculateComparison() {
             const start = document.getElementById('start').value;
             const end = document.getElementById('end').value;
             const containers = parseInt(document.getElementById('containers').value);
             const cargoType = document.getElementById('cargoType').value;
-            let departureDate = document.getElementById('departureDate').value;
+            const departureDate = document.getElementById('departureDate').value;
+            const timeRequirement = parseInt(document.getElementById('timeRequirement').value);
             
             if (!departureDate) {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 3);
-                departureDate = tomorrow.toISOString().split('T')[0];
-                document.getElementById('departureDate').value = departureDate;
+                alert('請選擇出發日期');
+                return;
             }
             
             document.getElementById('loadingOverlay').style.display = 'flex';
             
-            // 預設出發時間早上 9 點
             const departureHour = 9;
             const predictedSpeed = predictRoadSpeed(departureDate, departureHour);
             
-            // 公路距離 (高雄港到台中港約 220 公里實際貨櫃車路線)
-            const roadDistance = 230;
-            // 公路時間 = 行駛時間 + 上下交流道 + 市區接駁
-            const drivingTime = roadDistance / predictedSpeed;
-            const extraTime = 2.5; // 上下交流道 + 市區接駁時間
-            const roadTime = drivingTime + extraTime;
+            // 公路時間
+            const drivingTime = ROAD_DISTANCE / predictedSpeed;
+            const terminalTime = 1.5;
+            const roadTime = drivingTime + terminalTime;
             
-            // 海運時間 = 航行 + 等船 + 裝卸
-            const sailingTime = 8;      // 航行 8 小時
-            const waitingTime = 4;      // 等船 4 小時
-            const handlingTime = 4;     // 裝卸 4 小時
-            const seaTime = sailingTime + waitingTime + handlingTime;
+            // 海運時間
+            const SEA_SAILING = 8;
+            const SEA_WAITING = 4;
+            const SEA_HANDLING = 4;
+            const seaTime = SEA_SAILING + SEA_WAITING + SEA_HANDLING;
             
-            // 碳排計算 (kg CO2e)
-            const roadCarbon = 0.06 * roadDistance * containers;
-            const seaCarbon = 0.02 * roadDistance * containers;
+            // 碳排
+            const roadCarbon = 0.06 * ROAD_DISTANCE * containers;
+            const seaCarbon = 0.02 * ROAD_DISTANCE * containers;
             const carbonSaved = roadCarbon - seaCarbon;
             const reductionPct = (carbonSaved / roadCarbon * 100).toFixed(1);
             
-            // 成本計算 (NTD)
-            const roadCost = 65 * roadDistance * containers;
-            const seaCost = 35 * roadDistance * containers;
+            // 成本
+            const roadCost = 65 * ROAD_DISTANCE * containers;
+            const seaCost = 35 * ROAD_DISTANCE * containers;
             const costSaved = roadCost - seaCost;
             
-            // 事故風險成本
-            const roadRisk = 1.36 * roadDistance * containers;
-            const seaRisk = 0.18 * roadDistance * containers;
+            // 事故風險
+            const roadRisk = 1.36 * ROAD_DISTANCE * containers;
+            const seaRisk = 0.18 * ROAD_DISTANCE * containers;
             
-            let recommendMode = "";
-            let recommendation = "";
+            // ================= AI 多目標評分 =================
+            let seaScore = 0;
+            let roadScore = 0;
             let reasons = [];
             
-            // 特殊貨物強制海運
+            // 1. ESG 權重 (最優先)
+            seaScore += 40;
+            reasons.push({ icon: "🌱", text: "海運符合 ESG 永續供應鏈", target: "sea", points: 40 });
+            
+            // 2. 碳排評分
+            if (seaCarbon < roadCarbon) {
+                seaScore += 30;
+                reasons.push({ icon: "🌊", text: `海運減少 ${carbonSaved.toFixed(0)} kg 碳排 (${reductionPct}%)`, target: "sea", points: 30 });
+            } else {
+                roadScore += 10;
+                reasons.push({ icon: "🏭", text: "公路碳排放較低", target: "road", points: 10 });
+            }
+            
+            // 3. 成本評分
+            if (seaCost < roadCost) {
+                seaScore += 20;
+                reasons.push({ icon: "💰", text: `海運節省 NT$ ${costSaved.toLocaleString()}`, target: "sea", points: 20 });
+            } else {
+                roadScore += 20;
+                reasons.push({ icon: "💰", text: `公路節省 NT$ ${(-costSaved).toLocaleString()}`, target: "road", points: 20 });
+            }
+            
+            // 4. 時效評分 (權重降低)
+            if (roadTime < seaTime) {
+                roadScore += 15;
+                reasons.push({ icon: "⏱️", text: `公路快 ${(seaTime - roadTime).toFixed(1)} 小時`, target: "road", points: 15 });
+            } else {
+                seaScore += 10;
+                reasons.push({ icon: "⏱️", text: `海運時間可接受`, target: "sea", points: 10 });
+            }
+            
+            // 5. 危險品強制海運
             if (cargoType === "special") {
+                seaScore += 100;
+                reasons.push({ icon: "⚠️", text: "危險品依法優先海運", target: "sea", points: 100 });
+            }
+            
+            // 6. 大量貨櫃加成 (海運優勢)
+            if (containers >= 30) {
+                seaScore += 25;
+                reasons.push({ icon: "📦", text: `大量貨櫃 (${containers} TEU) 適合海運規模運輸`, target: "sea", points: 25 });
+            }
+            if (containers >= 100) {
+                seaScore += 40;
+                reasons.push({ icon: "🚢", text: "超大量貨櫃海運效益極高", target: "sea", points: 40 });
+            }
+            
+            // 7. 事故風險評分
+            if (seaRisk < roadRisk) {
+                seaScore += 15;
+                reasons.push({ icon: "🛡️", text: `海運事故風險較公路低 NT$ ${(roadRisk - seaRisk).toLocaleString()}`, target: "sea", points: 15 });
+            } else {
+                roadScore += 5;
+                reasons.push({ icon: "⚠️", text: "公路事故風險較低", target: "road", points: 5 });
+            }
+            
+            // ================= 最終決策 =================
+            let recommendMode = "";
+            let recommendation = "";
+            
+            // 綠色指數
+            const greenIndex = (carbonSaved / roadCarbon * 100);
+            const greenGrade = getGreenGrade(greenIndex);
+            
+            if (seaScore >= roadScore) {
                 recommendMode = "sea";
-                recommendation = "危險品/特殊貨物，依法規強制採海運";
-                reasons.push("⚠️ 危險品/特殊貨物，依法規強制採海運");
-                reasons.push("🌊 海運對危險品有完善的安全管理機制");
-            } 
-            // 海運優先邏輯：除非公路時間快很多，否則推薦海運
-            else if (roadTime < seaTime - 4) {
+                recommendation = `
+                    AI 多目標決策評分：海運 ${seaScore} 分 / 公路 ${roadScore} 分<br>
+                    🌱 海運在 ESG、碳排、成本與長期供應鏈穩定性具有明顯優勢，<br>
+                    建議採用藍色公路運輸方案。<br>
+                    <span class="green-index ${greenGrade.class}">${greenGrade.text}</span> 綠色指數：${greenIndex.toFixed(1)} 分
+                `;
+            } else {
                 recommendMode = "road";
-                recommendation = `公路時間 (${roadTime.toFixed(1)} 小時) 比海運快 ${(seaTime - roadTime).toFixed(1)} 小時，建議公路`;
-                reasons.push(`✅ 公路預估時間 ${roadTime.toFixed(1)} 小時，海運需 ${seaTime} 小時`);
-                reasons.push(`💰 公路成本較海運節省 NT$ ${(-costSaved).toLocaleString()}`);
-            } 
-            else {
-                recommendMode = "sea";
-                recommendation = `海運在成本、碳排、安全性上皆優於公路，建議採海運`;
-                reasons.push(`🌊 海運碳排放減少 ${carbonSaved.toFixed(0)} kg (${reductionPct}%)`);
-                reasons.push(`💰 海運可節省成本 NT$ ${costSaved.toLocaleString()}`);
-                reasons.push(`⚠️ 海運事故風險成本較公路低 NT$ ${(roadRisk - seaRisk).toLocaleString()}`);
-                reasons.push(`🌱 符合 ESG 永續發展目標`);
-                if (roadTime < seaTime) {
-                    reasons.push(`⏱️ 公路時間較海運快 ${(seaTime - roadTime).toFixed(1)} 小時，但整體效益海運更佳`);
-                } else {
-                    reasons.push(`⏱️ 海運時間 ${seaTime} 小時，可接受範圍內`);
-                }
+                recommendation = `
+                    AI 多目標決策評分：海運 ${seaScore} 分 / 公路 ${roadScore} 分<br>
+                    ⏱️ AI 判定此次運輸對時效需求較高，建議採公路運輸。<br>
+                    若無時效急迫性，海運仍為更永續之選擇。
+                `;
             }
             
             currentComparison = {
                 start, end, containers, cargoType,
                 departureDate, departureHour,
-                predictedSpeed, roadDistance,
+                predictedSpeed: Math.round(predictedSpeed),
+                roadDistance: ROAD_DISTANCE,
                 roadTime: roadTime.toFixed(1), seaTime,
                 roadCost, seaCost, costSaved,
                 roadCarbon: roadCarbon.toFixed(0), seaCarbon: seaCarbon.toFixed(0),
                 carbonSaved: carbonSaved.toFixed(0), reductionPct,
                 roadRisk: roadRisk.toFixed(0), seaRisk: seaRisk.toFixed(0),
-                recommendMode, recommendation, reasons
+                timeRequirement,
+                recommendMode, recommendation, reasons,
+                seaScore, roadScore,
+                greenIndex: greenIndex.toFixed(1), greenGrade
             };
             
             displayComparisonResult();
@@ -302,13 +369,45 @@
             const c = currentComparison;
             const isSeaRecommend = c.recommendMode === 'sea';
             
+            // 分數條
+            const totalScore = c.seaScore + c.roadScore;
+            const seaPercent = (c.seaScore / totalScore * 100).toFixed(1);
+            const roadPercent = (c.roadScore / totalScore * 100).toFixed(1);
+            
+            let reasonsHtml = '';
+            for (let r of c.reasons) {
+                const barWidth = (r.points / 100 * 100);
+                reasonsHtml += `
+                    <li>
+                        <span style="min-width: 40px">${r.icon}</span>
+                        <span style="flex:1">${r.text}</span>
+                        <span style="min-width: 60px; text-align:right">+${r.points} 分</span>
+                        <span style="min-width: 80px">
+                            <div class="score-bar" style="width:60px; height:6px; display:inline-block; margin-left:8px">
+                                <div class="score-fill" style="width:${barWidth}%; background:${r.target === 'sea' ? '#0077b6' : '#f39c12'}"></div>
+                            </div>
+                        </span>
+                    </li>
+                `;
+            }
+            
             let html = `
-                <div class="result-box ${isSeaRecommend ? 'sea-recommend' : 'road-recommend'}">
-                    <h3>🤖 AI 分析結果</h3>
-                    <p><strong>📅 預估出發日期：</strong>${c.departureDate} 早上 ${c.departureHour}:00</p>
-                    <p><strong>🛣️ 預測國道車速：</strong><span style="font-size:1.5rem; font-weight:bold; color:${c.predictedSpeed < 90 ? '#e74c3c' : '#27ae60'}">${c.predictedSpeed} km/h</span></p>
-                    <p><strong>🎯 AI 推薦方案：</strong><span style="font-size:1.3rem; font-weight:bold; color:#0077b6">${c.recommendMode === 'sea' ? '🚢 海運' : '🚛 公路運輸'}</span></p>
-                    <p><strong>💡 推薦原因：</strong> ${c.recommendation}</p>
+                <div class="result-box ${isSeaRecommend ? 'sea-recommend' : ''}">
+                    <h3>🤖 AI 多目標決策分析</h3>
+                    <div style="display:flex; gap:2rem; flex-wrap:wrap; margin-bottom:1rem">
+                        <div style="flex:1; text-align:center">
+                            <div style="font-size:1.2rem">🚢 海運綜合評分</div>
+                            <div style="font-size:2.5rem; font-weight:bold; color:#0077b6">${c.seaScore}</div>
+                            <div class="score-bar"><div class="score-fill" style="width:${seaPercent}%; background:#0077b6"></div></div>
+                        </div>
+                        <div style="flex:1; text-align:center">
+                            <div style="font-size:1.2rem">🚛 公路綜合評分</div>
+                            <div style="font-size:2.5rem; font-weight:bold; color:#f39c12">${c.roadScore}</div>
+                            <div class="score-bar"><div class="score-fill" style="width:${roadPercent}%; background:#f39c12"></div></div>
+                        </div>
+                    </div>
+                    <p><strong>🎯 AI 推薦方案：</strong><span style="font-size:1.3rem; font-weight:bold; color:#27ae60">${c.recommendMode === 'sea' ? '🚢 海運 (藍色公路)' : '🚛 公路運輸'}</span></p>
+                    <p><strong>💡 決策說明：</strong><br>${c.recommendation}</p>
                 </div>
                 
                 <div class="result-box">
@@ -316,25 +415,40 @@
                     <table class="comparison-table">
                         <thead><tr><th>項目</th><th>🚛 公路運輸</th><th>🚢 海運運輸</th><th>差異</th></tr></thead>
                         <tbody>
-                            <tr>}<strong>⏱️ 預估時間</strong></td><td>${c.roadTime} 小時</td><td>${c.seaTime} 小時</td><td class="${c.roadTime < c.seaTime ? 'winning' : ''}">${c.roadTime < c.seaTime ? '公路快' : '海運快'} ${Math.abs(c.roadTime - c.seaTime).toFixed(1)} 小時</td></tr>
-                            <td><strong>💰 運輸成本</strong></td><td>NT$ ${parseInt(c.roadCost).toLocaleString()}</td><td>NT$ ${parseInt(c.seaCost).toLocaleString()}</td><td class="${c.costSaved > 0 ? 'winning' : ''}">${c.costSaved > 0 ? `海運省 NT$ ${c.costSaved.toLocaleString()}` : `公路省 NT$ ${(-c.costSaved).toLocaleString()}`}</td></tr>
-                            <td><strong>🌱 碳排放</strong></td><td>${parseInt(c.roadCarbon).toLocaleString()} kg</td><td>${parseInt(c.seaCarbon).toLocaleString()} kg</td><td class="winning">海運減少 ${parseInt(c.carbonSaved).toLocaleString()} kg (${c.reductionPct}%)</td></tr>
-                            <td><strong>⚠️ 事故風險成本</strong></td><td>NT$ ${parseInt(c.roadRisk).toLocaleString()}</td><td>NT$ ${parseInt(c.seaRisk).toLocaleString()}</td><td class="winning">海運風險較低</td></tr>
+                            <tr>}<strong>📏 距離</strong></td><td>${c.roadDistance} km</td><td>-</td><td>-</td></tr>
+                            <tr>}<strong>⏱️ 預估時間</strong></td><td>${c.roadTime} 小時</td><td>${c.seaTime} 小時</td><td>${c.roadTime < c.seaTime ? '公路快' : '海運快'} ${Math.abs(c.roadTime - c.seaTime).toFixed(1)} 小時</td></tr>
+                            <tr>}<strong>💰 運輸成本</strong></td><td>NT$ ${parseInt(c.roadCost).toLocaleString()}</td><td>NT$ ${parseInt(c.seaCost).toLocaleString()}</td><td class="${c.costSaved > 0 ? 'winning' : ''}">${c.costSaved > 0 ? `海運省 NT$ ${c.costSaved.toLocaleString()}` : `公路省 NT$ ${(-c.costSaved).toLocaleString()}`}</td></tr>
+                            <tr>}<strong>🌱 碳排放</strong></td><td>${parseInt(c.roadCarbon).toLocaleString()} kg</td><td>${parseInt(c.seaCarbon).toLocaleString()} kg</td><td class="winning">海運減少 ${parseInt(c.carbonSaved).toLocaleString()} kg (${c.reductionPct}%)</td></tr>
+                            <tr>}<strong>⚠️ 事故風險成本</strong></td><td>NT$ ${parseInt(c.roadRisk).toLocaleString()}</td><td>NT$ ${parseInt(c.seaRisk).toLocaleString()}</td><td class="winning">海運風險較低</td></tr>
                         </tbody>
                     </table>
                 </div>
                 
                 <div class="result-box">
-                    <h3>📝 AI 決策理由詳解</h3>
+                    <h3>📝 AI 多目標評分明細</h3>
                     <ul class="reason-list">
-                        ${c.reasons.map(r => `<li>${r}</li>`).join('')}
+                        ${reasonsHtml}
                     </ul>
+                    <div style="margin-top:1rem; padding:1rem; background:#e8f5e9; border-radius:10px">
+                        <strong>🌱 綠色指數：${c.greenIndex} 分</strong>
+                        <span class="green-index ${c.greenGrade.class}" style="margin-left:1rem">${c.greenGrade.text}</span>
+                        <p style="margin-top:0.5rem; font-size:0.85rem">本平台優先考量低碳與永續運輸，協助企業符合未來碳費制度與 ESG 供應鏈要求</p>
+                    </div>
                 </div>
             `;
             document.getElementById('comparisonResult').innerHTML = html;
+            
+            // 動畫：分數條
+            setTimeout(() => {
+                document.querySelectorAll('.score-fill').forEach(el => {
+                    const width = el.style.width;
+                    el.style.width = '0%';
+                    setTimeout(() => { el.style.width = width; }, 100);
+                });
+            }, 200);
         }
         
-        // ================= 步驟 3：載入船班 =================
+        // ================= 步驟 3：船班訂倉 =================
         async function goToStep3() {
             const routeKey = currentComparison.start === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
             currentRouteKey = routeKey;
@@ -372,11 +486,10 @@
             ships.forEach(ship => {
                 const utilization = ship.utilization;
                 let alertHtml = '';
-                let alertClass = '';
                 if (utilization > 90) {
-                    alertHtml = '<span class="alert-critical">🚨 即將滿艙</span>';
+                    alertHtml = '<span style="color:#e74c3c; font-weight:bold">🚨 即將滿艙</span>';
                 } else if (utilization > 80) {
-                    alertHtml = '<span class="alert-warning">🔴 艙位緊張</span>';
+                    alertHtml = '<span style="color:#f39c12; font-weight:bold">🔴 艙位緊張</span>';
                 } else {
                     alertHtml = '<span style="color:#27ae60">🟢 艙位充足</span>';
                 }
@@ -465,7 +578,6 @@
                             <button class="btn btn-primary" onclick="location.href='/certificate_page'">📄 產生碳排認證</button>
                         </div>
                     `;
-                    // 重新整理船班列表
                     setTimeout(() => goToStep3(), 2000);
                 } else {
                     resultDiv.innerHTML = `<div class="booking-fail"><h3>❌ 訂倉失敗</h3><p>${result.error}</p><button class="btn btn-outline" onclick="location.reload()">重新查詢</button></div>`;
