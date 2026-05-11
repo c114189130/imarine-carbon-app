@@ -9,6 +9,7 @@
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
         
         .hero-section {
             background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
@@ -38,6 +39,7 @@
         .comparison-table th { background: var(--bright-teal-blue); color: white; }
         .winning { background: #d4edda; font-weight: bold; }
         .sea-recommend { background: #d4edda; border-left: 5px solid #27ae60; }
+        .hybrid-box { background: #fff3cd; border-left: 5px solid #ffc107; }
         
         .green-index { display: inline-block; padding: 0.2rem 0.8rem; border-radius: 20px; font-weight: bold; }
         .green-aaa { background: #2e7d32; color: white; }
@@ -49,6 +51,7 @@
         .ship-card.selected { border-color: #0077b6; background: #e8f4f8; }
         .capacity-bar { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin: 0.5rem 0; }
         .capacity-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
+        .capacity-critical { background: #e74c3c; animation: pulse 1s ease-in-out infinite; }
         
         .btn-next { background: linear-gradient(135deg, #0077b6, #00b4d8); color: white; border: none; padding: 12px 30px; border-radius: 50px; cursor: pointer; font-size: 1rem; font-weight: bold; }
         .booking-success { background: #d4edda; border-left: 4px solid #27ae60; padding: 1rem; border-radius: 10px; margin-top: 1rem; }
@@ -60,6 +63,11 @@
         .loading-container { background: white; border-radius: 20px; padding: 2rem; text-align: center; }
         .loading-spinner { width: 50px; height: 50px; border: 4px solid #ddd; border-top-color: #0077b6; border-radius: 50%; margin: 0 auto 1rem; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .highway-select { display: flex; gap: 1rem; margin: 1rem 0; }
+        .highway-option { flex: 1; padding: 0.8rem; text-align: center; border: 2px solid var(--light-cyan); border-radius: 12px; cursor: pointer; transition: all 0.3s; }
+        .highway-option.selected { border-color: #0077b6; background: #e8f4f8; }
+        .highway-option input { display: none; }
         
         @media (max-width: 768px) { .step-container { flex-direction: column; } .comparison-table { font-size: 0.8rem; } .hero-title { font-size: 1.5rem; } }
     </style>
@@ -78,7 +86,7 @@
         <div class="hero-section">
             <div class="floating-ship">🚢</div>
             <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
-            <div style="color:white; margin-top:0.5rem">🤖 AI 多目標決策 | 📊 ESG 永續評分 | 🚛 國道車速預測 | 🚢 長榮海運 TBS/TBS2</div>
+            <div style="color:white; margin-top:0.5rem">🤖 AI 多目標決策 | 📊 ESG 永續評分 | 🚛 即時國道路況 | 🚢 長榮海運 TBS/TBS2</div>
             <div style="color:rgba(255,255,255,0.9); margin-top:0.5rem; font-size:0.9rem">🌱 本平台優先考量低碳與永續運輸，協助企業符合未來碳費制度與 ESG 供應鏈要求</div>
         </div>
 
@@ -98,19 +106,29 @@
             </div>
         </div>
 
-        <!-- 步驟 1 -->
+        <!-- 步驟 1：輸入貨櫃需求 -->
         <div id="step1Panel" class="card">
             <h3>📦 貨櫃運輸需求</h3>
             <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
             <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
+            <div class="form-group"><label>🛣️ 國道路線選擇</label>
+                <div class="highway-select">
+                    <label class="highway-option selected" id="highway1Option">
+                        <input type="radio" name="highway" value="NH1" checked> 🛣️ 國道一號 (215km)
+                    </label>
+                    <label class="highway-option" id="highway3Option">
+                        <input type="radio" name="highway" value="NH3"> 🛣️ 國道三號 (251km)
+                    </label>
+                </div>
+            </div>
             <div class="form-group"><label>📦 貨櫃數量 (TEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="special">危險品/特殊貨物</option></select></div>
-            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-16"></div>
+            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-20"></div>
             <div class="form-group"><label>⏱️ 時效要求 (小時)</label><input type="number" id="timeRequirement" min="1" max="72" value="24"><span style="font-size:0.8rem"> 希望幾小時內送達</span></div>
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 AI 多目標決策分析</button>
         </div>
 
-        <!-- 步驟 2 -->
+        <!-- 步驟 2：AI 推薦結果 -->
         <div id="step2Panel" style="display:none">
             <div id="comparisonResult"></div>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
@@ -119,12 +137,16 @@
             </div>
         </div>
 
-        <!-- 步驟 3 -->
+        <!-- 步驟 3：船班選擇與訂倉 -->
         <div id="step3Panel" style="display:none">
             <div class="card">
                 <h3>🚢 可用船班選擇</h3>
                 <div id="shipsList">載入中...</div>
                 <div style="margin-top:1rem">
+                    <div class="form-group"><label>🎟️ 要訂購的艙位數量 (TEU)</label>
+                        <input type="number" id="bookContainers" min="1" placeholder="請輸入要訂購的數量" value="0">
+                        <p id="bookingLimitHint" style="font-size:0.8rem; color:#666"></p>
+                    </div>
                     <div class="form-group"><label>🏢 公司名稱</label><input type="text" id="companyName" placeholder="請輸入公司名稱"></div>
                     <div class="form-group"><label>👤 聯絡人</label><input type="text" id="contactPerson" placeholder="請輸入聯絡人"></div>
                     <div class="form-group"><label>📞 電話</label><input type="text" id="phone" placeholder="請輸入電話"></div>
@@ -165,9 +187,10 @@
         let selectedShip = null;
         let currentRouteKey = null;
         let shipsData = [];
+        let selectedHighway = "NH1";
 
-        // 公路距離 (高雄港 ↔ 台中港)
-        const ROAD_DISTANCE = 215;
+        // 公路距離
+        const ROAD_DISTANCE = { "NH1": 215, "NH3": 251 };
 
         // ================= 國道車速預測 =================
         const SPEED_MATRIX = {
@@ -196,13 +219,21 @@
             return SPEED_MATRIX[slot][weekdayIdx];
         }
 
-        // 綠色指數評級
         function getGreenGrade(greenIndex) {
             if (greenIndex >= 90) return { grade: "AAA", text: "AAA 綠色供應鏈", class: "green-aaa" };
             if (greenIndex >= 70) return { grade: "A", text: "A 級永續運輸", class: "green-a" };
             if (greenIndex >= 50) return { grade: "B", text: "B 級合格", class: "green-b" };
             return { grade: "C", text: "C 級待改善", class: "green-b" };
         }
+
+        // 國道路線選擇
+        document.querySelectorAll('.highway-option').forEach(opt => {
+            opt.addEventListener('click', function() {
+                document.querySelectorAll('.highway-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedHighway = this.querySelector('input').value;
+            });
+        });
 
         // ================= AI 多目標決策 =================
         async function calculateComparison() {
@@ -222,9 +253,10 @@
             
             const departureHour = 9;
             const predictedSpeed = predictRoadSpeed(departureDate, departureHour);
+            const roadDistance = ROAD_DISTANCE[selectedHighway];
             
             // 公路時間
-            const drivingTime = ROAD_DISTANCE / predictedSpeed;
+            const drivingTime = roadDistance / predictedSpeed;
             const terminalTime = 1.5;
             const roadTime = drivingTime + terminalTime;
             
@@ -235,26 +267,50 @@
             const seaTime = SEA_SAILING + SEA_WAITING + SEA_HANDLING;
             
             // 碳排
-            const roadCarbon = 0.06 * ROAD_DISTANCE * containers;
-            const seaCarbon = 0.02 * ROAD_DISTANCE * containers;
+            const roadCarbon = 0.06 * roadDistance * containers;
+            const seaCarbon = 0.02 * roadDistance * containers;
             const carbonSaved = roadCarbon - seaCarbon;
             const reductionPct = (carbonSaved / roadCarbon * 100).toFixed(1);
             
             // 成本
-            const roadCost = 65 * ROAD_DISTANCE * containers;
-            const seaCost = 35 * ROAD_DISTANCE * containers;
+            const roadCost = 65 * roadDistance * containers;
+            const seaCost = 35 * roadDistance * containers;
             const costSaved = roadCost - seaCost;
             
             // 事故風險
-            const roadRisk = 1.36 * ROAD_DISTANCE * containers;
-            const seaRisk = 0.18 * ROAD_DISTANCE * containers;
+            const roadRisk = 1.36 * roadDistance * containers;
+            const seaRisk = 0.18 * roadDistance * containers;
+            
+            // 載入船班資料，檢查可用艙位
+            const routeKey = start === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
+            let availableCapacity = 0;
+            let nearestShip = null;
+            
+            try {
+                const shipsRes = await fetch(`/api/ships/${routeKey}`);
+                const ships = await shipsRes.json();
+                if (ships && ships.length > 0) {
+                    // 找最近的船班
+                    const today = new Date().toISOString().split('T')[0];
+                    for (let ship of ships) {
+                        if (ship.sailing_date >= today) {
+                            nearestShip = ship;
+                            availableCapacity = ship.remaining;
+                            break;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("載入船班失敗:", e);
+            }
             
             // ================= AI 多目標評分 =================
             let seaScore = 0;
             let roadScore = 0;
             let reasons = [];
+            let hybridRecommendation = null;
             
-            // 1. ESG 權重 (最優先)
+            // 1. ESG 權重
             seaScore += 40;
             reasons.push({ icon: "🌱", text: "海運符合 ESG 永續供應鏈", target: "sea", points: 40 });
             
@@ -276,7 +332,7 @@
                 reasons.push({ icon: "💰", text: `公路節省 NT$ ${(-costSaved).toLocaleString()}`, target: "road", points: 20 });
             }
             
-            // 4. 時效評分 (權重降低)
+            // 4. 時效評分
             if (roadTime < seaTime) {
                 roadScore += 15;
                 reasons.push({ icon: "⏱️", text: `公路快 ${(seaTime - roadTime).toFixed(1)} 小時`, target: "road", points: 15 });
@@ -291,7 +347,7 @@
                 reasons.push({ icon: "⚠️", text: "危險品依法優先海運", target: "sea", points: 100 });
             }
             
-            // 6. 大量貨櫃加成 (海運優勢)
+            // 6. 大量貨櫃加成
             if (containers >= 30) {
                 seaScore += 25;
                 reasons.push({ icon: "📦", text: `大量貨櫃 (${containers} TEU) 適合海運規模運輸`, target: "sea", points: 25 });
@@ -301,7 +357,27 @@
                 reasons.push({ icon: "🚢", text: "超大量貨櫃海運效益極高", target: "sea", points: 40 });
             }
             
-            // 7. 事故風險評分
+            // 7. 艙位限制與混合運輸推薦
+            if (availableCapacity > 0 && containers > availableCapacity) {
+                const seaContainers = availableCapacity;
+                const roadContainers = containers - availableCapacity;
+                hybridRecommendation = {
+                    seaContainers,
+                    roadContainers,
+                    message: `⚠️ 目前可用艙位僅 ${availableCapacity} TEU，建議 ${seaContainers} TEU 走海運、${roadContainers} TEU 走公路`
+                };
+                // 混合運輸時，海運還是加分
+                seaScore += 20;
+                reasons.push({ icon: "🎟️", text: `艙位有限，推薦混合運輸：海運 ${seaContainers} TEU + 公路 ${roadContainers} TEU`, target: "sea", points: 20 });
+            } else if (availableCapacity > 0 && containers <= availableCapacity) {
+                seaScore += 15;
+                reasons.push({ icon: "✅", text: `艙位充足 (剩餘 ${availableCapacity} TEU)，可全數海運`, target: "sea", points: 15 });
+            } else if (availableCapacity === 0) {
+                roadScore += 30;
+                reasons.push({ icon: "❌", text: "目前無可用船班艙位，建議公路運輸", target: "road", points: 30 });
+            }
+            
+            // 8. 事故風險
             if (seaRisk < roadRisk) {
                 seaScore += 15;
                 reasons.push({ icon: "🛡️", text: `海運事故風險較公路低 NT$ ${(roadRisk - seaRisk).toLocaleString()}`, target: "sea", points: 15 });
@@ -314,7 +390,6 @@
             let recommendMode = "";
             let recommendation = "";
             
-            // 綠色指數
             const greenIndex = (carbonSaved / roadCarbon * 100);
             const greenGrade = getGreenGrade(greenIndex);
             
@@ -326,6 +401,9 @@
                     建議採用藍色公路運輸方案。<br>
                     <span class="green-index ${greenGrade.class}">${greenGrade.text}</span> 綠色指數：${greenIndex.toFixed(1)} 分
                 `;
+                if (hybridRecommendation) {
+                    recommendation += `<br><span style="color:#e67e22">📌 ${hybridRecommendation.message}</span>`;
+                }
             } else {
                 recommendMode = "road";
                 recommendation = `
@@ -338,8 +416,9 @@
             currentComparison = {
                 start, end, containers, cargoType,
                 departureDate, departureHour,
+                roadDistance,
+                highway: selectedHighway,
                 predictedSpeed: Math.round(predictedSpeed),
-                roadDistance: ROAD_DISTANCE,
                 roadTime: roadTime.toFixed(1), seaTime,
                 roadCost, seaCost, costSaved,
                 roadCarbon: roadCarbon.toFixed(0), seaCarbon: seaCarbon.toFixed(0),
@@ -348,7 +427,9 @@
                 timeRequirement,
                 recommendMode, recommendation, reasons,
                 seaScore, roadScore,
-                greenIndex: greenIndex.toFixed(1), greenGrade
+                greenIndex: greenIndex.toFixed(1), greenGrade,
+                availableCapacity,
+                hybridRecommendation
             };
             
             displayComparisonResult();
@@ -369,14 +450,13 @@
             const c = currentComparison;
             const isSeaRecommend = c.recommendMode === 'sea';
             
-            // 分數條
             const totalScore = c.seaScore + c.roadScore;
             const seaPercent = (c.seaScore / totalScore * 100).toFixed(1);
             const roadPercent = (c.roadScore / totalScore * 100).toFixed(1);
             
             let reasonsHtml = '';
             for (let r of c.reasons) {
-                const barWidth = (r.points / 100 * 100);
+                const barWidth = Math.min(100, (r.points / 100 * 100));
                 reasonsHtml += `
                     <li>
                         <span style="min-width: 40px">${r.icon}</span>
@@ -388,6 +468,18 @@
                             </div>
                         </span>
                     </li>
+                `;
+            }
+            
+            let hybridHtml = '';
+            if (c.hybridRecommendation) {
+                hybridHtml = `
+                    <div class="result-box hybrid-box">
+                        <h3>⚠️ 混合運輸建議</h3>
+                        <p>${c.hybridRecommendation.message}</p>
+                        <p><strong>海運：</strong>${c.hybridRecommendation.seaContainers} TEU | <strong>公路：</strong>${c.hybridRecommendation.roadContainers} TEU</p>
+                        <p class="note" style="font-size:0.85rem; margin-top:0.5rem">※ 艙位有限，建議混合運輸以滿足全部貨櫃需求</p>
+                    </div>
                 `;
             }
             
@@ -410,10 +502,12 @@
                     <p><strong>💡 決策說明：</strong><br>${c.recommendation}</p>
                 </div>
                 
+                ${hybridHtml}
+                
                 <div class="result-box">
                     <h3>📊 公路 vs 海運 完整比較</h3>
                     <table class="comparison-table">
-                        <thead><tr><th>項目</th><th>🚛 公路運輸</th><th>🚢 海運運輸</th><th>差異</th></tr></thead>
+                        <thead><tr><th>項目</th><th>🚛 公路運輸 (${c.highway === 'NH1' ? '國道一號' : '國道三號'})</th><th>🚢 海運運輸</th><th>差異</th></tr></thead>
                         <tbody>
                             <tr>}<strong>📏 距離</strong></td><td>${c.roadDistance} km</td><td>-</td><td>-</td></tr>
                             <tr>}<strong>⏱️ 預估時間</strong></td><td>${c.roadTime} 小時</td><td>${c.seaTime} 小時</td><td>${c.roadTime < c.seaTime ? '公路快' : '海運快'} ${Math.abs(c.roadTime - c.seaTime).toFixed(1)} 小時</td></tr>
@@ -438,7 +532,6 @@
             `;
             document.getElementById('comparisonResult').innerHTML = html;
             
-            // 動畫：分數條
             setTimeout(() => {
                 document.querySelectorAll('.score-fill').forEach(el => {
                     const width = el.style.width;
@@ -485,9 +578,12 @@
             let html = '<div style="display:grid; gap:1rem">';
             ships.forEach(ship => {
                 const utilization = ship.utilization;
+                const remaining = ship.remaining;
                 let alertHtml = '';
+                let capacityClass = '';
                 if (utilization > 90) {
                     alertHtml = '<span style="color:#e74c3c; font-weight:bold">🚨 即將滿艙</span>';
+                    capacityClass = 'capacity-critical';
                 } else if (utilization > 80) {
                     alertHtml = '<span style="color:#f39c12; font-weight:bold">🔴 艙位緊張</span>';
                 } else {
@@ -495,21 +591,21 @@
                 }
                 
                 const fillColor = utilization > 80 ? '#e74c3c' : (utilization > 60 ? '#f39c12' : '#27ae60');
-                const remainingPercent = (ship.remaining / ship.capacity * 100).toFixed(0);
+                const remainingPercent = (remaining / ship.capacity * 100).toFixed(0);
                 
                 html += `
-                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}')" id="ship_${ship.sailing_date.replace(/-/g, '')}">
+                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}', ${remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
                             <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div>
                             <div>📅 ${ship.sailing_date} (${ship.sailing_day})</div>
                             <div>${alertHtml}</div>
                         </div>
                         <div class="capacity-bar">
-                            <div class="capacity-fill" style="width:${utilization}%; background:${fillColor}"></div>
+                            <div class="capacity-fill ${capacityClass}" style="width:${utilization}%; background:${fillColor}"></div>
                         </div>
                         <div style="display:flex; justify-content:space-between; margin-top:0.5rem; flex-wrap:wrap">
                             <span>📊 總艙位：${ship.capacity.toLocaleString()} TEU</span>
-                            <span>📦 剩餘：${ship.remaining.toLocaleString()} TEU (${remainingPercent}%)</span>
+                            <span>📦 剩餘：<strong id="remaining_${ship.sailing_date.replace(/-/g, '')}">${remaining.toLocaleString()}</strong> TEU (${remainingPercent}%)</span>
                             <span>📈 使用率：${utilization}%</span>
                         </div>
                         <div style="margin-top:0.5rem; font-size:0.9rem; color:#666">
@@ -518,6 +614,9 @@
                         <div style="margin-top:0.5rem; font-size:0.85rem; color:#0077b6">
                             市場已訂：${ship.market_booked} TEU | 您已訂：${ship.user_booked} TEU
                         </div>
+                        <div style="margin-top:0.5rem; font-size:0.85rem; background:#f0f8ff; padding:0.5rem; border-radius:8px">
+                            ⏰ 截止收貨：${ship.cutoff_time || '開航前 24 小時'}
+                        </div>
                     </div>
                 `;
             });
@@ -525,12 +624,20 @@
             document.getElementById('shipsList').innerHTML = html;
         }
         
-        function selectShip(sailingDate) {
+        function selectShip(sailingDate, remaining) {
             document.querySelectorAll('.ship-card').forEach(card => card.classList.remove('selected'));
             const cardId = `ship_${sailingDate.replace(/-/g, '')}`;
             const selectedCard = document.getElementById(cardId);
             if (selectedCard) selectedCard.classList.add('selected');
             selectedShip = sailingDate;
+            
+            // 更新訂購數量限制
+            const bookInput = document.getElementById('bookContainers');
+            const hintSpan = document.getElementById('bookingLimitHint');
+            bookInput.max = remaining;
+            bookInput.placeholder = `最多可訂 ${remaining} TEU`;
+            hintSpan.innerHTML = `📌 此船班剩餘艙位：<strong>${remaining}</strong> TEU，最多可訂 ${remaining} TEU`;
+            bookInput.value = Math.min(currentComparison.containers || 50, remaining);
         }
         
         async function confirmBooking() {
@@ -543,7 +650,18 @@
                 alert('請輸入公司名稱');
                 return;
             }
-            const containers = currentComparison.containers;
+            
+            const containers = parseInt(document.getElementById('bookContainers').value);
+            const maxContainers = document.getElementById('bookContainers').max;
+            if (containers <= 0) {
+                alert('請輸入有效的訂購數量');
+                return;
+            }
+            if (containers > maxContainers) {
+                alert(`訂購數量超過剩餘艙位！最多可訂 ${maxContainers} TEU`);
+                return;
+            }
+            
             const contactPerson = document.getElementById('contactPerson').value;
             const phone = document.getElementById('phone').value;
             
@@ -568,17 +686,20 @@
                 if (result.success) {
                     resultDiv.innerHTML = `
                         <div class="booking-success">
-                            <h3>✅ 訂倉成功！</h3>
+                            <h3>✅ 訂倉成功！🎟️</h3>
                             <p>訂位編號：<strong>${result.booking_id}</strong></p>
                             <p>船班：${result.ship_name} (${result.voyage_no})</p>
                             <p>開航日：${result.sailing_date} (${result.sailing_day})</p>
                             <p>預訂數量：${result.containers} TEU</p>
-                            <p>剩餘艙位：${result.remaining} / ${result.capacity} TEU (${result.utilization}%)</p>
+                            <p>剩餘艙位：<strong>${result.remaining}</strong> / ${result.capacity} TEU (${result.utilization}%)</p>
                             <p>📍 預計到港：${result.eta_time || '航行中'}</p>
                             <button class="btn btn-primary" onclick="location.href='/certificate_page'">📄 產生碳排認證</button>
+                            <button class="btn btn-outline" onclick="location.reload()">繼續訂購</button>
                         </div>
                     `;
-                    setTimeout(() => goToStep3(), 2000);
+                    // 更新頁面上的剩餘艙位顯示
+                    const remainingSpan = document.getElementById(`remaining_${selectedShip.replace(/-/g, '')}`);
+                    if (remainingSpan) remainingSpan.innerText = result.remaining.toLocaleString();
                 } else {
                     resultDiv.innerHTML = `<div class="booking-fail"><h3>❌ 訂倉失敗</h3><p>${result.error}</p><button class="btn btn-outline" onclick="location.reload()">重新查詢</button></div>`;
                 }
@@ -605,6 +726,13 @@
             document.getElementById('step2Panel').style.display = 'block';
             document.getElementById('step3Panel').style.display = 'none';
         }
+        
+        // 初始化國道路線選擇事件
+        document.querySelectorAll('input[name="highway"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                selectedHighway = this.value;
+            });
+        });
     </script>
 </body>
 </html>
