@@ -1,6 +1,5 @@
 import os
 import math
-import requests
 import random
 from datetime import datetime
 from uuid import uuid4
@@ -30,8 +29,17 @@ from optimization_model import compare_modes, calculate_optimal_transfer_ratio
 from services.certificate_service import build_certificate_pdf, generate_certificate_id
 from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
-from services.booking_service import get_available_capacity, get_total_capacity, book_capacity, get_route_summary
-from services.carbon_service import get_esg_report, VSL
+from services.booking_service import (
+    get_available_capacity,
+    get_total_capacity,
+    book_capacity,
+    get_route_summary,
+    get_all_ships_summary,
+    get_customer_bookings,
+    get_upcoming_ships,
+    get_booking_summary
+)
+from services.carbon_service import get_esg_report
 from services.traffic_service import TrafficService
 
 app = Flask(__name__)
@@ -63,16 +71,6 @@ def calculate_financing_time_cost(distance_km, mode, containers, time_sensitivit
 
 # ================= AI 決策引擎 =================
 def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, time_requirement_hours=48):
-    """
-    AI 多層決策引擎
-    決策優先順序：
-    1. 特殊貨 → 海運（強制）
-    2. 海運來不及 → 公路
-    3. 公路壅塞 → 海運
-    4. 船快開 → 海運
-    5. 船太久 → 公路
-    6. 預設 → 海運（ESG導向）
-    """
     reasons = []
     
     if cargo_type == "special":
@@ -85,22 +83,15 @@ def ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, ti
         return "road", 85, reasons
     
     if road_condition.get("level") == "high":
-        reasons.append(f"🚨 國道嚴重壅塞（機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），建議改走海運")
+        reasons.append(f"🚨 國道嚴重壅塞，建議改走海運")
         return "sea", 90, reasons
     elif road_condition.get("level") == "medium":
-        reasons.append(f"⚠️ 國道車多（壅塞機率 {road_condition.get('congestion_probability', 0)*100:.0f}%），海運為較穩定選擇")
+        reasons.append(f"⚠️ 國道車多，海運為較穩定選擇")
         return "sea", 75, reasons
     
     if ship_schedule.get("eta_hours", 24) <= 8:
         reasons.append(f"🚢 船舶 {ship_schedule['eta_hours']} 小時內出發，艙位充足，建議海運")
         return "sea", 92, reasons
-    elif ship_schedule.get("eta_hours", 24) <= 16:
-        reasons.append(f"⏳ 船舶 {ship_schedule['eta_hours']} 小時後出發，可考慮海運")
-        return "sea", 70, reasons
-    
-    if ship_schedule.get("eta_hours", 24) > 36:
-        reasons.append(f"⏰ 船舶 {ship_schedule['eta_hours']} 小時後才出發，時效考量建議公路")
-        return "road", 80, reasons
     
     reasons.append("🌱 基於 ESG 永續發展目標，優先推薦低碳海運")
     return "sea", 88, reasons
@@ -120,8 +111,6 @@ def calculate_ai_scores(road_data, ship_data, containers):
 
     if ship_data.get("available", 0) >= containers:
         score_sea += 2
-    elif ship_data.get("available", 0) >= containers * 0.5:
-        score_sea += 1
 
     score_sea = min(10, round(score_sea, 1))
     score_road = min(10, round(max(2, 10 - score_sea + 1.5), 1))
@@ -153,23 +142,21 @@ def smart_dispatch(containers, road_data, ship_data, cargo_type="normal"):
 
     reasons = []
     if road_data.get("level") == "high":
-        reasons.append(f"🚨 國道路況壅塞，平均時速 {road_data['avg_speed']} km/h，海運吸引力提高")
-    elif road_data.get("level") == "medium":
-        reasons.append(f"⚠️ 國道路況偏慢，平均時速 {road_data['avg_speed']} km/h")
+        reasons.append(f"🚨 國道路況壅塞，海運吸引力提高")
     else:
-        reasons.append(f"✅ 國道路況順暢，平均時速 {road_data['avg_speed']} km/h")
+        reasons.append(f"✅ 國道路況順暢")
 
     reasons.append(f"🚢 {ship_data['name']} 預計 {ship_data['eta_hours']} 小時後可銜接，尚有 {ship_data.get('available', 0)} FEU 艙位")
 
     if ratio >= 0.6:
         action = "🌊 建議以海運為主"
-        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU，可兼顧成本與容量"
+        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU"
     elif ratio <= 0.4:
         action = "🚛 建議以公路為主"
-        suggestion = f"公路 {to_road} FEU、海運 {to_sea} FEU，較適合當前條件"
+        suggestion = f"公路 {to_road} FEU、海運 {to_sea} FEU"
     else:
         action = "⚖️ 建議混合派遣"
-        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU，維持彈性"
+        suggestion = f"海運 {to_sea} FEU、公路 {to_road} FEU"
 
     return {
         "to_sea": to_sea,
@@ -224,11 +211,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
     
     ai_mode, ai_score, ai_reasons = ai_decision_engine(cargo_type, road_condition, ship_schedule, containers, time_requirement)
     
-    congestion_prediction = traffic_service.predict_congestion("NH1")
-    accident_risk = traffic_service.predict_accident_risk(road_distance, road_condition["level"])
-    road_time_pred = traffic_service.predict_travel_time(road_distance, "road", road_condition["level"])
-    sea_time_pred = traffic_service.predict_travel_time(sea_distance, "sea", road_condition["level"])
-
     road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
     sea_carbon = EMISSION_FACTORS["sea"] * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
 
@@ -266,9 +248,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
     optimal_ratio = calculate_optimal_transfer_ratio(base_distance, containers)
     
     esg_report = get_esg_report(road_carbon, sea_carbon, containers, base_distance)
-    
-    route_key = f"{p1['code']}-{p2['code']}"
-    available_capacity = get_available_capacity(route_key)
 
     record = {
         "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
@@ -310,7 +289,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
             "social": round(road_social),
             "risk": round(road_risk),
             "carbon": round(road_carbon, 2),
-            "carbon_externality": round(road_carbon_externality),
             "total": round(road_total),
         },
         "sea": {
@@ -319,7 +297,6 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
             "social": round(sea_social),
             "risk": round(sea_risk),
             "carbon": round(sea_carbon, 2),
-            "carbon_externality": round(sea_carbon_externality),
             "total": round(sea_total),
         },
         "best_mode": best_mode,
@@ -328,24 +305,17 @@ def build_calculation_result(start, end, containers, cargo_type="normal", time_r
         "social_savings": round(social_savings),
         "carbon_improvement": round(carbon_improvement, 2),
         "reduction_pct": round(reduction_pct, 1),
-        "recommendation": f"AI 決策引擎推薦 {best_mode}，信心分數 {ai_score} 分。可減少 {carbon_improvement:.0f} kg CO2e，約 {reduction_pct:.1f}%",
+        "recommendation": f"AI 決策引擎推薦 {best_mode}。可減少 {carbon_improvement:.0f} kg CO2e，約 {reduction_pct:.1f}%",
         "road_condition": {
             "level": road_condition["level"],
             "level_text": "🟢 順暢" if road_condition["level"] == "low" else "🟡 車多" if road_condition["level"] == "medium" else "🔴 壅塞",
             "avg_speed": road_condition["avg_speed"],
-            "congestion_probability": road_condition.get("congestion_probability", 0),
-            "peak_window": road_condition.get("peak_window", ""),
         },
-        "congestion_prediction": congestion_prediction,
-        "accident_risk": accident_risk,
-        "road_time_prediction": road_time_pred,
-        "sea_time_prediction": sea_time_pred,
         "ship_schedule": ship_schedule,
         "dispatch": dispatch,
         "optimization": optimization,
         "optimal_transfer_ratio": optimal_ratio,
         "esg_report": esg_report,
-        "available_capacity": available_capacity,
     }
 
 # ================= 路由 =================
@@ -361,6 +331,10 @@ def history_page():
 def dashboard_page():
     return render_template("dashboard.html", app_title=APP_TITLE)
 
+@app.route("/certificate_page")
+def certificate_page():
+    return render_template("certificate.html", app_title=APP_TITLE)
+
 @app.route("/get_history")
 def get_history():
     return jsonify(load_history())
@@ -369,28 +343,46 @@ def get_history():
 def api_traffic():
     return jsonify(traffic_service.get_live_traffic_speed())
 
-@app.route("/api/congestion-prediction")
-def congestion_prediction():
-    return jsonify(traffic_service.predict_congestion("NH1"))
+@app.route("/api/ships/<route_key>")
+def get_ships(route_key):
+    """取得航線所有船班艙位資訊"""
+    ships = get_all_ships_summary(route_key)
+    return jsonify(ships)
 
-@app.route("/api/capacity/<start>/<end>")
-def get_capacity(start, end):
-    route_key = f"{start}-{end}"
-    available = get_available_capacity(route_key)
-    total = get_total_capacity(route_key)
-    return jsonify({"available": available, "total": total, "utilization": round((total - available) / total * 100, 1)})
+@app.route("/api/upcoming-ships")
+def get_upcoming():
+    """取得未來船班"""
+    ships = get_upcoming_ships(60)
+    return jsonify(ships)
 
-@app.route("/api/book", methods=["POST"])
-def book():
+@app.route("/api/bookings")
+def get_bookings():
+    """取得訂票記錄"""
+    company = request.args.get("company")
+    if company:
+        bookings = get_customer_bookings(company)
+    else:
+        bookings = get_customer_bookings()
+    return jsonify(bookings)
+
+@app.route("/api/booking-summary")
+def booking_summary():
+    """取得訂票摘要統計"""
+    summary = get_booking_summary()
+    return jsonify(summary)
+
+@app.route("/api/book-ship", methods=["POST"])
+def book_ship():
+    """預訂船班艙位"""
     data = request.get_json()
-    start = data.get("start")
-    end = data.get("end")
+    route_key = data.get("route_key")
+    sailing_date = data.get("sailing_date")
     containers = data.get("containers", 1)
     company_name = data.get("company_name", "")
-    cargo_type = data.get("cargo_type", "normal")
+    contact_person = data.get("contact_person", "")
+    phone = data.get("phone", "")
     
-    route_key = f"{start}-{end}"
-    result = book_capacity(route_key, containers, cargo_type, company_name)
+    result = book_capacity(route_key, sailing_date, containers, company_name, contact_person, phone)
     return jsonify(result)
 
 @app.route("/calculate", methods=["POST"])
