@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* 強制儀表板文字顏色 */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -13,30 +14,31 @@
             margin: 2rem 0;
         }
         .kpi-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
-            backdrop-filter: blur(10px);
+            background: white !important;
             border-radius: 20px;
             padding: 1.5rem;
             text-align: center;
-            transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .kpi-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         }
         .kpi-value {
             font-size: 2.5rem;
             font-weight: bold;
-            background: linear-gradient(135deg, var(--deep-twilight), var(--bright-teal-blue));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+            color: #0077b6 !important;
         }
         .kpi-label {
             font-size: 0.9rem;
-            color: var(--french-blue);
+            color: #023e8a !important;
             margin-top: 0.5rem;
+        }
+        h1 {
+            color: white !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin: 1rem 0;
         }
     </style>
 </head>
@@ -45,8 +47,6 @@
         <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
             <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/booking">🎟️ 艙位訂票</a>
             <a href="/history_page">📊 歷史記錄</a>
             <a href="/dashboard">📈 Dashboard</a>
         </div>
@@ -72,12 +72,12 @@
                 <div class="kpi-label">海運推薦率</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value" id="totalVS LSaved">-</div>
-                <div class="kpi-label">人命價值節省 (NTD)</div>
+                <div class="kpi-value" id="totalRevenue">-</div>
+                <div class="kpi-label">總營收 (NTD)</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value" id="totalCarbonCredit">-</div>
-                <div class="kpi-label">碳權價值 (NTD)</div>
+                <div class="kpi-value" id="totalBookings">-</div>
+                <div class="kpi-label">總訂艙次數</div>
             </div>
         </div>
         
@@ -89,6 +89,11 @@
         <div class="chart-container fade-in">
             <h3>🥧 運輸模式分佈</h3>
             <canvas id="modeChart"></canvas>
+        </div>
+        
+        <div class="chart-container fade-in">
+            <h3>📦 艙等預訂分佈</h3>
+            <canvas id="cargoTypeChart"></canvas>
         </div>
         
         <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>

@@ -5,14 +5,34 @@
     <title>歷史記錄 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 強制歷史記錄文字顏色 */
+        .history-table {
+            color: #1a1a1a !important;
+            background: white !important;
+        }
+        .history-table td {
+            color: #1a1a1a !important;
+            background: white !important;
+        }
+        .history-table th {
+            background: linear-gradient(135deg, #03045e, #0077b6) !important;
+            color: white !important;
+        }
+        .history-table tr:hover td {
+            background: #e8f4f8 !important;
+        }
+        h1 {
+            color: white !important;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
 <body onload="loadHistory()">
     <nav class="navbar">
         <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
             <a href="/">🏠 首頁</a>
-            <a href="/input">🚢 開始指派</a>
-            <a href="/booking">🎟️ 艙位訂票</a>
             <a href="/history_page">📊 歷史記錄</a>
             <a href="/dashboard">📈 Dashboard</a>
         </div>
