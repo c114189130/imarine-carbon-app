@@ -6,29 +6,14 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 強制歷史記錄文字顏色 */
-        .history-table {
-            color: #1a1a1a !important;
-            background: white !important;
-        }
-        .history-table td {
-            color: #1a1a1a !important;
-            background: white !important;
-        }
-        .history-table th {
-            background: linear-gradient(135deg, #03045e, #0077b6) !important;
-            color: white !important;
-        }
-        .history-table tr:hover td {
-            background: #e8f4f8 !important;
-        }
-        h1 {
-            color: white !important;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
+        .history-table { width: 100%; border-collapse: collapse; background: white; }
+        .history-table th, .history-table td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+        .history-table th { background: #0077b6; color: white; }
+        .history-table tr:nth-child(even) { background: #f9f9f9; }
+        h1 { color: white; }
     </style>
 </head>
-<body onload="loadHistory()">
+<body>
     <nav class="navbar">
         <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
@@ -38,9 +23,8 @@
         </div>
     </nav>
     <div class="container">
-        <h1>📊 貨櫃指派歷史記錄</h1>
-        <div class="chart-container fade-in"><canvas id="historyChart"></canvas></div>
-        <div class="card fade-in">
+        <h1>📊 貨櫃指派/訂艙歷史記錄</h1>
+        <div class="card">
             <div style="overflow-x:auto">
                 <table class="history-table">
                     <thead>
@@ -48,22 +32,61 @@
                             <th>時間</th>
                             <th>起點</th>
                             <th>終點</th>
-                            <th>貨櫃數</th>
-                            <th>距離</th>
-                            <th>海運碳排</th>
+                            <th>貨櫃數(TEU)</th>
+                            <th>貨物類型</th>
+                            <th>距離(km)</th>
+                            <th>海運碳排(kg)</th>
                             <th>最佳方案</th>
-                            <th>減碳量</th>
+                            <th>減碳量(kg)</th>
                             <th>減碳比例</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody">
-                        <tr><td colspan="9">載入中...</td></tr>
+                        <tr><td colspan="10">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
+        <button class="btn btn-outline" onclick="location.reload()">🔄 刷新</button>
         <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-    <script src="/static/app.js"></script>
+    <script>
+        async function loadHistory() {
+            try {
+                const response = await fetch('/get_history');
+                const data = await response.json();
+                const tbody = document.getElementById('historyBody');
+                tbody.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
+                    return;
+                }
+                
+                // 顯示最近50筆，最新的在上面
+                data.slice().reverse().forEach(r => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${r.date || '-'}</td>
+                            <td>${r.start || '-'}</td>
+                            <td>${r.end || '-'}</td>
+                            <td>${r.containers || 0}</td>
+                            <td>${r.cargo_type || '一般'}</td>
+                            <td>${r.base_distance || '-'}</td>
+                            <td>${r.sea_carbon ? r.sea_carbon.toLocaleString() : '-'}</td>
+                            <td>${r.best_mode || '-'}</td>
+                            <td>${r.carbon_improvement ? r.carbon_improvement.toLocaleString() : '-'}</td>
+                            <td>${r.reduction_pct || 0}%</td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {
+                console.error("載入失敗:", e);
+                document.getElementById('historyBody').innerHTML = '<tr><td colspan="10">載入失敗</td></tr>';
+            }
+        }
+        
+        loadHistory();
+    </script>
 </body>
 </html>

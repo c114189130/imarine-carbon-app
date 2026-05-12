@@ -6,43 +6,15 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 強制儀表板文字顏色 */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-        .kpi-card {
-            background: white !important;
-            border-radius: 20px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .kpi-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #0077b6 !important;
-        }
-        .kpi-label {
-            font-size: 0.9rem;
-            color: #023e8a !important;
-            margin-top: 0.5rem;
-        }
-        h1 {
-            color: white !important;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        .chart-container {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 20px;
-            margin: 1rem 0;
-        }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .kpi-card { background: white; border-radius: 20px; padding: 1.5rem; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .kpi-value { font-size: 2rem; font-weight: bold; color: #0077b6; }
+        .kpi-label { font-size: 0.85rem; color: #555; margin-top: 0.5rem; }
+        h1 { color: white; }
+        .chart-container { background: white; padding: 1.5rem; border-radius: 20px; margin: 1rem 0; }
     </style>
 </head>
-<body onload="loadDashboard()">
+<body>
     <nav class="navbar">
         <div class="navbar-brand">🌊 {{ app_title }}</div>
         <div class="navbar-links">
@@ -55,49 +27,74 @@
         <h1>📈 碳排放儀表板</h1>
         
         <div class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-value" id="totalReduction">-</div>
-                <div class="kpi-label">總減碳量 (kg CO2e)</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="avgReduction">-</div>
-                <div class="kpi-label">平均減碳比例</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="totalCount">-</div>
-                <div class="kpi-label">總指派次數</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="seaRate">-</div>
-                <div class="kpi-label">海運推薦率</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="totalRevenue">-</div>
-                <div class="kpi-label">總營收 (NTD)</div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="totalBookings">-</div>
-                <div class="kpi-label">總訂艙次數</div>
-            </div>
+            <div class="kpi-card"><div class="kpi-value" id="totalReduction">-</div><div class="kpi-label">總減碳量 (kg CO2e)</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="avgReduction">-</div><div class="kpi-label">平均減碳比例</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="totalCount">-</div><div class="kpi-label">總運輸次數</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="seaRate">-</div><div class="kpi-label">海運推薦率</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="totalBookings">-</div><div class="kpi-label">總訂艙次數</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="totalContainers">-</div><div class="kpi-label">總訂艙 TEU</div></div>
         </div>
         
-        <div class="chart-container fade-in">
-            <h3>📉 減碳趨勢</h3>
-            <canvas id="trendChart"></canvas>
-        </div>
+        <div class="chart-container"><canvas id="trendChart"></canvas></div>
+        <div class="chart-container"><canvas id="modeChart"></canvas></div>
         
-        <div class="chart-container fade-in">
-            <h3>🥧 運輸模式分佈</h3>
-            <canvas id="modeChart"></canvas>
-        </div>
-        
-        <div class="chart-container fade-in">
-            <h3>📦 艙等預訂分佈</h3>
-            <canvas id="cargoTypeChart"></canvas>
-        </div>
-        
+        <button class="btn btn-outline" onclick="location.reload()">🔄 刷新</button>
         <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
     </div>
-    <script src="/static/app.js"></script>
+    <script>
+        async function loadDashboard() {
+            try {
+                const [historyRes, bookingRes] = await Promise.all([
+                    fetch('/get_history'),
+                    fetch('/api/booking-summary')
+                ]);
+                const history = await historyRes.json();
+                const booking = await bookingRes.json();
+                
+                // 歷史統計
+                if (history && history.length > 0) {
+                    const totalCarbon = history.reduce((s, d) => s + (d.carbon_improvement || 0), 0);
+                    const avgPct = history.reduce((s, d) => s + (d.reduction_pct || 0), 0) / history.length;
+                    const seaCount = history.filter(d => d.best_mode === "海運").length;
+                    
+                    document.getElementById('totalReduction').innerText = Math.round(totalCarbon).toLocaleString();
+                    document.getElementById('avgReduction').innerText = avgPct.toFixed(1) + "%";
+                    document.getElementById('totalCount').innerText = history.length;
+                    document.getElementById('seaRate').innerText = Math.round(seaCount / history.length * 100) + "%";
+                    
+                    // 減碳趨勢圖
+                    const last7 = history.slice(-7);
+                    new Chart(document.getElementById('trendChart'), {
+                        type: 'line',
+                        data: {
+                            labels: last7.map(h => h.date?.split(' ')[0] || ''),
+                            datasets: [{ label: "減碳量 (kg)", data: last7.map(h => h.carbon_improvement || 0), borderColor: "#0077b6", fill: true }]
+                        }
+                    });
+                    
+                    // 運輸模式分佈圖
+                    new Chart(document.getElementById('modeChart'), {
+                        type: 'doughnut',
+                        data: { labels: ["海運推薦", "公路推薦"], datasets: [{ data: [seaCount, history.length - seaCount], backgroundColor: ["#00b4d8", "#48cae4"] }] }
+                    });
+                } else {
+                    document.getElementById('totalReduction').innerText = "0";
+                    document.getElementById('avgReduction').innerText = "0%";
+                    document.getElementById('totalCount').innerText = "0";
+                    document.getElementById('seaRate').innerText = "0%";
+                }
+                
+                // 訂艙統計
+                if (booking) {
+                    document.getElementById('totalBookings').innerText = booking.total_bookings || 0;
+                    document.getElementById('totalContainers').innerText = (booking.total_containers || 0).toLocaleString();
+                }
+            } catch(e) {
+                console.error("載入儀表板失敗:", e);
+            }
+        }
+        
+        loadDashboard();
+    </script>
 </body>
 </html>
