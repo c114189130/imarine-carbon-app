@@ -236,6 +236,8 @@ def api_traffic():
 
 @app.route("/api/ships/<route_key>")
 def get_ships(route_key):
+    """取得航線所有船班艙位資訊"""
+    from services.booking_service import get_all_ships_summary
     ships = get_all_ships_summary(route_key)
     return jsonify(ships)
 

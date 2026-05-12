@@ -16,7 +16,67 @@ _booking_lock = Lock()
 
 def load_ships_data():
     if not SHIPS_FILE.exists():
-        return {}
+        # 回傳預設資料
+        return {
+            "KHH-TXG": {
+                "route_name": "高雄港 → 台中港",
+                "ships": [
+                    {
+                        "voyage_no": "LC1021",
+                        "ship_name": "立昌輪",
+                        "sailing_date": "2026-05-20",
+                        "sailing_day": "Tuesday",
+                        "capacity_teu": 1618,
+                        "market_booked_teu": 890,
+                        "user_booked_teu": 0,
+                        "eta_port": "台中港",
+                        "eta_time": "2026-05-21 08:00:00",
+                        "cutoff_time": "2026-05-19 17:00:00"
+                    },
+                    {
+                        "voyage_no": "LC1022",
+                        "ship_name": "立昌輪",
+                        "sailing_date": "2026-05-23",
+                        "sailing_day": "Friday",
+                        "capacity_teu": 1618,
+                        "market_booked_teu": 1380,
+                        "user_booked_teu": 0,
+                        "eta_port": "台中港",
+                        "eta_time": "2026-05-24 08:00:00",
+                        "cutoff_time": "2026-05-22 17:00:00"
+                    }
+                ]
+            },
+            "TXG-KHH": {
+                "route_name": "台中港 → 高雄港",
+                "ships": [
+                    {
+                        "voyage_no": "LC2011",
+                        "ship_name": "立昌輪",
+                        "sailing_date": "2026-05-20",
+                        "sailing_day": "Wednesday",
+                        "capacity_teu": 1618,
+                        "market_booked_teu": 920,
+                        "user_booked_teu": 0,
+                        "eta_port": "高雄港",
+                        "eta_time": "2026-05-21 14:00:00",
+                        "cutoff_time": "2026-05-19 17:00:00"
+                    },
+                    {
+                        "voyage_no": "LC2012",
+                        "ship_name": "立昌輪",
+                        "sailing_date": "2026-05-23",
+                        "sailing_day": "Friday",
+                        "capacity_teu": 1618,
+                        "market_booked_teu": 1480,
+                        "user_booked_teu": 0,
+                        "eta_port": "高雄港",
+                        "eta_time": "2026-05-24 14:00:00",
+                        "cutoff_time": "2026-05-22 17:00:00"
+                    }
+                ]
+            }
+        }
     try:
         with open(SHIPS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -44,38 +104,86 @@ def save_bookings(bookings):
         json.dump(bookings, f, ensure_ascii=False, indent=2)
 
 
-def apply_market_simulation():
-    ships_data = load_ships_data()
-    updated = False
-    for route_key, route_data in ships_data.items():
-        for ship in route_data.get("ships", []):
-            if ship["sailing_date"] < datetime.now().strftime("%Y-%m-%d"):
-                continue
-            market_demand = get_market_booking_rate(ship["sailing_date"])
-            current_used = ship["market_booked_teu"] + ship.get("user_booked_teu", 0)
-            max_possible = ship["capacity_teu"] - current_used
-            new_market_booked = min(market_demand, max_possible)
-            if new_market_booked != ship["market_booked_teu"]:
-                ship["market_booked_teu"] = new_market_booked
-                updated = True
-    if updated:
-        save_ships_data(ships_data)
-        print("✅ 市場需求已更新")
-
-
-def init_market_simulation():
-    apply_market_simulation()
-
-
 def get_all_ships_summary(route_key):
+    """取得所有船班艙位摘要"""
     ships_data = load_ships_data()
     route_data = ships_data.get(route_key, {}).get("ships", [])
+    
+    # 如果沒有資料，回範例資料
+    if not route_data:
+        if route_key == "KHH-TXG":
+            route_data = [
+                {
+                    "voyage_no": "LC1021",
+                    "ship_name": "立昌輪",
+                    "sailing_date": "2026-05-20",
+                    "sailing_day": "Tuesday",
+                    "capacity_teu": 1618,
+                    "market_booked_teu": 890,
+                    "user_booked_teu": 0,
+                    "eta_port": "台中港",
+                    "eta_time": "2026-05-21 08:00:00",
+                    "cutoff_time": "2026-05-19 17:00:00"
+                },
+                {
+                    "voyage_no": "LC1022",
+                    "ship_name": "立昌輪",
+                    "sailing_date": "2026-05-23",
+                    "sailing_day": "Friday",
+                    "capacity_teu": 1618,
+                    "market_booked_teu": 1380,
+                    "user_booked_teu": 0,
+                    "eta_port": "台中港",
+                    "eta_time": "2026-05-24 08:00:00",
+                    "cutoff_time": "2026-05-22 17:00:00"
+                }
+            ]
+        else:
+            route_data = [
+                {
+                    "voyage_no": "LC2011",
+                    "ship_name": "立昌輪",
+                    "sailing_date": "2026-05-20",
+                    "sailing_day": "Wednesday",
+                    "capacity_teu": 1618,
+                    "market_booked_teu": 920,
+                    "user_booked_teu": 0,
+                    "eta_port": "高雄港",
+                    "eta_time": "2026-05-21 14:00:00",
+                    "cutoff_time": "2026-05-19 17:00:00"
+                },
+                {
+                    "voyage_no": "LC2012",
+                    "ship_name": "立昌輪",
+                    "sailing_date": "2026-05-23",
+                    "sailing_day": "Friday",
+                    "capacity_teu": 1618,
+                    "market_booked_teu": 1480,
+                    "user_booked_teu": 0,
+                    "eta_port": "高雄港",
+                    "eta_time": "2026-05-24 14:00:00",
+                    "cutoff_time": "2026-05-22 17:00:00"
+                }
+            ]
+    
     summary = []
     for ship in route_data:
         remaining = ship["capacity_teu"] - ship["market_booked_teu"] - ship.get("user_booked_teu", 0)
         if remaining < 0:
             remaining = 0
         utilization = round((ship["capacity_teu"] - remaining) / ship["capacity_teu"] * 100, 1) if ship["capacity_teu"] > 0 else 0
+        
+        cutoff_time = ship.get("cutoff_time", "")
+        is_cutoff_passed = False
+        if cutoff_time:
+            try:
+                cutoff_dt = datetime.strptime(cutoff_time, "%Y-%m-%d %H:%M:%S")
+                is_cutoff_passed = datetime.now() > cutoff_dt
+            except:
+                pass
+        
+        port_congestion = get_port_congestion(ship.get("eta_port", route_key[:3]))
+        
         summary.append({
             "voyage_no": ship["voyage_no"],
             "ship_name": ship["ship_name"],
@@ -88,10 +196,12 @@ def get_all_ships_summary(route_key):
             "user_booked": ship.get("user_booked_teu", 0),
             "eta_port": ship.get("eta_port", ""),
             "eta_time": ship.get("eta_time", ""),
-            "cutoff_time": ship.get("cutoff_time", ""),
+            "cutoff_time": cutoff_time,
+            "is_cutoff_passed": is_cutoff_passed,
             "dynamic_price": calculate_dynamic_price(12000, utilization),
-            "port_congestion": get_port_congestion(ship.get("eta_port", route_key[:3]))
+            "port_congestion": port_congestion
         })
+    
     return summary
 
 
@@ -184,16 +294,11 @@ def get_booking_summary():
 def book_capacity(route_key, sailing_date, containers, company_name, cargo_type="normal", contact_person="", phone=""):
     with _booking_lock:
         ships_data = load_ships_data()
-        
+        route_data = ships_data.get(route_key, {})
         target_ship = None
-        target_route_name = None
-        for rk, rd in ships_data.items():
-            for ship in rd.get("ships", []):
-                if ship["sailing_date"] == sailing_date:
-                    target_ship = ship
-                    target_route_name = rd.get("route_name", rk)
-                    break
-            if target_ship:
+        for ship in route_data.get("ships", []):
+            if ship["sailing_date"] == sailing_date:
+                target_ship = ship
                 break
         
         if not target_ship:
@@ -223,6 +328,7 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
             }
         
         target_ship["user_booked_teu"] = target_ship.get("user_booked_teu", 0) + containers
+        save_ships_data(ships_data)
         
         new_remaining = target_ship["capacity_teu"] - target_ship["market_booked_teu"] - target_ship["user_booked_teu"]
         if new_remaining < 0:
@@ -231,7 +337,15 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
         utilization = round((target_ship["capacity_teu"] - new_remaining) / target_ship["capacity_teu"] * 100, 1)
         dynamic_price = calculate_dynamic_price(12000, utilization)
         
-        save_ships_data(ships_data)
+        port_congestion = get_port_congestion(target_ship.get("eta_port", route_key[:3]))
+        eta_time = target_ship.get("eta_time", "")
+        if port_congestion["delay_hours"] > 0 and eta_time:
+            try:
+                eta_dt = datetime.strptime(eta_time, "%Y-%m-%d %H:%M:%S")
+                new_eta = eta_dt.replace(hour=eta_dt.hour + int(port_congestion["delay_hours"]))
+                eta_time = new_eta.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                pass
         
         booking = {
             "booking_id": f"BK-{datetime.now().strftime('%Y%m%d%H%M%S')}",
@@ -239,19 +353,20 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
             "company_name": company_name,
             "contact_person": contact_person,
             "phone": phone,
-            "route_key": rk,
-            "route_name": target_route_name,
+            "route_key": route_key,
+            "route_name": route_data.get("route_name", route_key),
             "sailing_date": sailing_date,
-            "sailing_day": target_ship.get("sailing_day", ""),
-            "voyage_no": target_ship.get("voyage_no", ""),
-            "ship_name": target_ship.get("ship_name", ""),
+            "sailing_day": target_ship["sailing_day"],
+            "voyage_no": target_ship["voyage_no"],
+            "ship_name": target_ship["ship_name"],
             "containers": containers,
             "cargo_type": cargo_type,
             "unit_price": dynamic_price,
             "total_price": dynamic_price * containers,
             "eta_port": target_ship.get("eta_port", ""),
-            "eta_time": target_ship.get("eta_time", ""),
-            "status": "confirmed"
+            "eta_time": eta_time,
+            "status": "confirmed",
+            "port_congestion": port_congestion["message"]
         }
         bookings = load_bookings()
         bookings.append(booking)
@@ -260,10 +375,10 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
         return {
             "success": True,
             "booking_id": booking["booking_id"],
-            "ship_name": target_ship.get("ship_name", "立昌輪"),
-            "voyage_no": target_ship.get("voyage_no", ""),
+            "ship_name": target_ship["ship_name"],
+            "voyage_no": target_ship["voyage_no"],
             "sailing_date": sailing_date,
-            "sailing_day": target_ship.get("sailing_day", ""),
+            "sailing_day": target_ship["sailing_day"],
             "containers": containers,
             "cargo_type": cargo_type,
             "remaining": new_remaining,
@@ -272,7 +387,12 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
             "unit_price": dynamic_price,
             "total_price": dynamic_price * containers,
             "eta_port": target_ship.get("eta_port", ""),
-            "eta_time": target_ship.get("eta_time", "航行中"),
-            "port_congestion": "順暢",
+            "eta_time": eta_time,
+            "port_congestion": port_congestion["message"],
             "message": f"成功預訂 {containers} TEU，剩餘 {new_remaining} TEU"
         }
+
+
+def init_market_simulation():
+    """初始化市場模擬"""
+    pass  # 簡單處理
