@@ -4,6 +4,10 @@ import random
 from datetime import datetime
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request, send_file
+from services.booking_service import init_market_simulation
+
+# 啟動時執行市場模擬
+init_market_simulation()
 
 from config import (
     APP_TITLE,
