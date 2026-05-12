@@ -594,5 +594,330 @@
             document.getElementById('step3Panel').style.display = 'none';
         }
     </script>
+    <!-- ================= AI 小助理 ================= -->
+<style>
+/* 小助理浮動視窗 */
+.ai-assistant {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    width: 380px;
+    max-width: calc(100vw - 48px);
+    transition: all 0.3s ease;
+}
+.assistant-toggle {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #0077b6, #00b4d8);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 119, 182, 0.4);
+    transition: all 0.3s;
+    margin-left: auto;
+}
+.assistant-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 180, 216, 0.5);
+}
+.assistant-toggle img, .assistant-toggle span {
+    font-size: 28px;
+}
+.assistant-chat {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border-radius: 24px;
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    transition: all 0.3s;
+    margin-bottom: 12px;
+}
+.assistant-header {
+    background: linear-gradient(135deg, #0077b6, #00b4d8);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+.assistant-header .avatar {
+    width: 36px;
+    height: 36px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+.assistant-header .title {
+    flex: 1;
+    color: white;
+    font-weight: 600;
+}
+.assistant-header .close-btn {
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    opacity: 0.7;
+    transition: 0.2s;
+}
+.assistant-header .close-btn:hover { opacity: 1; }
+.assistant-messages {
+    height: 320px;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f8fafc;
+}
+.message {
+    display: flex;
+    gap: 10px;
+    animation: fadeInUp 0.3s ease;
+}
+.message.ai .avatar {
+    background: #e2e8f0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.message.user {
+    justify-content: flex-end;
+}
+.message.user .bubble {
+    background: linear-gradient(135deg, #0077b6, #00b4d8);
+    color: white;
+    border-radius: 18px 18px 4px 18px;
+}
+.message.ai .bubble {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    border-radius: 18px 18px 18px 4px;
+}
+.bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.assistant-input {
+    display: flex;
+    padding: 12px;
+    border-top: 1px solid #e2e8f0;
+    background: white;
+    gap: 8px;
+}
+.assistant-input input {
+    flex: 1;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: 0.2s;
+}
+.assistant-input input:focus {
+    border-color: #00b4d8;
+    box-shadow: 0 0 0 2px rgba(0,180,216,0.2);
+}
+.assistant-input button {
+    background: #0077b6;
+    border: none;
+    border-radius: 24px;
+    padding: 0 16px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.assistant-input button:hover { background: #00b4d8; }
+.assistant-footer {
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 8px;
+    color: #94a3b8;
+    background: #f1f5f9;
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<div class="ai-assistant" id="aiAssistant">
+    <div class="assistant-chat" id="assistantChat" style="display: none;">
+        <div class="assistant-header" onclick="toggleAssistantChat()">
+            <div class="avatar">🤖</div>
+            <div class="title">iMarine AI 小助理</div>
+            <div class="close-btn" onclick="event.stopPropagation(); closeAssistant();">✕</div>
+        </div>
+        <div class="assistant-messages" id="assistantMessages">
+            <div class="message ai">
+                <div class="avatar">🤖</div>
+                <div class="bubble">您好！我是 iMarine AI 小助理 👋<br>我可以幫您：<br>✅ 查詢船班與艙位<br>✅ 完成訂艙<br>✅ 分析最佳運輸方案<br>✅ 提供減碳建議<br>有什麼我可以協助的嗎？</div>
+            </div>
+        </div>
+        <div class="assistant-input">
+            <input type="text" id="assistantInput" placeholder="輸入您的问题..." onkeypress="if(event.keyCode==13) sendAssistantMessage()">
+            <button onclick="sendAssistantMessage()">發送</button>
+        </div>
+        <div class="assistant-footer">Powered by iMarine AI</div>
+    </div>
+    <div class="assistant-toggle" onclick="toggleAssistantChat()">
+        <span>🤖</span>
+    </div>
+</div>
+
+<script>
+    // AI 小助理邏輯
+    let isChatOpen = false;
+    
+    function toggleAssistantChat() {
+        const chat = document.getElementById('assistantChat');
+        if (chat.style.display === 'none') {
+            chat.style.display = 'block';
+            isChatOpen = true;
+        } else {
+            chat.style.display = 'none';
+            isChatOpen = false;
+        }
+    }
+    
+    function closeAssistant() {
+        document.getElementById('assistantChat').style.display = 'none';
+        isChatOpen = false;
+    }
+    
+    function addAssistantMessage(text, isUser = false) {
+        const container = document.getElementById('assistantMessages');
+        const div = document.createElement('div');
+        div.className = `message ${isUser ? 'user' : 'ai'}`;
+        if (isUser) {
+            div.innerHTML = `<div class="bubble">${text}</div>`;
+        } else {
+            div.innerHTML = `<div class="avatar">🤖</div><div class="bubble">${text}</div>`;
+        }
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    async function sendAssistantMessage() {
+        const input = document.getElementById('assistantInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+        addAssistantMessage(msg, true);
+        input.value = '';
+        
+        // 智能回覆邏輯
+        let reply = '';
+        const lowerMsg = msg.toLowerCase();
+        
+        if (lowerMsg.includes('船班') || lowerMsg.includes('艙位')) {
+            const routeKey = document.getElementById('start')?.value === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
+            try {
+                const res = await fetch(`/api/ships/${routeKey}`);
+                const ships = await res.json();
+                if (ships && ships.length > 0) {
+                    const ship = ships[0];
+                    reply = `📅 最近船班：${ship.sailing_date || '近期'}，剩餘艙位 ${ship.remaining || 0} TEU，使用率 ${ship.utilization || 0}%。可至「選擇船班與訂艙」預訂。`;
+                } else {
+                    reply = '目前查無船班資料，請稍後再試。';
+                }
+            } catch(e) {
+                reply = '查詢船班失敗，請確認網路連線。';
+            }
+        } 
+        else if (lowerMsg.includes('訂艙') || lowerMsg.includes('訂位')) {
+            const containers = document.getElementById('containers')?.value || 50;
+            reply = `請先於上方選擇船班，並填寫公司名稱與數量，點擊「✅ 確認訂艙」完成預訂。\n目前預設 ${containers} FEU，可依需求調整。`;
+        }
+        else if (lowerMsg.includes('成本') || lowerMsg.includes('運費')) {
+            reply = `📊 單一FEU成本比較：\n🚢 藍色公路 NT$ ${SEA_COST_PER_FEU.toLocaleString()}\n🚛 內陸運輸 NT$ ${ROAD_COST_PER_FEU.toLocaleString()}\n💡 藍色公路每櫃可節省 NT$ ${(ROAD_COST_PER_FEU - SEA_COST_PER_FEU).toLocaleString()}`;
+        }
+        else if (lowerMsg.includes('碳排') || lowerMsg.includes('減碳')) {
+            reply = `🌱 碳排比較 (每FEU)：\n🚢 藍色公路 ${SEA_CARBON_PER_FEU} kg CO₂e\n🚛 內陸運輸 ${ROAD_CARBON_PER_FEU} kg CO₂e\n✅ 藍色公路減少 ${ROAD_CARBON_PER_FEU - SEA_CARBON_PER_FEU} kg CO₂e，減碳率 60%`;
+        }
+        else if (lowerMsg.includes('vsl') || lowerMsg.includes('人命')) {
+            reply = `🚸 根據交通部運研所 VSL 模型，藍色公路使用率越高，節省人命價值越高。\n例如 80% 使用率可節省約 NT$ 326萬，95% 使用率可達 NT$ 388萬。`;
+        }
+        else if (lowerMsg.includes('推薦') || lowerMsg.includes('方案')) {
+            if (currentComparison) {
+                reply = `🎯 AI 推薦：${currentComparison.recommendMode === 'sea' ? '藍色公路' : '內陸運輸'}\n${currentComparison.recommendation}`;
+            } else {
+                reply = `請先於上方輸入貨櫃需求，點擊「🚀 藍色公路 vs 內陸運輸 分析」獲取 AI 推薦。`;
+            }
+        }
+        else if (lowerMsg.includes('取消') || lowerMsg.includes('訂單')) {
+            reply = `如需取消訂艙，請聯繫客服專線 0800-123-456，或重新整理頁面後重新預訂。`;
+        }
+        else if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('你好')) {
+            reply = `您好！👋 歡迎使用 iMarine 智慧海運平台。請問需要協助什麼？\n💡 試試問「船班」、「成本」、「碳排」、「推薦」等關鍵字。`;
+        }
+        else {
+            reply = `📌 收到您的訊息：「${msg}」\n\n💡 您可以試試：\n• 查詢「船班」\n• 比較「成本」\n• 了解「碳排」\n• 獲取「推薦」方案\n• 詢問「訂艙」流程`;
+        }
+        
+        setTimeout(() => addAssistantMessage(reply), 300);
+    }
+    
+    // 自動通知訂艙成功
+    function notifyBookingSuccess(bookingData) {
+        const msg = `✅ 訂艙完成！\n\n📅 船班日期：${bookingData.sailing_date || '近期'}\n🕐 開航日：${bookingData.sailing_day || ''}\n📦 艙位數量：${bookingData.containers || 0} FEU\n🔢 訂位編號：${bookingData.booking_id || ''}\n💰 總費用：NT$ ${(bookingData.total_price || 0).toLocaleString()}\n\n📌 艙位已保留，請於截止時間前完成後續作業。`;
+        addAssistantMessage(msg);
+    }
+    
+    // 覆蓋原本的 confirmBooking，加入小助理通知
+    const originalConfirmBooking = confirmBooking;
+    window.confirmBooking = async function() {
+        if (!selectedShip) { alert('請先選擇船班'); return; }
+        const companyName = document.getElementById('companyName').value;
+        if (!companyName) { alert('請輸入公司名稱'); return; }
+        const containers = parseInt(document.getElementById('bookContainers').value);
+        
+        const response = await fetch('/api/book-ship', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                route_key: currentRouteKey,
+                sailing_date: selectedShip,
+                containers: containers,
+                company_name: companyName,
+                cargo_type: 'normal'
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
+            notifyBookingSuccess(result);
+            location.reload();
+        } else {
+            alert(`❌ 訂艙失敗：${result.error}`);
+            addAssistantMessage(`❌ 訂艙失敗：${result.error}，請確認艙位是否充足或聯絡客服。`);
+        }
+    };
+    
+    // 分析完成後自動通知
+    const originalDisplayComparisonResult = displayComparisonResult;
+    window.displayComparisonResult = function() {
+        originalDisplayComparisonResult();
+        if (currentComparison) {
+            const msg = `📊 分析完成！\n🎯 AI 推薦：${currentComparison.recommendMode === 'sea' ? '藍色公路' : '內陸運輸'}\n${currentComparison.recommendation}`;
+            addAssistantMessage(msg);
+        }
+    };
+</script>
 </body>
 </html>
