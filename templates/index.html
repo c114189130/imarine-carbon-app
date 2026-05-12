@@ -108,7 +108,7 @@
             <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="dangerous">危險品/特殊貨物</option></select></div>
             <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-20"></div>
-            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate" value="2026-05-22"><p style="font-size:0.8rem; color:#666">※ 海運約需 2 天，公路約需 1 天</p></div>
+            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate" value="2026-05-22"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 2 天 (含等船/裝卸/航行)，內陸運輸約需 1 天</p></div>
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 藍色公路 vs 內陸運輸 分析</button>
         </div>
 
@@ -165,7 +165,7 @@
         let currentRouteKey = null;
         let shipsData = [];
 
-        // 真實成本數據 (根據圖片)
+        // 真實成本數據
         const SEA_COST_PER_FEU = 2787;
         const ROAD_COST_PER_FEU = 7218;
         
@@ -174,8 +174,8 @@
         const ROAD_CARBON_PER_FEU = 120;
         
         // 運輸時間 (天數)
-        const SEA_TRANSIT_DAYS = 2;   // 海運約需 2 天
-        const ROAD_TRANSIT_DAYS = 1;  // 公路約需 1 天
+        const SEA_TRANSIT_DAYS = 2;   // 航運作業時間 2 天
+        const ROAD_TRANSIT_DAYS = 1;  // 公路運輸 1 天
         
         // VSL 階段數據
         const VSL_STAGES = {
@@ -262,8 +262,6 @@
                 const shipsRes = await fetch(`/api/ships/${routeKey}`);
                 const ships = await shipsRes.json();
                 if (ships && ships.length > 0) {
-                    // 找最近的船班
-                    const today = new Date();
                     for (let ship of ships) {
                         const shipDate = new Date(ship.sailing_date);
                         if (shipDate >= departureDate) {
@@ -300,7 +298,8 @@
                 recommendMode = "road";
                 trafficLight = "🔴";
                 recommendation = `⚠️ 海運與公路皆無法在 ${arrivalRequirementStr} 前送達，建議調整需求日期`;
-                reasons.push(`⏰ 海運預計 ${formatDate(seaArrivalDate)} 到港，公路預計 ${formatDate(roadArrivalDate)} 到港`);
+                reasons.push(`⏰ 海運需要 ${SEA_TRANSIT_DAYS} 天，預計 ${formatDate(seaArrivalDate)} 到港`);
+                reasons.push(`⏰ 公路需要 ${ROAD_TRANSIT_DAYS} 天，預計 ${formatDate(roadArrivalDate)} 到港`);
                 reasons.push(`💡 建議延後希望抵達日期，或提前出發`);
             }
             // 規則3：海運來不及，公路來得及
@@ -318,11 +317,10 @@
                 trafficLight = "🟡";
                 recommendation = `公路無法在 ${arrivalRequirementStr} 前送達，建議採藍色公路`;
                 reasons.push(`⏰ 公路需要 ${ROAD_TRANSIT_DAYS} 天，預計 ${formatDate(roadArrivalDate)} 到港`);
-                reasons.push(`✅ 海運可在 ${formatDate(seaArrivalDate)} 前送達`);
+                reasons.push(`✅ 海運需要 ${SEA_TRANSIT_DAYS} 天，可在 ${formatDate(seaArrivalDate)} 前送達`);
             }
             // 規則5：兩者皆可在時限內送達，比較成本與碳排
             else {
-                // 比較成本節省
                 if (costSaved > 0) {
                     recommendMode = "sea";
                     trafficLight = "🟢";
@@ -387,13 +385,36 @@
                 <div class="result-box">
                     <h3>⏰ 時效分析</h3>
                     <table class="comparison-table">
-                        <thead><tr><th>項目</th><th>🚢 藍色公路</th><th>🚛 內陸運輸</th><th>時效要求</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>項目</th>
+                                <th>🚢 藍色公路</th>
+                                <th>🚛 內陸運輸</th>
+                                <th>時效要求</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            <tr>}<strong>運輸時間</strong>}<td>約 ${c.seaTransitDays} 天</td><td>約 ${c.roadTransitDays} 天</td><td>-</td> '</tr>
-                            <tr>}<strong>預計抵達日期</strong>}<td>${c.seaArrivalDate}</td><td>${c.roadArrivalDate}</td><td>希望 ${c.arrivalRequirement} 前</td> </tr>
-                            <tr>}<strong>是否符合時效</strong>}<td class="${c.seaArrivalDate <= c.arrivalRequirement ? 'winning' : ''}">${c.seaArrivalDate <= c.arrivalRequirement ? '✅ 符合' : '❌ 不符合'}</td>
-                            <td class="${c.roadArrivalDate <= c.arrivalRequirement ? 'winning' : ''}">${c.roadArrivalDate <= c.arrivalRequirement ? '✅ 符合' : '❌ 不符合'}</td>
-                            <td>-</td>
+                            <tr>
+                                <td><strong>運輸時間</strong></td>
+                                <td>約 ${c.seaTransitDays} 天 (含等船/裝卸/航行)</td>
+                                <td>約 ${c.roadTransitDays} 天</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td><strong>預計抵達日期</strong></td>
+                                <td>${c.seaArrivalDate}</td>
+                                <td>${c.roadArrivalDate}</td>
+                                <td>希望 ${c.arrivalRequirement} 前</td>
+                            </tr>
+                            <tr>
+                                <td><strong>是否符合時效</strong></td>
+                                <td class="${c.seaArrivalDate <= c.arrivalRequirement ? 'winning' : ''}">
+                                    ${c.seaArrivalDate <= c.arrivalRequirement ? '✅ 符合' : '❌ 不符合'}
+                                </td>
+                                <td class="${c.roadArrivalDate <= c.arrivalRequirement ? 'winning' : ''}">
+                                    ${c.roadArrivalDate <= c.arrivalRequirement ? '✅ 符合' : '❌ 不符合'}
+                                </td>
+                                <td>-</td>
                             </tr>
                         </tbody>
                     </table>
@@ -405,10 +426,8 @@
                     <table class="comparison-table">
                         <thead><tr><th>項目</th><th>🚢 藍色公路</th><th>🚛 內陸運輸</th><th>差異</th></tr></thead>
                         <tbody>
-                            <tr>}<strong>單一FEU成本</strong>}<td>NT$ ${SEA_COST_PER_FEU.toLocaleString()}</td><td>NT$ ${ROAD_COST_PER_FEU.toLocaleString()}</td>
-                            <td class="winning">藍色公路省 NT$ ${(ROAD_COST_PER_FEU - SEA_COST_PER_FEU).toLocaleString()}</td> '</tr>
-                            <tr>}<strong>總成本 (${c.containers} FEU)</strong>}<td>NT$ ${c.seaCost.toLocaleString()}</td><td>NT$ ${c.roadCost.toLocaleString()}</td>
-                            <td class="winning">${c.costSaved > 0 ? `藍色公路省 NT$ ${c.costSaved.toLocaleString()}` : `內陸運輸省 NT$ ${(-c.costSaved).toLocaleString()}`}</td> </tr>
+                            <tr>}<strong>單一FEU成本</strong></td>}<strong>NT$ ${SEA_COST_PER_FEU.toLocaleString()}</strong></td>}<strong>NT$ ${ROAD_COST_PER_FEU.toLocaleString()}</strong></td><td class="winning">藍色公路省 NT$ ${(ROAD_COST_PER_FEU - SEA_COST_PER_FEU).toLocaleString()}</td></tr>
+                            <tr>}<strong>總成本 (${c.containers} FEU)</strong></td>}<strong>NT$ ${c.seaCost.toLocaleString()}</strong></td>}<strong>NT$ ${c.roadCost.toLocaleString()}</strong></td><td class="winning">${c.costSaved > 0 ? `藍色公路省 NT$ ${c.costSaved.toLocaleString()}` : `內陸運輸省 NT$ ${(-c.costSaved).toLocaleString()}`}</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -417,12 +436,10 @@
                 <div class="result-box">
                     <h3>🌱 碳排比較</h3>
                     <table class="comparison-table">
-                        <thead><tr><th>項目</th><th>🚢 藍色公路</th><th>🚛 內陸運輸</th><th>差異</th> </tr></thead>
+                        <thead><tr><th>項目</th><th>🚢 藍色公路</th><th>🚛 內陸運輸</th><th>差異</th></td></thead>
                         <tbody>
-                            <tr>}<strong>碳排係數</strong>}<td>${SEA_CARBON_PER_FEU} kg/FEU</td><td>${ROAD_CARBON_PER_FEU} kg/FEU</td>
-                            <td class="winning">藍色公路低 ${ROAD_CARBON_PER_FEU - SEA_CARBON_PER_FEU} kg/FEU</td> </tr>
-                            <tr>}<strong>總碳排 (${c.containers} FEU)</strong>}<td>${c.seaCarbon.toLocaleString()} kg</td><td>${c.roadCarbon.toLocaleString()} kg</td>
-                            <td class="winning">減少 ${c.carbonSaved.toLocaleString()} kg (${c.reductionPct}%)</td> </tr>
+                            <tr>}<strong>碳排係數</strong></td>}<strong>${SEA_CARBON_PER_FEU} kg/FEU</strong></td>}<strong>${ROAD_CARBON_PER_FEU} kg/FEU</strong></td><td class="winning">藍色公路低 ${ROAD_CARBON_PER_FEU - SEA_CARBON_PER_FEU} kg/FEU</td> '</tbody>
+                            <tr>}<strong>總碳排 (${c.containers} FEU)</strong></td>}<strong>${c.seaCarbon.toLocaleString()} kg</strong>}<td><strong>${c.roadCarbon.toLocaleString()} kg</strong>}<td><td class="winning">減少 ${c.carbonSaved.toLocaleString()} kg (${c.reductionPct}%)</td>  </tr>
                         </tbody>
                     </table>
                 </div>
@@ -431,9 +448,9 @@
                 <div class="result-box">
                     <h3>🚸 人命價值 (VSL) 階段分析</h3>
                     <table class="comparison-table">
-                        <thead><tr><th>藍色公路使用率</th><th>減少死亡事故肇事率</th><th>節省人命價值成本</th> </tr></thead>
+                        <thead><tr><th>藍色公路使用率</th><th>減少死亡事故肇事率</th><th>節省人命價值成本</th> </thead>
                         <tbody>
-                            <tr>}<td>${Math.round(c.utilization)}%</td><td>${(c.utilization * 0.0061).toFixed(3)}%</td><td class="winning">NT$ ${c.vslSaved.toLocaleString()}</td> </tr>
+                            <tr>}<td><strong>${Math.round(c.utilization)}%</strong></td>}<td><strong>${(c.utilization * 0.0061).toFixed(3)}%</strong></td><td class="winning"><strong>NT$ ${c.vslSaved.toLocaleString()}</strong></td> </tr>
                             <tr><td colspan="3" style="font-size:0.85rem">※ 資料來源：本研究彙整 (參考交通部運研所 VSL 研究模型)</td> </tr>
                         </tbody>
                     </table>
@@ -463,7 +480,6 @@
                 displayShips(shipsData);
             } catch(err) {
                 console.error("載入船班失敗:", err);
-                // 顯示模擬船班
                 displayShips([
                     {voyage_no:"LC1021", ship_name:"立昌輪", sailing_date:"2026-05-20", sailing_day:"Tuesday", capacity:1618, remaining:1098, utilization:32, eta_time:"2026-05-21 08:00:00", dynamic_price:12000, is_cutoff_passed:false},
                     {voyage_no:"LC1022", ship_name:"立昌輪", sailing_date:"2026-05-23", sailing_day:"Friday", capacity:1618, remaining:238, utilization:85, eta_time:"2026-05-24 08:00:00", dynamic_price:15000, is_cutoff_passed:false}
