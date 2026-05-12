@@ -236,10 +236,17 @@ def api_traffic():
 
 @app.route("/api/ships/<route_key>")
 def get_ships(route_key):
-    """取得航線所有船班艙位資訊"""
+    """取得航線所有船班艙位資訊 - 含錯誤處理"""
     from services.booking_service import get_all_ships_summary
-    ships = get_all_ships_summary(route_key)
-    return jsonify(ships)
+    
+    try:
+        ships = get_all_ships_summary(route_key)
+        return jsonify(ships)
+    except Exception as e:
+        print(f"SHIP API ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "success": False}), 500
 
 @app.route("/api/booking-summary")
 def booking_summary():
