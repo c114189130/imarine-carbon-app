@@ -266,7 +266,7 @@ def book_ship():
     
     result = book_capacity(route_key, sailing_date, containers, company_name, cargo_type, contact_person, phone)
     
-    # 🔥 訂艙成功時，同時寫入歷史記錄
+    # 訂艙成功時，同時寫入歷史記錄
     if result.get("success"):
         # 取得航線名稱
         if route_key == "KHH-TXG":
@@ -274,14 +274,12 @@ def book_ship():
         else:
             start, end = "台中港", "高雄港"
         
-        # 計算碳排
         distance = 215
         road_carbon = 0.06 * distance * containers
         sea_carbon = 0.02 * distance * containers
         carbon_improvement = road_carbon - sea_carbon
         reduction_pct = (carbon_improvement / road_carbon * 100) if road_carbon > 0 else 0
         
-        # 建立歷史記錄（這才是顯示在歷史記錄表格的資料）
         history_record = {
             "id": result["booking_id"],
             "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -300,11 +298,27 @@ def book_ship():
             "sea_total": 0
         }
         save_history(history_record)
-        
-        # 同時也儲存訂艙記錄到 booking.json
-        # book_capacity 已經做了，這裡不需要重複
     
-    return jsonify(result)
+    # 🔥 確保回傳前端需要的所有欄位
+    return jsonify({
+        "success": result.get("success", False),
+        "booking_id": result.get("booking_id", ""),
+        "ship_name": result.get("ship_name", "立昌輪"),
+        "voyage_no": result.get("voyage_no", ""),
+        "sailing_date": result.get("sailing_date", sailing_date),
+        "sailing_day": result.get("sailing_day", ""),
+        "containers": result.get("containers", containers),
+        "cargo_type": result.get("cargo_type", cargo_type),
+        "remaining": result.get("remaining", 0),
+        "capacity": result.get("capacity", 1618),
+        "utilization": result.get("utilization", 0),
+        "unit_price": result.get("unit_price", 12000),
+        "total_price": result.get("total_price", 0),
+        "eta_port": result.get("eta_port", ""),
+        "eta_time": result.get("eta_time", "航行中"),
+        "port_congestion": result.get("port_congestion", "順暢"),
+        "error": result.get("error")
+    })
 
 @app.route("/calculate", methods=["POST"])
 def calculate():

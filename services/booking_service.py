@@ -72,25 +72,10 @@ def get_all_ships_summary(route_key):
     route_data = ships_data.get(route_key, {}).get("ships", [])
     summary = []
     for ship in route_data:
-        # 正確計算剩餘艙位
         remaining = ship["capacity_teu"] - ship["market_booked_teu"] - ship.get("user_booked_teu", 0)
         if remaining < 0:
             remaining = 0
-        
         utilization = round((ship["capacity_teu"] - remaining) / ship["capacity_teu"] * 100, 1) if ship["capacity_teu"] > 0 else 0
-        
-        # 檢查 Cut-off
-        cutoff_time = ship.get("cutoff_time", "")
-        is_cutoff_passed = False
-        if cutoff_time:
-            try:
-                cutoff_dt = datetime.strptime(cutoff_time, "%Y-%m-%d %H:%M:%S")
-                is_cutoff_passed = datetime.now() > cutoff_dt
-            except:
-                pass
-        
-        port_congestion = get_port_congestion(ship.get("eta_port", route_key[:3]))
-        
         summary.append({
             "voyage_no": ship["voyage_no"],
             "ship_name": ship["ship_name"],
@@ -103,10 +88,9 @@ def get_all_ships_summary(route_key):
             "user_booked": ship.get("user_booked_teu", 0),
             "eta_port": ship.get("eta_port", ""),
             "eta_time": ship.get("eta_time", ""),
-            "cutoff_time": cutoff_time,
-            "is_cutoff_passed": is_cutoff_passed,
+            "cutoff_time": ship.get("cutoff_time", ""),
             "dynamic_price": calculate_dynamic_price(12000, utilization),
-            "port_congestion": port_congestion
+            "port_congestion": get_port_congestion(ship.get("eta_port", route_key[:3]))
         })
     return summary
 
@@ -182,14 +166,17 @@ def get_upcoming_ships(days_ahead=30):
 
 def get_booking_summary():
     bookings = load_bookings()
+    total_bookings = len(bookings)
+    total_containers = sum(b.get("containers", 0) for b in bookings)
+    total_revenue = sum(b.get("total_price", 0) for b in bookings)
     cargo_stats = {"normal": 0, "reefer": 0, "dangerous": 0}
     for b in bookings:
         ct = b.get("cargo_type", "normal")
         cargo_stats[ct] = cargo_stats.get(ct, 0) + b.get("containers", 0)
     return {
-        "total_bookings": len(bookings),
-        "total_containers": sum(b.get("containers", 0) for b in bookings),
-        "total_revenue": sum(b.get("total_price", 0) for b in bookings),
+        "total_bookings": total_bookings,
+        "total_containers": total_containers,
+        "total_revenue": total_revenue,
         "cargo_stats": cargo_stats
     }
 
@@ -198,14 +185,13 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
     with _booking_lock:
         ships_data = load_ships_data()
         
-        # 找到目標船班
         target_ship = None
-        target_route_key = None
+        target_route_name = None
         for rk, rd in ships_data.items():
             for ship in rd.get("ships", []):
                 if ship["sailing_date"] == sailing_date:
                     target_ship = ship
-                    target_route_key = rk
+                    target_route_name = rd.get("route_name", rk)
                     break
             if target_ship:
                 break
@@ -213,7 +199,6 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
         if not target_ship:
             return {"success": False, "error": f"找不到 {sailing_date} 的船班"}
         
-        # 檢查 Cut-off
         cutoff_time = target_ship.get("cutoff_time", "")
         if cutoff_time:
             try:
@@ -223,7 +208,6 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
             except:
                 pass
         
-        # 計算當前剩餘艙位
         current_remaining = target_ship["capacity_teu"] - target_ship["market_booked_teu"] - target_ship.get("user_booked_teu", 0)
         if current_remaining < 0:
             current_remaining = 0
@@ -238,10 +222,8 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
                 "remaining": current_remaining
             }
         
-        # 更新用戶預訂量
         target_ship["user_booked_teu"] = target_ship.get("user_booked_teu", 0) + containers
         
-        # 重新計算剩餘
         new_remaining = target_ship["capacity_teu"] - target_ship["market_booked_teu"] - target_ship["user_booked_teu"]
         if new_remaining < 0:
             new_remaining = 0
@@ -249,22 +231,26 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
         utilization = round((target_ship["capacity_teu"] - new_remaining) / target_ship["capacity_teu"] * 100, 1)
         dynamic_price = calculate_dynamic_price(12000, utilization)
         
-        # 儲存更新
         save_ships_data(ships_data)
         
-        # 記錄訂票
         booking = {
             "booking_id": f"BK-{datetime.now().strftime('%Y%m%d%H%M%S')}",
             "booking_time": datetime.now().isoformat(),
             "company_name": company_name,
             "contact_person": contact_person,
             "phone": phone,
-            "route_key": target_route_key,
+            "route_key": rk,
+            "route_name": target_route_name,
             "sailing_date": sailing_date,
+            "sailing_day": target_ship.get("sailing_day", ""),
+            "voyage_no": target_ship.get("voyage_no", ""),
+            "ship_name": target_ship.get("ship_name", ""),
             "containers": containers,
             "cargo_type": cargo_type,
             "unit_price": dynamic_price,
             "total_price": dynamic_price * containers,
+            "eta_port": target_ship.get("eta_port", ""),
+            "eta_time": target_ship.get("eta_time", ""),
             "status": "confirmed"
         }
         bookings = load_bookings()
@@ -274,10 +260,19 @@ def book_capacity(route_key, sailing_date, containers, company_name, cargo_type=
         return {
             "success": True,
             "booking_id": booking["booking_id"],
+            "ship_name": target_ship.get("ship_name", "立昌輪"),
+            "voyage_no": target_ship.get("voyage_no", ""),
+            "sailing_date": sailing_date,
+            "sailing_day": target_ship.get("sailing_day", ""),
+            "containers": containers,
+            "cargo_type": cargo_type,
             "remaining": new_remaining,
             "capacity": target_ship["capacity_teu"],
             "utilization": utilization,
             "unit_price": dynamic_price,
             "total_price": dynamic_price * containers,
+            "eta_port": target_ship.get("eta_port", ""),
+            "eta_time": target_ship.get("eta_time", "航行中"),
+            "port_congestion": "順暢",
             "message": f"成功預訂 {containers} TEU，剩餘 {new_remaining} TEU"
         }
