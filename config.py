@@ -10,11 +10,6 @@ DATA_DIR.mkdir(exist_ok=True)
 APP_TITLE = "iMarine 智慧海運碳排管理系統"
 SECRET_KEY = "change-me-in-production"
 
-# 在 config.py 中加入艙位設定
-TOTAL_CAPACITY_TEU = 1700  # 總艙位 1700 TEU
-REMAINING_CAPACITY_TEU = 566  # 剩餘約 1/3
-
-# TDX API 憑證（請填入你的）
 TDX_CLIENT_ID = "你的App ID"
 TDX_CLIENT_SECRET = "你的App Key"
 
@@ -23,7 +18,6 @@ TRANSPORT_COST_RATES = {"road": 60, "sea": 24}
 RISK_COST_RATES = {"road": 1.36, "sea": 0.18}
 SOCIAL_COST_RATES = {"road": 3.70, "sea": 0.64}
 SOCIAL_COST_OF_CARBON = 10.0
-TIME_VALUE_PER_HOUR = 57
 ROAD_SPEED_KMH = 60
 SEA_SPEED_KMH = 46
 PORT_HANDLING_EMISSION_PER_CONTAINER = 8.0
@@ -39,8 +33,3 @@ PORTS = {
 HISTORY_FILE = DATA_DIR / "history.json"
 CERTIFICATE_FILE = DATA_DIR / "certificates.json"
 SCHEDULE_FILE = DATA_DIR / "evergreen_schedule.json"
-
-DEFAULT_SCHEDULE = {
-    "KHH": {"port_name": "高雄港", "ships": [{"name": "Evergreen TBS2", "eta_hours": 18, "available": 320, "destination": "台中港", "route": "TBS2", "eta": "FRI"}]},
-    "TXG": {"port_name": "台中港", "ships": [{"name": "Evergreen TBS", "eta_hours": 24, "available": 560, "destination": "高雄港", "route": "TBS", "eta": "THU"}]},
-}
