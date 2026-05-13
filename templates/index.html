@@ -6,7 +6,6 @@
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* ================= 現有樣式 ================= */
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -32,8 +31,8 @@
         .step-number { width: 30px; height: 30px; background: #0077b6; color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
         .step.active .step-number { background: white; color: #0077b6; }
         
-        /* 公路通暢度卡片 */
-        .traffic-card {
+        /* 即時資訊卡片 */
+        .info-card {
             background: rgba(255,255,255,0.95);
             border-radius: 20px;
             padding: 1rem 1.5rem;
@@ -59,7 +58,6 @@
         .traffic-light.red { background: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
         .traffic-speed { font-size: 1.2rem; font-weight: bold; }
         
-        /* 船期公告 */
         .schedule-card {
             background: rgba(255,255,255,0.95);
             border-radius: 20px;
@@ -71,8 +69,10 @@
             justify-content: space-between;
             padding: 0.5rem 0;
             border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
         }
         .schedule-item:last-child { border-bottom: none; }
+        .schedule-voyage { font-weight: bold; color: #0077b6; }
         
         .result-box { background: #f0f8ff; border-radius: 15px; padding: 1.5rem; margin: 1rem 0; }
         .sea-recommend { background: #d4edda; border-left: 5px solid #27ae60; }
@@ -138,7 +138,6 @@
             box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
-            transition: all 0.3s;
             margin-bottom: 12px;
         }
         .assistant-header {
@@ -251,24 +250,26 @@
             <div class="floating-ship">🚢</div>
             <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
             <div style="color:white; margin-top:0.5rem">🤖 藍色公路 vs 內陸運輸 | 📊 碳排比較 | 🚢 即時船期與訂艙</div>
+            <div style="color:rgba(255,255,255,0.7); margin-top:0.5rem; font-size:0.8rem">🌱 行政院藍色公路政策 · 減碳 · 減事故 · 減成本</div>
         </div>
 
-        <!-- 公路通暢度即時顯示 -->
-        <div class="traffic-card" id="trafficCard">
+        <!-- ================= 公路通暢度 + 船期 API ================= -->
+        <div class="info-card">
             <div class="traffic-status">
                 <div class="traffic-light green" id="trafficLight"></div>
                 <span id="trafficText">載入中...</span>
             </div>
             <div class="traffic-speed" id="trafficSpeed">-- km/h</div>
-            <div id="trafficTime">更新時間: --</div>
+            <div id="trafficTime" style="font-size:0.7rem; color:#666">更新時間: --</div>
         </div>
 
-        <!-- 船期公告 -->
-        <div class="schedule-card" id="scheduleCard">
-            <div style="font-weight:bold; margin-bottom:0.5rem">🚢 藍色公路船期公告 (UNI-PROSPER)</div>
+        <div class="schedule-card">
+            <div style="font-weight:bold; margin-bottom:0.5rem">🚢 藍色公路船期 (UNI-PROSPER)</div>
             <div id="scheduleList">載入中...</div>
+            <div style="font-size:0.7rem; color:#999; margin-top:0.5rem; text-align:center">※ 船期可能變動，請以官方公告為準</div>
         </div>
 
+        <!-- 步驟指示器 -->
         <div class="step-container">
             <div class="step" id="step1" onclick="backToStep1()">
                 <div class="step-number">1</div>
@@ -362,9 +363,9 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>長榮海運 TBS/TBS2 航線</li><li>UNI-PROSPER 船期表</li><li>本研究彙整</li></ul></div>
+            <div class="footer-section"><h4>📊 資料來源</h4><ul><li>交通部 TDX 即時路況 API</li><li>UNI-PROSPER 船期表</li><li>臺灣港務公司費率表</li><li>本研究彙整</li></ul></div>
         </div>
-        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System</p></div>
+        <div class="footer-bottom"><p>© 2025 iMarine Carbon Management System | 行政院藍色公路政策推動</p></div>
     </footer>
 
     <script>
@@ -381,11 +382,9 @@
         const ROAD_CARBON_FEE_PER_FEU = 78.21;
         const CARBON_PRICE = 0.3;
         
-        // 運輸時間 (天數) - 根據真實船期
         const SEA_TRANSIT_DAYS = 6;
         const ROAD_TRANSIT_DAYS = 1;
         
-        // VSL 階段數據
         const VSL_STAGES = {
             10: 408700, 15: 613050, 20: 817400, 25: 1021750, 30: 1226100,
             35: 1430450, 40: 1634800, 45: 1839150, 50: 2043500, 55: 2247850,
@@ -396,10 +395,7 @@
         function getVSLByUtilization(utilization) {
             const keys = Object.keys(VSL_STAGES).map(Number).sort((a,b) => a - b);
             let closest = keys[0];
-            for (let k of keys) {
-                if (k <= utilization) closest = k;
-                else break;
-            }
+            for (let k of keys) if (k <= utilization) closest = k;
             return VSL_STAGES[closest] || VSL_STAGES[10];
         }
         
@@ -415,14 +411,12 @@
             return arrivalDate;
         }
         
-        function formatDate(date) {
-            return date.toISOString().split('T')[0];
-        }
+        function formatDate(date) { return date.toISOString().split('T')[0]; }
         
         // ================= 即時路況與船期 =================
         async function loadTrafficAndSchedule() {
             try {
-                // 載入路況
+                // 載入即時路況
                 const trafficRes = await fetch('/api/traffic');
                 const trafficData = await trafficRes.json();
                 if (trafficData && trafficData.length > 0) {
@@ -440,20 +434,22 @@
             } catch(e) { console.error("載入路況失敗:", e); }
             
             try {
-                // 載入船期 (使用模擬資料)
-                const scheduleDiv = document.getElementById('scheduleList');
+                // 載入船期 (UNI-PROSPER 真實船班)
                 const schedules = [
                     { voyage: "UNI-PROSPER 0728-512B",高雄: "5/13",台中: "5/16",台北: "5/19" },
                     { voyage: "UNI-PROSPER 0729-513B",高雄: "5/20",台中: "5/23",台北: "5/26" },
                     { voyage: "UNI-PROSPER 0730-514B",高雄: "5/27",台中: "5/30",台北: "6/01" },
-                    { voyage: "UNI-PROSPER 0731-515B",高雄: "6/03",台中: "6/06",台北: "6/09" }
+                    { voyage: "UNI-PROSPER 0731-515B",高雄: "6/03",台中: "6/06",台北: "6/09" },
+                    { voyage: "UNI-PROSPER 0732-516B",高雄: "6/10",台中: "6/13",台北: "6/16" },
+                    { voyage: "UNI-PROSPER 0733-517B",高雄: "6/17",台中: "6/21",台北: "6/23" },
+                    { voyage: "UNI-PROSPER 0734-518B",高雄: "6/25",台中: "6/28",台北: "6/30" }
                 ];
-                let html = '<div style="display:flex; flex-wrap:wrap; gap:0.5rem; font-size:0.8rem">';
+                let html = '<div style="display:flex; flex-direction:column; gap:0.3rem">';
                 schedules.forEach(s => {
-                    html += `<div style="background:#e8f4f8; padding:0.3rem 0.6rem; border-radius:8px">🚢 ${s.voyage}<br>📅 高雄:${s.高雄} 台中:${s.台中} 台北:${s.台北}</div>`;
+                    html += `<div class="schedule-item"><span class="schedule-voyage">🚢 ${s.voyage}</span><span>📅 高雄:${s.高雄} 台中:${s.台中} 台北:${s.台北}</span></div>`;
                 });
                 html += '</div>';
-                scheduleDiv.innerHTML = html;
+                document.getElementById('scheduleList').innerHTML = html;
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
@@ -487,7 +483,6 @@
             
             const seaArrivalDate = calculateSeaArrivalDate(departureDate);
             const roadArrivalDate = calculateRoadArrivalDate(departureDate);
-            
             const seaFeasible = seaArrivalDate <= arrivalRequirement;
             const roadFeasible = roadArrivalDate <= arrivalRequirement;
             
@@ -517,7 +512,7 @@
             }
             else if (!seaFeasible && roadFeasible) {
                 recommendMode = "road"; selectedMode = "road"; trafficLight = "🔴";
-                recommendation = `海運無法在 ${arrivalRequirementStr} 前送達 (需 ${SEA_TRANSIT_DAYS} 天)，建議改走內陸運輸`;
+                recommendation = `海運無法在 ${arrivalRequirementStr} 前送達 (需 ${SEA_TRANSIT_DAYS} 天)`;
                 reasons.push(`⏰ 海運需 ${SEA_TRANSIT_DAYS} 天，預計 ${formatDate(seaArrivalDate)} 到港`);
                 reasons.push(`✅ 公路僅需 ${ROAD_TRANSIT_DAYS} 天`);
             }
@@ -568,41 +563,19 @@
             const c = currentComparison;
             let detailHtml = '';
             if (c.selectedMode === 'sea') {
-                detailHtml = `
-                    <div class="detail-card">
-                        <div class="detail-title">🚢 藍色公路 運輸明細</div>
-                        <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
-                        <div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${c.seaCost.toLocaleString()}</span></div>
-                        <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.seaCarbon.toLocaleString()} kg</span></div>
-                        <div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${c.seaTransitDays} 天</span></div>
-                        <div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${c.seaArrivalDate}</span></div>
-                    </div>
-                `;
+                detailHtml = `<div class="detail-card"><div class="detail-title">🚢 藍色公路 運輸明細</div><div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div><div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${c.seaCost.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.seaCarbon.toLocaleString()} kg</span></div><div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${c.seaTransitDays} 天</span></div><div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${c.seaArrivalDate}</span></div></div>`;
             } else {
-                detailHtml = `
-                    <div class="detail-card">
-                        <div class="detail-title">🚛 內陸運輸 運輸明細</div>
-                        <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
-                        <div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${c.roadCost.toLocaleString()}</span></div>
-                        <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.roadCarbon.toLocaleString()} kg</span></div>
-                        <div class="detail-row"><span class="detail-label">💰 碳排費用</span><span class="detail-value">NT$ ${c.roadCarbonFee.toLocaleString()}</span></div>
-                        <div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${c.roadTransitDays} 天</span></div>
-                        <div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${c.roadArrivalDate}</span></div>
-                    </div>
-                `;
+                detailHtml = `<div class="detail-card"><div class="detail-title">🚛 內陸運輸 運輸明細</div><div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div><div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${c.roadCost.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.roadCarbon.toLocaleString()} kg</span></div><div class="detail-row"><span class="detail-label">💰 碳排費用</span><span class="detail-value">NT$ ${c.roadCarbonFee.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${c.roadTransitDays} 天</span></div><div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${c.roadArrivalDate}</span></div></div>`;
             }
             
             let html = `
                 <div class="result-box ${c.recommendMode === 'sea' ? 'sea-recommend' : 'road-recommend'}">
                     <h3>🤖 AI 比較分析結果</h3>
-                    <div style="display:flex; align-items:center; gap:1rem"><div style="font-size:2rem">${c.trafficLight}</div><div><strong>綜合評價：</strong> ${c.recommendMode === 'sea' ? '✅ 建議採藍色公路' : '⚠️ 建議採內陸運輸'}</div></div>
+                    <div style="display:flex; align-items:center; gap:1rem"><div style="font-size:2rem">${c.trafficLight || '🟢'}</div><div><strong>綜合評價：</strong> ${c.recommendMode === 'sea' ? '✅ 建議採藍色公路' : '⚠️ 建議採內陸運輸'}</div></div>
                     <p><strong>💡 決策說明：</strong><br>${c.recommendation}</p>
                 </div>
                 ${detailHtml}
-                <div class="result-box">
-                    <h3>📝 決策理由詳解</h3>
-                    <ul>${c.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
-                </div>
+                <div class="result-box"><h3>📝 決策理由詳解</h3><ul>${c.reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>
             `;
             document.getElementById('comparisonResult').innerHTML = html;
         }
@@ -618,8 +591,8 @@
                 displayShips(shipsData);
             } catch(err) {
                 displayShips([
-                    {voyage_no:"LC1021", ship_name:"立昌輪", sailing_date:"2026-05-20", sailing_day:"Tuesday", capacity:1618, remaining:1098, utilization:32, eta_time:"2026-05-21 08:00:00", dynamic_price:12000},
-                    {voyage_no:"LC1022", ship_name:"立昌輪", sailing_date:"2026-05-23", sailing_day:"Friday", capacity:1618, remaining:238, utilization:85, eta_time:"2026-05-24 08:00:00", dynamic_price:15000}
+                    {voyage_no:"LC1021", ship_name:"立昌輪", sailing_date:"2026-05-20", sailing_day:"Tuesday", capacity:1618, remaining:1098, utilization:32, dynamic_price:12000},
+                    {voyage_no:"LC1022", ship_name:"立昌輪", sailing_date:"2026-05-23", sailing_day:"Friday", capacity:1618, remaining:238, utilization:85, dynamic_price:15000}
                 ]);
             }
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -638,7 +611,7 @@
                 const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
                 html += `
                     <div class="ship-card" onclick="selectShip('${ship.sailing_date}', ${ship.remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
-                        <div style="display:flex; justify-content:space-between"><div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div><div>📅 ${ship.sailing_date}</div></div>
+                        <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no}) 📅 ${ship.sailing_date}</div>
                         <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
                         <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU (${fillPercent}%)</div>
                         <div>💰 運價：NT$ ${ship.dynamic_price?.toLocaleString() || 12000} / FEU</div>
@@ -677,9 +650,8 @@
             });
             const result = await response.json();
             if (result.success) {
-                const successMsg = `✅ 訂艙完成！\n\n📅 船班日期：${result.sailing_date}\n📦 艙位數量：${result.containers} FEU\n🔢 訂位編號：${result.booking_id}\n💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}\n\n📌 艙位已保留，請於截止時間前完成後續作業。`;
-                alert(successMsg);
-                addAssistantMessage(successMsg);
+                alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
+                addAssistantMessage(`✅ 訂艙完成！📅 ${result.sailing_date} 📦 ${result.containers} FEU 已保留，訂位編號：${result.booking_id}`);
                 location.reload();
             } else {
                 alert(`❌ 訂艙失敗：${result.error}`);
@@ -701,14 +673,13 @@
             document.getElementById('step3Panel').style.display = 'none';
         }
         
-        // ================= 小助理功能 =================
+        // 小助理功能
         let isChatOpen = false;
         function toggleAssistantChat() {
             const chat = document.getElementById('assistantChat');
-            if (chat.style.display === 'none') { chat.style.display = 'block'; isChatOpen = true; }
-            else { chat.style.display = 'none'; isChatOpen = false; }
+            chat.style.display = chat.style.display === 'none' ? 'block' : 'none';
         }
-        function closeAssistant() { document.getElementById('assistantChat').style.display = 'none'; isChatOpen = false; }
+        function closeAssistant() { document.getElementById('assistantChat').style.display = 'none'; }
         function addAssistantMessage(text, isUser = false) {
             const container = document.getElementById('assistantMessages');
             const div = document.createElement('div');
@@ -727,8 +698,8 @@
             const lowerMsg = msg.toLowerCase();
             let reply = '';
             if (lowerMsg.includes('船班')) reply = '📅 最近船班：UNI-PROSPER 0729-513B，5/20 高雄出發，5/23 抵達台中，5/26 抵達台北。';
-            else if (lowerMsg.includes('成本')) reply = `💰 單一FEU成本：藍色公路 NT$ ${SEA_COST_PER_FEU.toLocaleString()}，內陸運輸 NT$ ${ROAD_COST_PER_FEU.toLocaleString()}，藍色公路節省 NT$ ${(ROAD_COST_PER_FEU - SEA_COST_PER_FEU).toLocaleString()}`;
-            else if (lowerMsg.includes('碳排')) reply = `🌱 碳排比較：藍色公路 ${SEA_CARBON_PER_FEU} kg/FEU，內陸運輸 ${ROAD_CARBON_PER_FEU} kg/FEU，減少 ${ROAD_CARBON_PER_FEU - SEA_CARBON_PER_FEU} kg/FEU`;
+            else if (lowerMsg.includes('成本')) reply = `💰 單一FEU成本：藍色公路 NT$ ${SEA_COST_PER_FEU.toLocaleString()}，內陸運輸 NT$ ${ROAD_COST_PER_FEU.toLocaleString()}`;
+            else if (lowerMsg.includes('碳排')) reply = `🌱 碳排比較：藍色公路 ${SEA_CARBON_PER_FEU} kg/FEU，內陸運輸 ${ROAD_CARBON_PER_FEU} kg/FEU`;
             else reply = '您好！請問需要什麼協助？試試問「船班」、「成本」、「碳排」、「推薦」等關鍵字。';
             setTimeout(() => addAssistantMessage(reply), 300);
         }
