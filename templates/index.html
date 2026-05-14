@@ -43,16 +43,8 @@
             flex-wrap: wrap;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .traffic-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .traffic-light {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-        }
+        .traffic-status { display: flex; align-items: center; gap: 0.5rem; }
+        .traffic-light { width: 16px; height: 16px; border-radius: 50%; }
         .traffic-light.green { background: #27ae60; box-shadow: 0 0 5px #27ae60; }
         .traffic-light.yellow { background: #f39c12; box-shadow: 0 0 5px #f39c12; }
         .traffic-light.red { background: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
@@ -293,7 +285,7 @@
             <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="dangerous">危險品/特殊貨物</option></select></div>
             <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-20"></div>
-            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate" value="2026-05-28"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 6 天，內陸運輸約需 1 天</p></div>
+            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate" value="2026-05-25"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 藍色公路 vs 內陸運輸 分析</button>
         </div>
 
@@ -382,7 +374,8 @@
         const ROAD_CARBON_FEE_PER_FEU = 78.21;
         const CARBON_PRICE = 0.3;
         
-        const SEA_TRANSIT_DAYS = 6;
+        // 🔥 運輸時間 (天數) - 海運改為 5 天
+        const SEA_TRANSIT_DAYS = 5;
         const ROAD_TRANSIT_DAYS = 1;
         
         const VSL_STAGES = {
@@ -402,6 +395,10 @@
         function calculateSeaArrivalDate(departureDate) {
             const arrivalDate = new Date(departureDate);
             arrivalDate.setDate(arrivalDate.getDate() + SEA_TRANSIT_DAYS);
+            // 假日調整
+            const dayOfWeek = arrivalDate.getDay();
+            if (dayOfWeek === 6) arrivalDate.setDate(arrivalDate.getDate() + 2);
+            if (dayOfWeek === 0) arrivalDate.setDate(arrivalDate.getDate() + 1);
             return arrivalDate;
         }
         
@@ -416,7 +413,6 @@
         // ================= 即時路況與船期 =================
         async function loadTrafficAndSchedule() {
             try {
-                // 載入即時路況
                 const trafficRes = await fetch('/api/traffic');
                 const trafficData = await trafficRes.json();
                 if (trafficData && trafficData.length > 0) {
@@ -434,7 +430,6 @@
             } catch(e) { console.error("載入路況失敗:", e); }
             
             try {
-                // 載入船期 (UNI-PROSPER 真實船班)
                 const schedules = [
                     { voyage: "UNI-PROSPER 0728-512B",高雄: "5/13",台中: "5/16",台北: "5/19" },
                     { voyage: "UNI-PROSPER 0729-513B",高雄: "5/20",台中: "5/23",台北: "5/26" },
