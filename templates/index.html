@@ -246,6 +246,7 @@
             <div style="color:white; margin-top:0.5rem">🤖 藍色公路 vs 內陸運輸 | 📊 碳排比較 | 🚢 即時船期與訂艙</div>
         </div>
 
+        <!-- 公路通暢度 -->
         <div class="info-card">
             <div class="traffic-status">
                 <div class="traffic-light green" id="trafficLight"></div>
@@ -255,12 +256,14 @@
             <div id="trafficTime" style="font-size:0.7rem; color:#666">更新時間: --</div>
         </div>
 
+        <!-- 船期表 -->
         <div class="schedule-card">
             <div style="font-weight:bold; margin-bottom:0.5rem">🚢 藍色公路船期 (UNI-PROSPER)</div>
             <div id="scheduleList">載入中...</div>
             <div style="font-size:0.7rem; color:#999; margin-top:0.5rem; text-align:center">※ 船期可能變動，請以官方公告為準</div>
         </div>
 
+        <!-- 步驟指示器 -->
         <div class="step-container">
             <div class="step" id="step1" onclick="backToStep1()">
                 <div class="step-number">1</div>
@@ -276,6 +279,7 @@
             </div>
         </div>
 
+        <!-- 步驟 1 -->
         <div id="step1Panel" class="card">
             <h3>📦 貨櫃運輸需求</h3>
             <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
@@ -287,14 +291,17 @@
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 藍色公路 vs 內陸運輸 分析</button>
         </div>
 
+        <!-- 步驟 2 -->
         <div id="step2Panel" style="display:none">
             <div id="comparisonResult"></div>
             <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem">
                 <button class="btn btn-outline" onclick="backToStep1()">← 修改需求</button>
                 <button class="btn btn-primary" id="goToBookingBtn" onclick="goToStep3()" style="display:none">🎟️ 查看船班與訂艙 →</button>
+                <button class="btn btn-warning" id="confirmRoadBtn" onclick="confirmRoadTransport()" style="display:none">🚛 確認採納內陸運輸</button>
             </div>
         </div>
 
+        <!-- 步驟 3 -->
         <div id="step3Panel" style="display:none">
             <div class="card">
                 <h3>🚢 藍色公路船班選擇</h3>
@@ -366,11 +373,10 @@
         const SEA_COST_PER_FEU = 2787;
         const ROAD_COST_PER_FEU = 7218;
         
-        // 碳排係數 (kg CO2e / FEU / 航程)
-        // 高雄-台中距離約 215km
+        // 碳排係數 (高雄-台中距離 215km)
         const DISTANCE = 215;
-        const SEA_CARBON_PER_FEU = 0.02 * DISTANCE;   // 0.02 kg/km * 215km = 4.3 kg/FEU
-        const ROAD_CARBON_PER_FEU = 0.06 * DISTANCE;  // 0.06 kg/km * 215km = 12.9 kg/FEU
+        const SEA_CARBON_PER_FEU = 0.02 * DISTANCE;   // 4.3 kg/FEU
+        const ROAD_CARBON_PER_FEU = 0.06 * DISTANCE;  // 12.9 kg/FEU
         
         const ROAD_CARBON_FEE_PER_FEU = 78.21;
         const CARBON_PRICE = 0.3;
@@ -409,17 +415,15 @@
         
         function formatDate(date) { return date.toISOString().split('T')[0]; }
         
-        // 顯示小助理訊息（自動彈出，訊息會保留）
-        function showAssistantMessage(message, isAuto = true) {
+        // 顯示小助理訊息（自動彈出，訊息保留）
+        function showAssistantMessage(message) {
             const chatDiv = document.getElementById('assistantChat');
             const messagesDiv = document.getElementById('assistantMessages');
             
-            // 如果聊天室是關閉的，先顯示它
             if (chatDiv.style.display === 'none') {
                 chatDiv.style.display = 'block';
             }
             
-            // 添加 AI 訊息（保留在對話記錄中）
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ai';
             msgDiv.innerHTML = `<div class="avatar">🤖</div><div class="bubble assistant-notification">${message}</div>`;
@@ -427,6 +431,7 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
         
+        // 載入即時路況與船期
         async function loadTrafficAndSchedule() {
             try {
                 const trafficRes = await fetch('/api/traffic');
@@ -459,6 +464,7 @@
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
+        // AI 比較分析
         async function calculateComparison() {
             const containers = parseInt(document.getElementById('containers').value);
             const cargoType = document.getElementById('cargoType').value;
@@ -473,7 +479,7 @@
             const departureDate = new Date(departureDateStr);
             const arrivalRequirement = new Date(arrivalRequirementStr);
             
-            // 🔥 正確的碳排計算
+            // 碳排計算
             const seaCarbon = SEA_CARBON_PER_FEU * containers;
             const roadCarbon = ROAD_CARBON_PER_FEU * containers;
             const carbonSaved = roadCarbon - seaCarbon;
@@ -563,7 +569,14 @@
             document.getElementById('loadingOverlay').style.display = 'none';
             
             const goToBookingBtn = document.getElementById('goToBookingBtn');
-            goToBookingBtn.style.display = recommendMode === 'sea' ? 'inline-block' : 'none';
+            const confirmRoadBtn = document.getElementById('confirmRoadBtn');
+            if (recommendMode === 'sea') {
+                goToBookingBtn.style.display = 'inline-block';
+                confirmRoadBtn.style.display = 'none';
+            } else {
+                goToBookingBtn.style.display = 'none';
+                confirmRoadBtn.style.display = 'inline-block';
+            }
         }
         
         function displayComparisonResult() {
@@ -585,6 +598,58 @@
                 <div class="result-box"><h3>📝 決策理由詳解</h3><ul>${c.reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>
             `;
             document.getElementById('comparisonResult').innerHTML = html;
+        }
+        
+        // 內陸運輸確認（記錄到歷史）
+        async function confirmRoadTransport() {
+            if (!currentComparison) {
+                alert('請先進行分析');
+                return;
+            }
+            
+            const containers = currentComparison.containers;
+            const start = document.getElementById('start').value;
+            const end = document.getElementById('end').value;
+            const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
+            const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
+            const cargoType = document.getElementById('cargoType').value;
+            
+            const distance = 215;
+            const roadCarbon = 0.06 * distance * containers;
+            const seaCarbon = 0.02 * distance * containers;
+            const carbonImprovement = roadCarbon - seaCarbon;
+            const reductionPct = (carbonImprovement / roadCarbon * 100).toFixed(1);
+            
+            const historyRecord = {
+                id: Date.now().toString(),
+                date: new Date().toISOString(),
+                start: startName,
+                end: endName,
+                containers: containers,
+                cargo_type: cargoType,
+                base_distance: distance,
+                road_carbon: roadCarbon,
+                sea_carbon: seaCarbon,
+                carbon_improvement: carbonImprovement,
+                reduction_pct: reductionPct,
+                best_mode: "內陸運輸",
+                social_savings: 0,
+                road_total: 0,
+                sea_total: 0
+            };
+            
+            const response = await fetch('/save_history_direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(historyRecord)
+            });
+            
+            if (response.ok) {
+                showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 已加入歷史記錄，可至儀表板查看詳細數據。`);
+                alert('✅ 已記錄內陸運輸決策！');
+            } else {
+                alert('❌ 記錄失敗，請稍後再試');
+            }
         }
         
         async function goToStep3() {
@@ -665,7 +730,6 @@
             const result = await response.json();
             
             if (result.success) {
-                // 🔥 小助理訊息（保留在對話記錄中，不跳回首頁）
                 const message = `✅ 訂艙完成！<br><br>
                 🚢 船班：${result.ship_name || '立昌輪'} (${result.voyage_no || ''})<br>
                 📅 開航日期：${result.sailing_date || selectedShip}<br>
@@ -678,7 +742,7 @@
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
                 
-                // 🔥 重新載入船班列表（更新剩餘艙位），但不跳回首頁
+                // 重新載入船班列表，不跳回首頁
                 await goToStep3();
             } else {
                 alert(`❌ 訂艙失敗：${result.error}`);
@@ -701,6 +765,7 @@
         }
         
         // 小助理功能
+        let isChatOpen = false;
         function toggleAssistantChat() {
             const chat = document.getElementById('assistantChat');
             chat.style.display = chat.style.display === 'none' ? 'block' : 'none';
