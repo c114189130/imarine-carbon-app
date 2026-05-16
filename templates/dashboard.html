@@ -53,7 +53,6 @@
         
         .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
         
-        /* Hero 區塊 */
         .hero {
             display: flex;
             justify-content: space-between;
@@ -91,7 +90,6 @@
         }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
         
-        /* KPI 網格 */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -135,7 +133,6 @@
         }
         .kpi-label { font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem; }
         
-        /* 控制中心 */
         .control-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -157,6 +154,19 @@
             width: 100%;
             accent-color: #38bdf8;
         }
+        .control-item button {
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            color: #38bdf8;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .control-item button:hover {
+            background: #38bdf8;
+            color: #020617;
+        }
         .slider-value {
             margin-top: 0.7rem;
             font-size: 1.1rem;
@@ -164,7 +174,6 @@
             color: #38bdf8;
         }
         
-        /* 船隊卡片 */
         .fleet-card {
             background: rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(12px);
@@ -216,7 +225,6 @@
         }
         .status-green { color: #22c55e; font-weight: 600; }
         
-        /* VSL 階段 */
         .vsl-container {
             display: flex;
             flex-wrap: wrap;
@@ -238,7 +246,6 @@
             box-shadow: 0 0 12px #38bdf8;
         }
         
-        /* 運輸統計卡片 */
         .stats-card {
             background: rgba(255, 255, 255, 0.04);
             border-radius: 20px;
@@ -265,6 +272,21 @@
         .sea-fill { background: linear-gradient(90deg, #0077b6, #00b4d8); }
         .road-fill { background: linear-gradient(90deg, #f39c12, #e67e22); }
         
+        .insight-box {
+            background: rgba(56, 189, 248, 0.1);
+            border-left: 4px solid #38bdf8;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
         @media (max-width: 768px) {
             .dashboard-container { padding: 1rem; }
             .kpi-value { font-size: 1.6rem; }
@@ -284,71 +306,78 @@
     </nav>
 
     <div class="dashboard-container">
-        <!-- Hero -->
         <div class="hero">
             <div>
-                <div class="hero-title">⛵ Blue Intelligence Center</div>
-                <div style="font-size:0.85rem; color:#94a3b8;">AI 營運分析 · 即時碳流 · 藍色公路艦隊狀態</div>
+                <div class="hero-title">⛵ 智慧營運分析平台</div>
+                <div style="font-size:0.85rem; color:#94a3b8;">真實歷史數據 · 日期篩選 · AI 即時分析</div>
             </div>
             <div class="live-badge">
                 <div class="live-dot"></div>
-                <span style="font-size: 0.8rem;">即時數據串流</span>
+                <span style="font-size: 0.8rem;">即時數據</span>
             </div>
         </div>
 
-        <!-- ================= AI 模擬控制中心 ================= -->
+        <!-- 日期篩選控制區 -->
         <div class="fleet-card">
-            <div class="section-title">🎛️ AI 模擬控制中心</div>
+            <div class="section-title">📅 資料時間篩選</div>
             <div class="control-grid">
                 <div class="control-item">
-                    <label>📦 貨櫃量</label>
-                    <input type="range" id="containerSlider" min="500" max="10000" value="3200">
-                    <div class="slider-value"><span id="containerValue">3200</span> FEU</div>
+                    <label>開始日期</label>
+                    <input type="date" id="startDate">
                 </div>
                 <div class="control-item">
-                    <label>🚢 海運比例</label>
-                    <input type="range" id="seaRatioSlider" min="10" max="95" value="72">
-                    <div class="slider-value"><span id="seaRatioValue">72</span> %</div>
+                    <label>結束日期</label>
+                    <input type="date" id="endDate">
                 </div>
                 <div class="control-item">
-                    <label>📈 艙位使用率</label>
-                    <input type="range" id="utilSlider" min="30" max="98" value="81">
-                    <div class="slider-value"><span id="utilValue">81</span> %</div>
-                </div>
-                <div class="control-item">
-                    <label>💎 碳價</label>
-                    <input type="range" id="carbonSlider" min="200" max="1200" value="390">
-                    <div class="slider-value">NT$ <span id="carbonValue">390</span>/噸</div>
+                    <label>快速篩選</label>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button onclick="quickFilter(3)">近3天</button>
+                        <button onclick="quickFilter(7)">近7天</button>
+                        <button onclick="quickFilter(30)">整月</button>
+                        <button onclick="resetFilter()">全部</button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- KPI 卡片 -->
-        <div class="kpi-grid" id="kpiGrid">
-            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🌿</span><span class="kpi-trend" id="carbonTrend">+0%</span></div><div class="kpi-value" id="totalReduction">--</div><div class="kpi-label">總減碳量 (kg CO₂e)</div></div>
-            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">💎</span><span class="kpi-trend">碳權價值</span></div><div class="kpi-value" id="carbonCredit">--</div><div class="kpi-label">碳權價值 (NTD)</div></div>
-            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">📦</span><span class="kpi-trend" id="containerTrend">+0%</span></div><div class="kpi-value" id="totalContainers">--</div><div class="kpi-label">總處理貨櫃量 (FEU)</div></div>
-            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🚢</span><span class="kpi-trend">藍色公路使用率</span></div><div class="kpi-value" id="seaRate">--%</div><div class="kpi-label">低碳航線滲透率</div></div>
+        <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🌿</span><span class="kpi-trend" id="carbonTrend">+0%</span></div><div class="kpi-value" id="totalReduction">0</div><div class="kpi-label">總減碳量 (kg CO₂e)</div></div>
+            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">💎</span><span class="kpi-trend">碳權價值</span></div><div class="kpi-value" id="carbonCredit">0</div><div class="kpi-label">碳權價值 (NTD)</div></div>
+            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">📦</span><span class="kpi-trend" id="containerTrend">+0%</span></div><div class="kpi-value" id="totalContainers">0</div><div class="kpi-label">總處理貨櫃量 (FEU)</div></div>
+            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🚢</span><span class="kpi-trend">藍色公路使用率</span></div><div class="kpi-value" id="seaRate">0%</div><div class="kpi-label">低碳航線滲透率</div></div>
         </div>
 
-        <!-- 一個月運輸統計 -->
+        <!-- 運輸統計 + 圓餅圖 -->
         <div class="fleet-card">
-            <div class="section-title">📊 運輸模擬統計</div>
+            <div class="section-title">📊 運輸模式分析</div>
             <div class="stats-card">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                     <span>🚢 藍色公路運輸量</span>
-                    <span id="seaVolumeTotal" class="status-green">-- FEU</span>
+                    <span id="seaVolumeTotal" class="status-green">0 FEU</span>
                 </div>
-                <div class="stat-bar"><div id="seaBarFill" class="stat-bar-fill sea-fill" style="width:0%">--</div></div>
+                <div class="stat-bar"><div id="seaBarFill" class="stat-bar-fill sea-fill" style="width:0%">0%</div></div>
                 <div style="display: flex; justify-content: space-between; margin-top: 0.8rem; margin-bottom: 0.5rem;">
                     <span>🚛 內陸運輸量</span>
-                    <span id="roadVolumeTotal" style="color:#f39c12">-- FEU</span>
+                    <span id="roadVolumeTotal" style="color:#f39c12">0 FEU</span>
                 </div>
-                <div class="stat-bar"><div id="roadBarFill" class="stat-bar-fill road-fill" style="width:0%">--</div></div>
+                <div class="stat-bar"><div id="roadBarFill" class="stat-bar-fill road-fill" style="width:0%">0%</div></div>
                 <div style="margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
                     <span>📊 總運輸量</span>
-                    <span id="totalVolume" style="font-weight: bold;">-- FEU</span>
+                    <span id="totalVolume" style="font-weight: bold;">0 FEU</span>
                 </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <canvas id="transportChart" style="max-height: 200px;"></canvas>
+            </div>
+        </div>
+
+        <!-- 時間序列趨勢圖 -->
+        <div class="fleet-card">
+            <div class="section-title">📈 減碳趨勢分析</div>
+            <div class="chart-container">
+                <canvas id="trendChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
@@ -363,33 +392,45 @@
             <div class="section-title">🚸 階段式人命價值 (VSL) 節省分析</div>
             <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
                 <div>
-                    <div style="font-size: 2rem; font-weight: bold; color: #ffd700;" id="totalVslSaved">--</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #ffd700;" id="totalVslSaved">0</div>
                     <div style="font-size: 0.8rem;">累積節省社會成本</div>
                 </div>
                 <div style="background: rgba(255,215,0,0.15); padding: 0.5rem 1rem; border-radius: 20px;">
-                    📈 使用率提升 <span id="utilizationIncrease" style="color:#ffd700; font-weight:bold;">--</span>%
+                    📈 使用率提升 <span id="utilizationIncrease" style="color:#ffd700; font-weight:bold;">0</span>%
                 </div>
             </div>
             <div class="vsl-container" id="vslStageContainer"></div>
             <div style="font-size: 0.7rem; margin-top: 0.8rem;">⚡ 依據交通部運研所 VSL 研究模型 (每增加5%使用率，節省約20.4萬)</div>
         </div>
 
+        <!-- AI 即時決策狀態 -->
+        <div class="fleet-card">
+            <div class="section-title">🤖 AI 即時決策狀態</div>
+            <div class="insight-box" id="aiInsightBox">
+                載入資料中...
+            </div>
+        </div>
+
         <div style="text-align: center; padding: 1rem;">
-            <button class="btn btn-outline" onclick="location.reload()">🔄 刷新數據</button>
+            <button class="btn btn-outline" onclick="loadDashboardData()">🔄 刷新數據</button>
             <button class="btn btn-outline" onclick="location.href='/'">🏠 返回決策中心</button>
         </div>
     </div>
 
     <script>
-        // ================= 參數設定 =================
-        const CARBON_PRICE_USD = 12;
-        const USD_TO_NTD = 32.5;
+        // ================= 全域變數 =================
+        let allHistoryData = [];
+        let filteredData = [];
+        let transportChart = null;
+        let trendChart = null;
         
-        // 碳排係數 (kg CO2e / FEU)
+        // 碳排係數
+        const CARBON_PRICE_NTD = 390;  // 元/噸
         const SEA_CARBON_PER_FEU = 48;
         const ROAD_CARBON_PER_FEU = 120;
+        const TOTAL_CAPACITY = 5000;
         
-        // VSL 階段數據 (每5%一階)
+        // VSL 階段數據
         const VSL_STAGES = {
             10: 408700, 15: 613050, 20: 817400, 25: 1021750, 30: 1226100,
             35: 1430450, 40: 1634800, 45: 1839150, 50: 2043500, 55: 2247850,
@@ -397,70 +438,120 @@
             85: 3473950, 90: 3678300, 95: 3882650
         };
         
-        // 取得當前使用率對應的 VSL 值
         function getVSLByUtilization(utilization) {
             const keys = Object.keys(VSL_STAGES).map(Number).sort((a,b) => a - b);
             let closest = keys[0];
-            for (let k of keys) {
-                if (k <= utilization) closest = k;
-                else break;
-            }
+            for (let k of keys) if (k <= utilization) closest = k;
             return VSL_STAGES[closest] || VSL_STAGES[10];
         }
         
-        // ================= Dashboard 狀態管理 =================
-        let dashboardState = {
-            containers: 3200,
-            seaRatio: 72,
-            utilization: 81,
-            carbonPrice: 390
-        };
+        // ================= 動畫數字函數 =================
+        function animateValue(elementId, targetValue, suffix = '') {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            const startValue = parseFloat(element.innerText.replace(/[^0-9.-]/g, '')) || 0;
+            if (startValue === targetValue) return;
+            const duration = 800;
+            const steps = 60;
+            const increment = (targetValue - startValue) / steps;
+            let current = startValue;
+            let step = 0;
+            const timer = setInterval(() => {
+                step++;
+                current += increment;
+                if (step >= steps) {
+                    element.innerText = Math.round(targetValue).toLocaleString() + suffix;
+                    clearInterval(timer);
+                } else {
+                    element.innerText = Math.round(current).toLocaleString() + suffix;
+                }
+            }, duration / steps);
+        }
         
-        // 格式化數字
-        function formatNumber(num) { return num ? num.toLocaleString() : '0'; }
-        
-        // ================= 即時重算引擎 =================
-        function updateDashboardRealtime() {
-            // 計算海運和公路貨櫃量
-            const seaContainers = dashboardState.containers * (dashboardState.seaRatio / 100);
-            const roadContainers = dashboardState.containers - seaContainers;
+        // ================= 更新儀表板（核心） =================
+        function updateDashboard(filteredData) {
+            if (!filteredData || filteredData.length === 0) {
+                // 無資料時顯示0
+                animateValue('totalReduction', 0);
+                animateValue('carbonCredit', 0);
+                animateValue('totalContainers', 0);
+                document.getElementById('seaRate').innerText = '0%';
+                document.getElementById('seaVolumeTotal').innerHTML = '0 FEU';
+                document.getElementById('roadVolumeTotal').innerHTML = '0 FEU';
+                document.getElementById('totalVolume').innerHTML = '0 FEU';
+                document.getElementById('seaBarFill').style.width = '0%';
+                document.getElementById('seaBarFill').innerHTML = '0%';
+                document.getElementById('roadBarFill').style.width = '0%';
+                document.getElementById('roadBarFill').innerHTML = '0%';
+                return;
+            }
             
-            // 碳排計算
-            const seaCarbon = seaContainers * SEA_CARBON_PER_FEU;
-            const roadCarbon = roadContainers * ROAD_CARBON_PER_FEU;
-            const totalReduction = roadCarbon - seaCarbon;
+            // 計算 KPI
+            let totalCarbon = 0;
+            let totalContainers = 0;
+            let seaCount = 0;
+            let seaContainers = 0;
+            let roadContainers = 0;
             
-            // 碳權價值
-            const carbonTon = totalReduction / 1000;
-            const carbonValue = carbonTon * dashboardState.carbonPrice;
+            filteredData.forEach(record => {
+                totalCarbon += record.carbon_improvement || 0;
+                totalContainers += record.containers || 0;
+                if (record.best_mode === "海運") {
+                    seaCount++;
+                    seaContainers += record.containers || 0;
+                } else {
+                    roadContainers += record.containers || 0;
+                }
+            });
+            
+            const seaRate = filteredData.length > 0 ? Math.round((seaCount / filteredData.length) * 100) : 0;
+            const carbonTon = totalCarbon / 1000;
+            const carbonCreditValue = carbonTon * CARBON_PRICE_NTD;
+            
+            // 更新 KPI 動畫
+            animateValue('totalReduction', Math.round(totalCarbon));
+            animateValue('carbonCredit', Math.round(carbonCreditValue));
+            animateValue('totalContainers', totalContainers);
+            
+            const seaRateElement = document.getElementById('seaRate');
+            if (seaRateElement) seaRateElement.innerText = seaRate + '%';
             
             // 更新運輸量顯示
             document.getElementById('seaVolumeTotal').innerHTML = Math.round(seaContainers).toLocaleString() + ' FEU';
             document.getElementById('roadVolumeTotal').innerHTML = Math.round(roadContainers).toLocaleString() + ' FEU';
-            document.getElementById('totalVolume').innerHTML = formatNumber(dashboardState.containers) + ' FEU';
+            document.getElementById('totalVolume').innerHTML = totalContainers.toLocaleString() + ' FEU';
             
             // 更新進度條
-            const seaPercent = dashboardState.seaRatio;
+            const seaPercent = totalContainers > 0 ? (seaContainers / totalContainers * 100) : 0;
             const roadPercent = 100 - seaPercent;
             document.getElementById('seaBarFill').style.width = seaPercent + '%';
             document.getElementById('seaBarFill').innerHTML = seaPercent > 15 ? seaPercent.toFixed(0) + '%' : '';
             document.getElementById('roadBarFill').style.width = roadPercent + '%';
             document.getElementById('roadBarFill').innerHTML = roadPercent > 15 ? roadPercent.toFixed(0) + '%' : '';
             
-            // 更新 KPI
-            document.getElementById('totalReduction').innerText = formatNumber(Math.round(totalReduction));
-            document.getElementById('carbonCredit').innerText = formatNumber(Math.round(carbonValue));
-            document.getElementById('totalContainers').innerText = formatNumber(dashboardState.containers);
-            document.getElementById('seaRate').innerText = dashboardState.seaRatio + "%";
+            // 更新圓餅圖
+            if (transportChart) {
+                transportChart.data.datasets[0].data = [seaPercent, roadPercent];
+                transportChart.update();
+            }
             
-            // 計算使用率提升 (基準 10%)
-            const utilizationIncrease = dashboardState.utilization - 10;
+            // 更新時間序列圖
+            if (trendChart && filteredData.length > 0) {
+                const sortedData = [...filteredData].sort((a, b) => new Date(a.date) - new Date(b.date));
+                trendChart.data.labels = sortedData.map(d => d.date?.split(' ')[0] || '');
+                trendChart.data.datasets[0].data = sortedData.map(d => d.carbon_improvement || 0);
+                trendChart.update();
+            }
+            
+            // 計算動態艙位使用率
+            const utilization = Math.min(Math.round((seaContainers / TOTAL_CAPACITY) * 100), 98);
+            const utilizationIncrease = utilization - 10;
             document.getElementById('utilizationIncrease').innerText = utilizationIncrease.toFixed(1);
             
             // VSL 計算
-            const currentVSL = getVSLByUtilization(Math.round(dashboardState.utilization));
-            const vslSaved = currentVSL * (dashboardState.containers / 100);
-            document.getElementById('totalVslSaved').innerText = 'NT$ ' + formatNumber(Math.round(vslSaved));
+            const currentVSL = getVSLByUtilization(utilization);
+            const vslSaved = currentVSL * (totalContainers / 100);
+            animateValue('totalVslSaved', Math.round(vslSaved), '');
             
             // 更新 VSL 階段顯示
             const stageContainer = document.getElementById('vslStageContainer');
@@ -471,15 +562,94 @@
                     const badge = document.createElement('span');
                     badge.className = 'stage-badge';
                     badge.innerText = stage + '%';
-                    if (dashboardState.utilization >= stage) {
+                    if (utilization >= stage) {
                         badge.classList.add('stage-active');
                     }
                     stageContainer.appendChild(badge);
                 });
             }
+            
+            // AI 決策狀態
+            updateAIInsight(seaRate, utilization);
         }
         
-        // ================= 載入真實船隊數據 =================
+        function updateAIInsight(seaRate, utilization) {
+            let insight = "";
+            if (seaRate >= 70) {
+                insight = "🌱 AI 判定：藍色公路比例高，ESG 表現優異，建議持續維持。";
+            } else if (utilization > 90) {
+                insight = "⚠️ AI 偵測艙位接近滿載，建議增加船班或調整訂艙策略。";
+            } else if (seaRate > 50) {
+                insight = "📊 AI 分析：藍色公路比例適中，碳排持續下降，建議維持當前配置。";
+            } else {
+                insight = "🚛 公路比例偏高，碳排增加，建議轉移部分貨量至藍色公路。";
+            }
+            document.getElementById('aiInsightBox').innerHTML = insight;
+        }
+        
+        // ================= 日期篩選 =================
+        function applyDateFilter() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!allHistoryData || allHistoryData.length === 0) {
+                filteredData = [];
+                updateDashboard(filteredData);
+                return;
+            }
+            
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59);
+                filteredData = allHistoryData.filter(item => {
+                    const itemDate = new Date(item.date);
+                    return itemDate >= start && itemDate <= end;
+                });
+            } else {
+                filteredData = [...allHistoryData];
+            }
+            
+            updateDashboard(filteredData);
+        }
+        
+        function quickFilter(days) {
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - days);
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            document.getElementById('endDate').value = end.toISOString().split('T')[0];
+            applyDateFilter();
+        }
+        
+        function resetFilter() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            filteredData = [...allHistoryData];
+            updateDashboard(filteredData);
+        }
+        
+        // ================= 載入歷史資料 =================
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/get_history');
+                allHistoryData = await response.json();
+                
+                // 預設顯示最近30天
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+                document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
+                
+                applyDateFilter();
+                await loadFleetData();
+            } catch(e) {
+                console.error("載入資料失敗:", e);
+                document.getElementById('aiInsightBox').innerHTML = "⚠️ 資料載入失敗，請確認後端服務";
+            }
+        }
+        
+        // ================= 載入船隊資料 =================
         async function loadFleetData() {
             try {
                 const response = await fetch('/api/ships/KHH-TXG');
@@ -487,11 +657,9 @@
                 if (!Array.isArray(ships)) ships = ships ? [ships] : [];
                 
                 let shipsHtml = '';
-                let totalUtil = 0;
                 if (ships.length > 0) {
                     ships.forEach(ship => {
                         const utilization = ship.utilization || 50;
-                        totalUtil += utilization;
                         const fillColor = utilization > 85 ? '#e74c3c' : (utilization > 70 ? '#f39c12' : '#22c55e');
                         shipsHtml += `
                             <div class="route-card">
@@ -501,70 +669,72 @@
                             </div>
                         `;
                     });
-                    const avgUtil = totalUtil / ships.length;
-                    dashboardState.utilization = Math.round(avgUtil);
-                    document.getElementById('utilValue').innerText = dashboardState.utilization;
-                    document.getElementById('utilSlider').value = dashboardState.utilization;
                 } else {
                     shipsHtml = '<div class="route-card">等待船舶資料同步...</div>';
                 }
                 document.getElementById('shipsOverview').innerHTML = shipsHtml;
-                updateDashboardRealtime();
             } catch(e) {
                 console.error("載入船隊失敗:", e);
-                document.getElementById('shipsOverview').innerHTML = '<div class="route-card">⚠️ 數據連線重整中，請稍後...</div>';
             }
         }
         
-        // ================= 綁定滑桿事件 =================
-        function bindSliders() {
-            const containerSlider = document.getElementById('containerSlider');
-            const seaRatioSlider = document.getElementById('seaRatioSlider');
-            const utilSlider = document.getElementById('utilSlider');
-            const carbonSlider = document.getElementById('carbonSlider');
-            
-            if (containerSlider) {
-                containerSlider.addEventListener('input', (e) => {
-                    dashboardState.containers = parseInt(e.target.value);
-                    document.getElementById('containerValue').innerText = e.target.value;
-                    updateDashboardRealtime();
+        // ================= 初始化圖表 =================
+        function initCharts() {
+            const ctx1 = document.getElementById('transportChart')?.getContext('2d');
+            if (ctx1) {
+                transportChart = new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['藍色公路', '內陸運輸'],
+                        datasets: [{ data: [50, 50], backgroundColor: ['#0ea5e9', '#f39c12'], borderWidth: 0 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } }
+                    }
                 });
             }
             
-            if (seaRatioSlider) {
-                seaRatioSlider.addEventListener('input', (e) => {
-                    dashboardState.seaRatio = parseInt(e.target.value);
-                    document.getElementById('seaRatioValue').innerText = e.target.value;
-                    updateDashboardRealtime();
+            const ctx2 = document.getElementById('trendChart')?.getContext('2d');
+            if (ctx2) {
+                trendChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: '減碳量 (kg CO2e)',
+                            data: [],
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: { legend: { labels: { color: '#fff' } } },
+                        scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' } } }
+                    }
                 });
             }
-            
-            if (utilSlider) {
-                utilSlider.addEventListener('input', (e) => {
-                    dashboardState.utilization = parseInt(e.target.value);
-                    document.getElementById('utilValue').innerText = e.target.value;
-                    updateDashboardRealtime();
-                });
-            }
-            
-            if (carbonSlider) {
-                carbonSlider.addEventListener('input', (e) => {
-                    dashboardState.carbonPrice = parseInt(e.target.value);
-                    document.getElementById('carbonValue').innerText = e.target.value;
-                    updateDashboardRealtime();
-                });
-            }
+        }
+        
+        // ================= 綁定事件 =================
+        function bindEvents() {
+            document.getElementById('startDate')?.addEventListener('change', applyDateFilter);
+            document.getElementById('endDate')?.addEventListener('change', applyDateFilter);
         }
         
         // ================= 初始化 =================
-        async function initDashboard() {
-            await loadFleetData();
-            bindSliders();
-            updateDashboardRealtime();
+        async function init() {
+            initCharts();
+            bindEvents();
+            await loadDashboardData();
         }
         
-        initDashboard();
-        setInterval(loadFleetData, 30000);
+        init();
     </script>
 </body>
 </html>
