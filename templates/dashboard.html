@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* ================= 儀表板專屬樣式 ================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
@@ -150,10 +149,6 @@
             font-weight: 600;
             color: #cbd5e1;
         }
-        .control-item input[type=range] {
-            width: 100%;
-            accent-color: #38bdf8;
-        }
         .control-item button {
             background: rgba(56, 189, 248, 0.2);
             border: 1px solid rgba(56, 189, 248, 0.4);
@@ -162,16 +157,11 @@
             color: #38bdf8;
             cursor: pointer;
             transition: 0.2s;
+            margin: 0.2rem;
         }
         .control-item button:hover {
             background: #38bdf8;
             color: #020617;
-        }
-        .slider-value {
-            margin-top: 0.7rem;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #38bdf8;
         }
         
         .fleet-card {
@@ -334,7 +324,7 @@
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                         <button onclick="quickFilter(3)">近3天</button>
                         <button onclick="quickFilter(7)">近7天</button>
-                        <button onclick="quickFilter(30)">整月</button>
+                        <button onclick="quickFilter(30)">近30天</button>
                         <button onclick="resetFilter()">全部</button>
                     </div>
                 </div>
@@ -400,7 +390,7 @@
                 </div>
             </div>
             <div class="vsl-container" id="vslStageContainer"></div>
-            <div style="font-size: 0.7rem; margin-top: 0.8rem;">⚡ 依據交通部運研所 VSL 研究模型 (每增加5%使用率，節省約20.4萬)</div>
+            <div style="font-size: 0.7rem; margin-top: 0.8rem;">⚡ 依據交通部運研所 VSL 研究模型</div>
         </div>
 
         <!-- AI 即時決策狀態 -->
@@ -425,7 +415,7 @@
         let trendChart = null;
         
         // 碳排係數
-        const CARBON_PRICE_NTD = 390;  // 元/噸
+        const CARBON_PRICE_NTD = 390;
         const SEA_CARBON_PER_FEU = 48;
         const ROAD_CARBON_PER_FEU = 120;
         const TOTAL_CAPACITY = 5000;
@@ -445,7 +435,7 @@
             return VSL_STAGES[closest] || VSL_STAGES[10];
         }
         
-        // ================= 動畫數字函數 =================
+        // 動畫數字函數
         function animateValue(elementId, targetValue, suffix = '') {
             const element = document.getElementById(elementId);
             if (!element) return;
@@ -468,10 +458,9 @@
             }, duration / steps);
         }
         
-        // ================= 更新儀表板（核心） =================
-        function updateDashboard(filteredData) {
+        // 更新儀表板（核心）
+        function updateDashboard() {
             if (!filteredData || filteredData.length === 0) {
-                // 無資料時顯示0
                 animateValue('totalReduction', 0);
                 animateValue('carbonCredit', 0);
                 animateValue('totalContainers', 0);
@@ -483,6 +472,7 @@
                 document.getElementById('seaBarFill').innerHTML = '0%';
                 document.getElementById('roadBarFill').style.width = '0%';
                 document.getElementById('roadBarFill').innerHTML = '0%';
+                document.getElementById('aiInsightBox').innerHTML = '⚠️ 無資料，請調整日期範圍';
                 return;
             }
             
@@ -508,7 +498,6 @@
             const carbonTon = totalCarbon / 1000;
             const carbonCreditValue = carbonTon * CARBON_PRICE_NTD;
             
-            // 更新 KPI 動畫
             animateValue('totalReduction', Math.round(totalCarbon));
             animateValue('carbonCredit', Math.round(carbonCreditValue));
             animateValue('totalContainers', totalContainers);
@@ -570,10 +559,6 @@
             }
             
             // AI 決策狀態
-            updateAIInsight(seaRate, utilization);
-        }
-        
-        function updateAIInsight(seaRate, utilization) {
             let insight = "";
             if (seaRate >= 70) {
                 insight = "🌱 AI 判定：藍色公路比例高，ESG 表現優異，建議持續維持。";
@@ -587,14 +572,14 @@
             document.getElementById('aiInsightBox').innerHTML = insight;
         }
         
-        // ================= 日期篩選 =================
+        // 日期篩選（核心修正）
         function applyDateFilter() {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             
             if (!allHistoryData || allHistoryData.length === 0) {
                 filteredData = [];
-                updateDashboard(filteredData);
+                updateDashboard();
                 return;
             }
             
@@ -610,7 +595,7 @@
                 filteredData = [...allHistoryData];
             }
             
-            updateDashboard(filteredData);
+            updateDashboard();
         }
         
         function quickFilter(days) {
@@ -626,10 +611,10 @@
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
             filteredData = [...allHistoryData];
-            updateDashboard(filteredData);
+            updateDashboard();
         }
         
-        // ================= 載入歷史資料 =================
+        // 載入歷史資料
         async function loadDashboardData() {
             try {
                 const response = await fetch('/get_history');
@@ -649,7 +634,7 @@
             }
         }
         
-        // ================= 載入船隊資料 =================
+        // 載入船隊資料
         async function loadFleetData() {
             try {
                 const response = await fetch('/api/ships/KHH-TXG');
@@ -678,7 +663,7 @@
             }
         }
         
-        // ================= 初始化圖表 =================
+        // 初始化圖表
         function initCharts() {
             const ctx1 = document.getElementById('transportChart')?.getContext('2d');
             if (ctx1) {
@@ -721,13 +706,11 @@
             }
         }
         
-        // ================= 綁定事件 =================
         function bindEvents() {
             document.getElementById('startDate')?.addEventListener('change', applyDateFilter);
             document.getElementById('endDate')?.addEventListener('change', applyDateFilter);
         }
         
-        // ================= 初始化 =================
         async function init() {
             initCharts();
             bindEvents();
