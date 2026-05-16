@@ -6,11 +6,20 @@
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
+        /* ================= 動畫與樣式 ================= */
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-glow { 0% { box-shadow: 0 0 0 0 rgba(0, 180, 216, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(0, 180, 216, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 180, 216, 0); } }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
         
         .hero-section {
             background: linear-gradient(135deg, #03045e, #0077b6, #00b4d8);
@@ -31,7 +40,6 @@
         .step-number { width: 30px; height: 30px; background: #0077b6; color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
         .step.active .step-number { background: white; color: #0077b6; }
         
-        /* 即時資訊卡片 */
         .info-card {
             background: rgba(255,255,255,0.95);
             border-radius: 20px;
@@ -99,7 +107,7 @@
         .loading-container { background: white; border-radius: 20px; padding: 2rem; text-align: center; }
         .loading-spinner { width: 50px; height: 50px; border: 4px solid #ddd; border-top-color: #0077b6; border-radius: 50%; margin: 0 auto 1rem; animation: spin 1s linear infinite; }
         
-        /* 小助理樣式 */
+        /* ================= 小助理樣式 ================= */
         .ai-assistant {
             position: fixed;
             bottom: 24px;
@@ -130,6 +138,7 @@
             box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
+            transition: all 0.3s;
             margin-bottom: 12px;
         }
         .assistant-header {
@@ -219,6 +228,18 @@
             color: #94a3b8;
             background: #f1f5f9;
         }
+        
+        /* 自動彈出通知樣式 */
+        .assistant-notification {
+            animation: slideInRight 0.5s ease, bounce 0.5s ease 0.3s;
+            border-left: 4px solid #27ae60;
+            background: linear-gradient(135deg, #ffffff, #f0fff4);
+        }
+        
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -245,7 +266,7 @@
             <div style="color:rgba(255,255,255,0.7); margin-top:0.5rem; font-size:0.8rem">🌱 行政院藍色公路政策 · 減碳 · 減事故 · 減成本</div>
         </div>
 
-        <!-- ================= 公路通暢度 + 船期 API ================= -->
+        <!-- 公路通暢度 + 船期 API -->
         <div class="info-card">
             <div class="traffic-status">
                 <div class="traffic-light green" id="trafficLight"></div>
@@ -374,7 +395,7 @@
         const ROAD_CARBON_FEE_PER_FEU = 78.21;
         const CARBON_PRICE = 0.3;
         
-        // 🔥 運輸時間 (天數) - 海運改為 5 天
+        // 運輸時間 (天數) - 海運 5 天
         const SEA_TRANSIT_DAYS = 5;
         const ROAD_TRANSIT_DAYS = 1;
         
@@ -395,7 +416,6 @@
         function calculateSeaArrivalDate(departureDate) {
             const arrivalDate = new Date(departureDate);
             arrivalDate.setDate(arrivalDate.getDate() + SEA_TRANSIT_DAYS);
-            // 假日調整
             const dayOfWeek = arrivalDate.getDay();
             if (dayOfWeek === 6) arrivalDate.setDate(arrivalDate.getDate() + 2);
             if (dayOfWeek === 0) arrivalDate.setDate(arrivalDate.getDate() + 1);
@@ -409,6 +429,31 @@
         }
         
         function formatDate(date) { return date.toISOString().split('T')[0]; }
+        
+        // ================= 小助理自動通知 =================
+        function showAssistantMessage(message, isAuto = true) {
+            const chatDiv = document.getElementById('assistantChat');
+            const messagesDiv = document.getElementById('assistantMessages');
+            
+            // 如果聊天室是關閉的，先顯示它
+            if (chatDiv.style.display === 'none') {
+                chatDiv.style.display = 'block';
+            }
+            
+            // 添加 AI 訊息
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ai';
+            msgDiv.innerHTML = `<div class="avatar">🤖</div><div class="bubble assistant-notification">${message}</div>`;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // 5秒後自動關閉聊天室
+            setTimeout(() => {
+                if (chatDiv.style.display === 'block') {
+                    chatDiv.style.display = 'none';
+                }
+            }, 8000);
+        }
         
         // ================= 即時路況與船期 =================
         async function loadTrafficAndSchedule() {
@@ -433,11 +478,7 @@
                 const schedules = [
                     { voyage: "UNI-PROSPER 0728-512B",高雄: "5/13",台中: "5/16",台北: "5/19" },
                     { voyage: "UNI-PROSPER 0729-513B",高雄: "5/20",台中: "5/23",台北: "5/26" },
-                    { voyage: "UNI-PROSPER 0730-514B",高雄: "5/27",台中: "5/30",台北: "6/01" },
-                    { voyage: "UNI-PROSPER 0731-515B",高雄: "6/03",台中: "6/06",台北: "6/09" },
-                    { voyage: "UNI-PROSPER 0732-516B",高雄: "6/10",台中: "6/13",台北: "6/16" },
-                    { voyage: "UNI-PROSPER 0733-517B",高雄: "6/17",台中: "6/21",台北: "6/23" },
-                    { voyage: "UNI-PROSPER 0734-518B",高雄: "6/25",台中: "6/28",台北: "6/30" }
+                    { voyage: "UNI-PROSPER 0730-514B",高雄: "5/27",台中: "5/30",台北: "6/01" }
                 ];
                 let html = '<div style="display:flex; flex-direction:column; gap:0.3rem">';
                 schedules.forEach(s => {
@@ -626,6 +667,7 @@
             document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 50, remaining);
         }
         
+        // ================= 訂艙確認（包含小助理自動通知） =================
         async function confirmBooking() {
             if (!selectedShip) { alert('請先選擇船班'); return; }
             const companyName = document.getElementById('companyName').value;
@@ -644,13 +686,25 @@
                 })
             });
             const result = await response.json();
+            
             if (result.success) {
+                // 🔥 小助理自動彈出通知（不需要點擊）
+                const message = `✅ 訂艙完成！<br><br>
+                🚢 船班：${result.ship_name || '立昌輪'} (${result.voyage_no || ''})<br>
+                📅 開航日期：${result.sailing_date || selectedShip}<br>
+                📦 訂艙數量：${result.containers || containers} FEU<br>
+                📊 剩餘艙位：${result.remaining || 0} / ${result.capacity || 1618} TEU<br>
+                💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>
+                🆔 訂位編號：${result.booking_id}<br><br>
+                📌 艙位已保留，如有任何問題歡迎隨時詢問我！`;
+                
+                showAssistantMessage(message);
+                
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
-                addAssistantMessage(`✅ 訂艙完成！📅 ${result.sailing_date} 📦 ${result.containers} FEU 已保留，訂位編號：${result.booking_id}`);
-                location.reload();
+                setTimeout(() => location.reload(), 2000);
             } else {
                 alert(`❌ 訂艙失敗：${result.error}`);
-                addAssistantMessage(`❌ 訂艙失敗：${result.error}`);
+                showAssistantMessage(`❌ 訂艙失敗：${result.error}<br>請確認艙位數量或聯絡客服。`);
             }
         }
         
