@@ -252,7 +252,7 @@
         <div class="hero-section">
             <div class="floating-ship">🚢</div>
             <div class="hero-title">🌊 iMarine 智慧海運碳排管理平台</div>
-            <div style="color:white; margin-top:0.5rem">🤖 藍色公路 vs 內陸運輸 | 📊 碳排比較 | 🚢 即時船期與訂艙</div>
+            <div style="color:white; margin-top:0.5rem">🤖 藍色公路 vs 內陸運輸 | 📊 成本比較 | 🚢 即時船期與訂艙</div>
         </div>
 
         <div class="info-card">
@@ -461,12 +461,16 @@
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
-        function calculateCarbonReduction(containers) {
+        function calculateCarbonAndCost(containers) {
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
             const seaCarbon = SEA_CARBON_RATE * DISTANCE * containers;
             const carbonSaved = roadCarbon - seaCarbon;
-            const reductionPct = roadCarbon > 0 ? (carbonSaved / roadCarbon * 100).toFixed(1) : 0;
-            return { roadCarbon, seaCarbon, carbonSaved, reductionPct };
+            
+            const roadCost = ROAD_COST_PER_FEU * containers;
+            const seaCost = SEA_COST_PER_FEU * containers;
+            const costSaved = roadCost - seaCost;
+            
+            return { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved };
         }
         
         async function calculateComparison() {
@@ -483,11 +487,7 @@
             const departureDate = new Date(departureDateStr);
             const arrivalRequirement = new Date(arrivalRequirementStr);
             
-            const { roadCarbon, seaCarbon, carbonSaved, reductionPct } = calculateCarbonReduction(containers);
-            
-            const seaCost = SEA_COST_PER_FEU * containers;
-            const roadCost = ROAD_COST_PER_FEU * containers;
-            const costSaved = roadCost - seaCost;
+            const { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved } = calculateCarbonAndCost(containers);
             
             const seaCarbonCredit = seaCarbon * CARBON_PRICE;
             const roadCarbonCredit = roadCarbon * CARBON_PRICE;
@@ -537,9 +537,9 @@
             else {
                 if (costSaved > 0) {
                     recommendMode = "sea"; selectedMode = "sea"; trafficLight = "🟢";
-                    recommendation = `藍色公路可節省成本 NT$ ${costSaved.toLocaleString()}，減少碳排 ${carbonSaved.toFixed(0)} kg (${reductionPct}%)`;
+                    recommendation = `藍色公路可節省成本 NT$ ${costSaved.toLocaleString()}，減少碳排 ${carbonSaved.toFixed(0)} kg`;
                     reasons.push(`💰 藍色公路節省成本 NT$ ${costSaved.toLocaleString()}`);
-                    reasons.push(`🌱 減少碳排 ${carbonSaved.toFixed(0)} kg (${reductionPct}%)`);
+                    reasons.push(`🌱 減少碳排 ${carbonSaved.toFixed(0)} kg`);
                 } else {
                     recommendMode = "road"; selectedMode = "road"; trafficLight = "🟡";
                     recommendation = `內陸運輸成本較低 (節省 NT$ ${(-costSaved).toLocaleString()})`;
@@ -549,7 +549,7 @@
             
             currentComparison = {
                 containers, cargoType, seaCost, roadCost, costSaved,
-                seaCarbon, roadCarbon, carbonSaved, reductionPct,
+                seaCarbon, roadCarbon, carbonSaved,
                 seaCarbonCredit, roadCarbonCredit, roadCarbonFee,
                 utilization, vslSaved: totalVslSaved,
                 recommendMode, recommendation, reasons, selectedMode,
@@ -609,9 +609,8 @@
             const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
             const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
             
-            const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
+            const { roadCarbon, roadCost } = calculateCarbonAndCost(containers);
             
-            // 正確的時間格式 (YYYY-MM-DD HH:MM:SS)
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -632,10 +631,9 @@
                 road_carbon: roadCarbon,
                 sea_carbon: roadCarbon,
                 carbon_improvement: 0,
-                reduction_pct: 0,
+                savings_amount: 0,
                 best_mode: "內陸運輸",
-                social_savings: 0,
-                road_total: currentComparison.roadCost,
+                road_total: roadCost,
                 sea_total: 0
             };
             
@@ -647,7 +645,7 @@
                 });
                 
                 if (response.ok) {
-                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 時間：${formattedDate}<br>📌 已加入歷史記錄，可至儀表板查看詳細數據。`);
+                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>💰 總費用：NT$ ${roadCost.toLocaleString()}<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 時間：${formattedDate}<br>📌 已加入歷史記錄，可至儀表板查看詳細數據。`);
                     alert('✅ 已記錄內陸運輸決策！');
                     backToStep1();
                 } else {
@@ -740,7 +738,7 @@
             const result = await response.json();
             
             if (result.success) {
-                const { seaCarbon } = calculateCarbonReduction(containers);
+                const { seaCarbon, seaCost, carbonSaved, costSaved } = calculateCarbonAndCost(containers);
                 const start = document.getElementById('start').value;
                 const end = document.getElementById('end').value;
                 const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
@@ -765,10 +763,9 @@
                     base_distance: DISTANCE,
                     road_carbon: 0,
                     sea_carbon: seaCarbon,
-                    carbon_improvement: seaCarbon,
-                    reduction_pct: 66.7,
+                    carbon_improvement: carbonSaved,
+                    savings_amount: costSaved,
                     best_mode: "海運",
-                    social_savings: 0,
                     road_total: 0,
                     sea_total: result.total_price
                 };
@@ -779,7 +776,7 @@
                     body: JSON.stringify(historyRecord)
                 });
                 
-                const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>📊 剩餘艙位：${result.remaining} / ${result.capacity} TEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
+                const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
                 await goToStep3();
