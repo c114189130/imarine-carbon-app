@@ -145,19 +145,62 @@ def get_ships(route_key):
 
 @app.route("/api/booking-summary")
 def booking_summary():
-    """取得訂票摘要統計"""
-    summary = get_booking_summary()
-    return jsonify(summary)
+    """取得訂票摘要統計 - 從歷史記錄計算"""
+    try:
+        history = load_history()
+        
+        # 只計算海運訂艙
+        sea_bookings = [r for r in history if r.get("best_mode") == "海運"]
+        
+        total_bookings = len(sea_bookings)
+        total_containers = sum(r.get("containers", 0) for r in sea_bookings)
+        total_revenue = sum(r.get("sea_total", 0) for r in sea_bookings)
+        avg_booking_size = round(total_containers / total_bookings) if total_bookings > 0 else 0
+        
+        return jsonify({
+            "total_bookings": total_bookings,
+            "total_containers": total_containers,
+            "total_revenue": total_revenue,
+            "avg_booking_size": avg_booking_size
+        })
+    except Exception as e:
+        print(f"訂艙統計錯誤: {e}")
+        return jsonify({
+            "total_bookings": 0,
+            "total_containers": 0,
+            "total_revenue": 0,
+            "avg_booking_size": 0
+        })
 
 @app.route("/api/bookings")
 def get_bookings():
     """取得訂票記錄"""
     company = request.args.get("company")
+    history = load_history()
+    
+    # 只篩選海運記錄
+    bookings = [r for r in history if r.get("best_mode") == "海運"]
+    
     if company:
-        bookings = get_customer_bookings(company)
-    else:
-        bookings = get_customer_bookings()
-    return jsonify(bookings)
+        bookings = [b for b in bookings if b.get("company_name", "").lower() == company.lower()]
+    
+    # 按日期排序（最新的在前）
+    bookings.sort(key=lambda x: x.get("date", ""), reverse=True)
+    
+    result = []
+    for b in bookings[:50]:
+        result.append({
+            "booking_id": b.get("id", b.get("booking_id", "")),
+            "company_name": b.get("company_name", b.get("start", "")),
+            "route": f"{b.get('start', '')} → {b.get('end', '')}",
+            "containers": b.get("containers", 0),
+            "sailing_date": b.get("ship_date", b.get("date", "").split(" ")[0]),
+            "total_price": b.get("sea_total", 0),
+            "status": "confirmed",
+            "booking_date": b.get("date", "")
+        })
+    
+    return jsonify(result)
 
 @app.route("/api/book-ship", methods=["POST"])
 def book_ship():
