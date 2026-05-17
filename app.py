@@ -1,5 +1,6 @@
 import os
 import math
+import requests
 import random
 from datetime import datetime
 from uuid import uuid4
@@ -52,7 +53,6 @@ traffic_service = TrafficService(app_id=TDX_CLIENT_ID, app_key=TDX_CLIENT_SECRET
 ensure_json_file(HISTORY_FILE, [])
 ensure_json_file(CERTIFICATE_FILE, [])
 
-# 初始化市場模擬
 init_market_simulation()
 
 # ================= 輔助函數 =================
@@ -230,22 +230,45 @@ def verify_certificate(cert_id):
 def get_history():
     return jsonify(load_history())
 
+# 在 app.py 中確認有這個路由（加入在適當位置）
+
+@app.route("/save_history_direct", methods=["POST"])
+def save_history_direct():
+    """直接保存歷史記錄（用於內陸運輸確認）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "無資料"}), 400
+        
+        # 確保必要欄位存在
+        if "date" not in data:
+            data["date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if "id" not in data:
+            data["id"] = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+        
+        history = load_history()
+        history.append(data)
+        if len(history) > MAX_HISTORY_RECORDS:
+            history = history[-MAX_HISTORY_RECORDS:]
+        write_json(HISTORY_FILE, history)
+        
+        print(f"✅ 已保存內陸運輸記錄: {data['containers']} FEU")
+        return jsonify({"success": True, "message": "記錄已保存"})
+    except Exception as e:
+        print(f"保存歷史錯誤: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/traffic")
 def api_traffic():
     return jsonify(traffic_service.get_live_traffic_speed())
 
 @app.route("/api/ships/<route_key>")
 def get_ships(route_key):
-    """取得航線所有船班艙位資訊 - 含錯誤處理"""
-    from services.booking_service import get_all_ships_summary
-    
     try:
         ships = get_all_ships_summary(route_key)
         return jsonify(ships)
     except Exception as e:
         print(f"SHIP API ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e), "success": False}), 500
 
 @app.route("/api/booking-summary")
@@ -275,9 +298,7 @@ def book_ship():
     
     result = book_capacity(route_key, sailing_date, containers, company_name, cargo_type, contact_person, phone)
     
-    # 訂艙成功時，同時寫入歷史記錄
     if result.get("success"):
-        # 取得航線名稱
         if route_key == "KHH-TXG":
             start, end = "高雄港", "台中港"
         else:
@@ -308,26 +329,7 @@ def book_ship():
         }
         save_history(history_record)
     
-    # 🔥 確保回傳前端需要的所有欄位
-    return jsonify({
-        "success": result.get("success", False),
-        "booking_id": result.get("booking_id", ""),
-        "ship_name": result.get("ship_name", "立昌輪"),
-        "voyage_no": result.get("voyage_no", ""),
-        "sailing_date": result.get("sailing_date", sailing_date),
-        "sailing_day": result.get("sailing_day", ""),
-        "containers": result.get("containers", containers),
-        "cargo_type": result.get("cargo_type", cargo_type),
-        "remaining": result.get("remaining", 0),
-        "capacity": result.get("capacity", 1618),
-        "utilization": result.get("utilization", 0),
-        "unit_price": result.get("unit_price", 12000),
-        "total_price": result.get("total_price", 0),
-        "eta_port": result.get("eta_port", ""),
-        "eta_time": result.get("eta_time", "航行中"),
-        "port_congestion": result.get("port_congestion", "順暢"),
-        "error": result.get("error")
-    })
+    return jsonify(result)
 
 @app.route("/calculate", methods=["POST"])
 def calculate():

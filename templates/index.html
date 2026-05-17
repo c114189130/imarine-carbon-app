@@ -598,59 +598,99 @@
                 <div class="result-box"><h3>📝 決策理由詳解</h3><ul>${c.reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>
             `;
             document.getElementById('comparisonResult').innerHTML = html;
+            // 在 displayComparisonResult 函數結尾加入
+const goToBookingBtn = document.getElementById('goToBookingBtn');
+const confirmRoadBtn = document.getElementById('confirmRoadBtn');
+
+if (c.recommendMode === 'sea') {
+    if (goToBookingBtn) goToBookingBtn.style.display = 'inline-block';
+    if (confirmRoadBtn) confirmRoadBtn.style.display = 'none';
+} else {
+    if (goToBookingBtn) goToBookingBtn.style.display = 'none';
+    if (confirmRoadBtn) confirmRoadBtn.style.display = 'inline-block';
+}
         }
         
-        // 內陸運輸確認（記錄到歷史）
-        async function confirmRoadTransport() {
-            if (!currentComparison) {
-                alert('請先進行分析');
-                return;
-            }
+        
+        // 確認採納內陸運輸（記錄到歷史）
+async function confirmRoadTransport() {
+    if (!currentComparison) {
+        alert('請先進行分析');
+        return;
+    }
+    
+    const containers = currentComparison.containers;
+    const startSelect = document.getElementById('start');
+    const endSelect = document.getElementById('end');
+    const start = startSelect ? startSelect.value : 'kaohsiung';
+    const end = endSelect ? endSelect.value : 'taichung';
+    const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
+    const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
+    const cargoTypeSelect = document.getElementById('cargoType');
+    const cargoType = cargoTypeSelect ? cargoTypeSelect.value : 'normal';
+    
+    // 距離 (高雄-台中約 215km)
+    const distance = 215;
+    const roadCarbon = 0.06 * distance * containers;
+    const seaCarbon = 0.02 * distance * containers;
+    const carbonImprovement = roadCarbon - seaCarbon;
+    const reductionPct = (carbonImprovement / roadCarbon * 100).toFixed(1);
+    
+    // 建立歷史記錄
+    const historyRecord = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        start: startName,
+        end: endName,
+        containers: containers,
+        cargo_type: cargoType,
+        base_distance: distance,
+        road_carbon: roadCarbon,
+        sea_carbon: seaCarbon,
+        carbon_improvement: carbonImprovement,
+        reduction_pct: reductionPct,
+        best_mode: "內陸運輸",
+        social_savings: 0,
+        road_total: 0,
+        sea_total: 0
+    };
+    
+    console.log("發送內陸運輸記錄:", historyRecord);
+    
+    try {
+        const response = await fetch('/save_history_direct', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(historyRecord)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            const message = `✅ 已記錄您選擇「內陸運輸」！<br><br>
+            📦 貨櫃數量：${containers} FEU<br>
+            🚛 運輸模式：內陸運輸<br>
+            🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>
+            📅 已加入歷史記錄，可至儀表板查看詳細數據。`;
             
-            const containers = currentComparison.containers;
-            const start = document.getElementById('start').value;
-            const end = document.getElementById('end').value;
-            const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
-            const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
-            const cargoType = document.getElementById('cargoType').value;
-            
-            const distance = 215;
-            const roadCarbon = 0.06 * distance * containers;
-            const seaCarbon = 0.02 * distance * containers;
-            const carbonImprovement = roadCarbon - seaCarbon;
-            const reductionPct = (carbonImprovement / roadCarbon * 100).toFixed(1);
-            
-            const historyRecord = {
-                id: Date.now().toString(),
-                date: new Date().toISOString(),
-                start: startName,
-                end: endName,
-                containers: containers,
-                cargo_type: cargoType,
-                base_distance: distance,
-                road_carbon: roadCarbon,
-                sea_carbon: seaCarbon,
-                carbon_improvement: carbonImprovement,
-                reduction_pct: reductionPct,
-                best_mode: "內陸運輸",
-                social_savings: 0,
-                road_total: 0,
-                sea_total: 0
-            };
-            
-            const response = await fetch('/save_history_direct', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(historyRecord)
-            });
-            
-            if (response.ok) {
-                showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 已加入歷史記錄，可至儀表板查看詳細數據。`);
-                alert('✅ 已記錄內陸運輸決策！');
+            if (typeof showAssistantMessage === 'function') {
+                showAssistantMessage(message);
             } else {
-                alert('❌ 記錄失敗，請稍後再試');
+                alert(message.replace(/<br>/g, '\n'));
             }
+            alert('✅ 已記錄內陸運輸決策！');
+            
+            // 可選：回到步驟1
+            setTimeout(() => backToStep1(), 2000);
+        } else {
+            console.error("記錄失敗:", result);
+            alert('❌ 記錄失敗：' + (result.error || '請稍後再試'));
         }
+    } catch (error) {
+        console.error("網路錯誤:", error);
+        alert('❌ 記錄失敗：網路錯誤，請檢查連線');
+    }
+}
         
         async function goToStep3() {
             const routeKey = document.getElementById('start').value === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
