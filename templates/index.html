@@ -6,7 +6,6 @@
     <title>{{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* ... 原有樣式保持不變 ... */
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -603,7 +602,7 @@
             document.getElementById('comparisonResult').innerHTML = html;
         }
         
-        // 🔥 確認採納內陸運輸（正確記錄歷史）
+        // 🔥 確認採納內陸運輸（只記錄一次）
         async function confirmRoadTransport() {
             if (!currentComparison) { alert('請先進行分析'); return; }
             
@@ -614,13 +613,9 @@
             const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
             const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
             
-            // 🔥 正確計算公路碳排（沒有海運碳排）
+            // 🔥 正確計算公路碳排（沒有海運碳排，減碳比例為 0）
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
-            const seaCarbon = 0; // 陸運沒有海運碳排
-            const carbonImprovement = 0; // 陸運沒有減碳效益
-            const reductionPct = 0;
             
-            // 🔥 正確的時間格式 (ISO 8601)
             const now = new Date();
             const formattedDate = now.toISOString();
             
@@ -633,9 +628,9 @@
                 cargo_type: cargoType,
                 base_distance: DISTANCE,
                 road_carbon: roadCarbon,
-                sea_carbon: seaCarbon,
-                carbon_improvement: carbonImprovement,
-                reduction_pct: reductionPct,
+                sea_carbon: 0,
+                carbon_improvement: 0,
+                reduction_pct: 0,
                 best_mode: "內陸運輸",
                 social_savings: 0,
                 road_total: currentComparison.roadCost,
@@ -720,6 +715,7 @@
             document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 50, remaining);
         }
         
+        // 🔥 確認訂艙（只記錄一次，不重複）
         async function confirmBooking() {
             if (!selectedShip) { alert('請先選擇船班'); return; }
             const companyName = document.getElementById('companyName').value;
@@ -743,37 +739,7 @@
             const result = await response.json();
             
             if (result.success) {
-                // 🔥 同時記錄到歷史記錄
-                const start = document.getElementById('start').value;
-                const end = document.getElementById('end').value;
-                const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
-                const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
-                const { seaCarbon } = calculateCarbonReduction(containers);
-                
-                const historyRecord = {
-                    id: result.booking_id,
-                    date: new Date().toISOString(),
-                    start: startName,
-                    end: endName,
-                    containers: containers,
-                    cargo_type: cargoType,
-                    base_distance: DISTANCE,
-                    road_carbon: 0,
-                    sea_carbon: seaCarbon,
-                    carbon_improvement: seaCarbon,
-                    reduction_pct: 66.7,
-                    best_mode: "海運",
-                    social_savings: 0,
-                    road_total: 0,
-                    sea_total: result.total_price
-                };
-                
-                await fetch('/save_history_direct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(historyRecord)
-                });
-                
+                // 🔥 只記錄一次歷史記錄（由後端 booking_service 處理，這裡不再重複記錄）
                 const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>📊 剩餘艙位：${result.remaining} / ${result.capacity} TEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
