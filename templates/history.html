@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>歷史記錄 - {{ app_title }}</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .history-table {
             width: 100%;
@@ -47,6 +46,31 @@
             border-radius: 20px;
             font-size: 0.75rem;
         }
+        .stats-summary {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00b4d8;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
     </style>
 </head>
 <body>
@@ -62,8 +86,20 @@
     <div class="container">
         <h1>📊 貨櫃指派/訂艙歷史記錄</h1>
         
-        <div class="chart-container fade-in">
-            <canvas id="historyChart"></canvas>
+        <!-- 簡易統計摘要 -->
+        <div class="stats-summary" id="statsSummary">
+            <div class="stat-item">
+                <div class="stat-value" id="totalRecords">0</div>
+                <div class="stat-label">總記錄數</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalContainers">0</div>
+                <div class="stat-label">總貨櫃數 (FEU)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalCarbonReduction">0</div>
+                <div class="stat-label">總減碳量 (kg)</div>
+            </div>
         </div>
         
         <div class="card fade-in">
@@ -80,11 +116,10 @@
                             <th>碳排放(kg)</th>
                             <th>運輸模式</th>
                             <th>減碳量(kg)</th>
-                            <th>節省金額(NTD)</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody">
-                        <tr><td colspan="10">載入中...</td></tr>
+                        <tr><td colspan="9">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -93,6 +128,7 @@
         <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem">
             <button class="btn btn-outline" onclick="location.reload()">🔄 刷新</button>
             <button class="btn btn-outline" onclick="location.href='/'">🏠 返回首頁</button>
+            <button class="btn btn-outline" onclick="location.href='/dashboard'">📈 前往儀表板</button>
         </div>
     </div>
     
@@ -105,19 +141,19 @@
                 tbody.innerHTML = '';
                 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
                     return;
                 }
+                
+                // 計算統計
+                let totalContainers = 0;
+                let totalCarbonReduction = 0;
                 
                 // 顯示最近50筆，最新的在上面
                 const reversed = [...data].reverse();
                 reversed.forEach(record => {
-                    // 計算節省金額（如果沒有 savings_amount，就用 carbon_improvement 推算）
-                    let savingsAmount = record.savings_amount || 0;
-                    if (!savingsAmount && record.carbon_improvement) {
-                        // 碳排節省量 * 碳價 (約 0.3元/kg) 作為參考節省金額
-                        savingsAmount = Math.round(record.carbon_improvement * 0.3);
-                    }
+                    totalContainers += record.containers || 0;
+                    totalCarbonReduction += record.carbon_improvement || 0;
                     
                     const modeBadge = record.best_mode === '海運' 
                         ? '<span class="badge-sea">🚢 海運</span>' 
@@ -133,64 +169,20 @@
                             <td>${record.base_distance || '-'}</td>
                             <td>${(record.sea_carbon || 0).toLocaleString()}</td>
                             <td>${modeBadge}</td>
-                            <td>${(record.carbon_improvement || 0).toLocaleString()}</td>
-                            <td style="color: #27ae60; font-weight: bold;">NT$ ${savingsAmount.toLocaleString()}</td>
+                            <td style="color: #27ae60; font-weight: bold;">${(record.carbon_improvement || 0).toLocaleString()}</td>
                         </tr>
                     `;
                 });
                 
-                drawHistoryChart(data);
+                // 更新統計摘要
+                document.getElementById('totalRecords').innerText = data.length;
+                document.getElementById('totalContainers').innerText = totalContainers.toLocaleString();
+                document.getElementById('totalCarbonReduction').innerText = totalCarbonReduction.toLocaleString();
+                
             } catch(e) {
                 console.error("載入失敗:", e);
-                document.getElementById('historyBody').innerHTML = '<tr><td colspan="10">載入失敗</td></tr>';
+                document.getElementById('historyBody').innerHTML = '<tr><td colspan="9">載入失敗</td></tr>';
             }
-        }
-        
-        function drawHistoryChart(history) {
-            const ctx = document.getElementById('historyChart');
-            if (!ctx) return;
-            
-            const last7 = history.slice(-7);
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: last7.map(h => h.date?.split(' ')[0] || ''),
-                    datasets: [
-                        {
-                            label: '減碳量 (kg CO2e)',
-                            data: last7.map(h => h.carbon_improvement || 0),
-                            borderColor: '#0077b6',
-                            backgroundColor: 'rgba(0, 119, 182, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        },
-                        {
-                            label: '節省金額 (NTD)',
-                            data: last7.map(h => {
-                                let savings = h.savings_amount || 0;
-                                if (!savings && h.carbon_improvement) savings = Math.round(h.carbon_improvement * 0.3);
-                                return savings;
-                            }),
-                            borderColor: '#27ae60',
-                            backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: { mode: 'index', intersect: false },
-                        legend: { position: 'top', labels: { color: '#333' } }
-                    },
-                    scales: {
-                        y: { title: { display: true, text: '減碳量 (kg)', color: '#0077b6' } },
-                        y1: { position: 'right', title: { display: true, text: '節省金額 (NTD)', color: '#27ae60' }, grid: { drawOnChartArea: false } }
-                    }
-                }
-            });
         }
         
         loadHistory();
