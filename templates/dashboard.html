@@ -91,7 +91,7 @@
         
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -100,7 +100,7 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 28px;
-            padding: 1.5rem;
+            padding: 1.2rem;
             transition: all 0.35s ease;
         }
         .kpi-card:hover {
@@ -112,11 +112,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.5rem;
         }
-        .kpi-icon { font-size: 2rem; }
+        .kpi-icon { font-size: 1.8rem; }
         .kpi-value {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
             background: linear-gradient(135deg, #f8fafc, #94a3b8);
             -webkit-background-clip: text;
@@ -130,7 +130,7 @@
             padding: 0.2rem 0.5rem;
             border-radius: 20px;
         }
-        .kpi-label { font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem; }
+        .kpi-label { font-size: 0.8rem; color: #94a3b8; margin-top: 0.3rem; }
         
         .control-grid {
             display: grid;
@@ -317,6 +317,30 @@
             color: #38bdf8;
         }
         
+        .certificate-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border: none;
+            color: white;
+            font-weight: bold;
+        }
+        .certificate-btn:hover {
+            background: linear-gradient(135deg, #219a52, #27ae60);
+            color: white;
+        }
+        
+        input, select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 10px;
+            width: 100%;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        
         @media (max-width: 768px) {
             .dashboard-container { padding: 1rem; }
             .kpi-value { font-size: 1.6rem; }
@@ -369,6 +393,33 @@
                         <button onclick="resetFilter()">全部</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 減碳證書產生器 -->
+        <div class="fleet-card">
+            <div class="section-title">📜 減碳績效證書</div>
+            <div class="control-grid">
+                <div class="control-item">
+                    <label>📅 起始日期</label>
+                    <input type="date" id="certStartDate">
+                </div>
+                <div class="control-item">
+                    <label>📅 結束日期</label>
+                    <input type="date" id="certEndDate">
+                </div>
+                <div class="control-item">
+                    <label>🏢 公司名稱（選填）</label>
+                    <input type="text" id="certCompanyName" placeholder="請輸入公司名稱">
+                </div>
+                <div class="control-item" style="display: flex; align-items: flex-end;">
+                    <button onclick="generateCertificate()" class="certificate-btn" style="width:100%; padding:0.6rem;">
+                        📄 產生減碳證書 PDF
+                    </button>
+                </div>
+            </div>
+            <div id="certificateResult" style="margin-top: 0.8rem; font-size: 0.75rem; color: #94a3b8; text-align: center;">
+                💡 選擇日期區間後，系統將自動計算該期間的減碳總量並產生正式證書
             </div>
         </div>
 
@@ -575,7 +626,6 @@
                 trendChart.update(); 
             }
             
-            // 節省金額趨勢圖
             if(savingsTrendChart && filteredData.length>0){
                 let sd=[...filteredData].sort((a,b)=>new Date(a.date)-new Date(b.date));
                 savingsTrendChart.data.labels=sd.map(d=>d.date?.split('T')[0]||d.date?.split(' ')[0]||'');
@@ -653,7 +703,85 @@
         
         function bindEvents(){ document.getElementById('startDate')?.addEventListener('change',applyDateFilter); document.getElementById('endDate')?.addEventListener('change',applyDateFilter); }
         
-        async function init(){ initCharts(); bindEvents(); await loadDashboardData(); }
+        // 設定證書日期預設值（上個月到今天）
+        function setDefaultCertificateDates() {
+            const today = new Date();
+            const lastMonth = new Date(today);
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            
+            const certStart = document.getElementById('certStartDate');
+            const certEnd = document.getElementById('certEndDate');
+            if (certStart) certStart.value = lastMonth.toISOString().split('T')[0];
+            if (certEnd) certEnd.value = today.toISOString().split('T')[0];
+        }
+        
+        // 產生證書函數
+        async function generateCertificate() {
+            let startDate = document.getElementById('certStartDate').value;
+            let endDate = document.getElementById('certEndDate').value;
+            let companyName = document.getElementById('certCompanyName').value.trim();
+            
+            if (!startDate || !endDate) {
+                alert('請選擇起始日期和結束日期');
+                return;
+            }
+            
+            if (!companyName) {
+                companyName = 'iMarine Customer';
+            }
+            
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ 產生中...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/generate_certificate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate,
+                        company_name: companyName
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `carbon_certificate_${startDate}_to_${endDate}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    const resultDiv = document.getElementById('certificateResult');
+                    if (resultDiv) {
+                        resultDiv.innerHTML = '<div style="background:#27ae60; padding:0.5rem; border-radius:10px; margin-top:0.5rem; text-align:center;">✅ 證書已產生並下載！</div>';
+                        setTimeout(() => { resultDiv.innerHTML = '💡 選擇日期區間後，系統將自動計算該期間的減碳總量並產生正式證書'; }, 3000);
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('產生證書失敗：' + (error.error || '未知錯誤'));
+                }
+            } catch (err) {
+                console.error('產生證書錯誤:', err);
+                alert('產生證書失敗，請檢查網路連線');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function init() { 
+            initCharts(); 
+            bindEvents(); 
+            await loadDashboardData();
+            setDefaultCertificateDates();
+        }
+        
         init();
     </script>
 </body>

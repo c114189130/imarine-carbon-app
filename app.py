@@ -27,7 +27,7 @@ from config import (
     TDX_CLIENT_SECRET,
 )
 from optimization_model import compare_modes, calculate_optimal_transfer_ratio
-from services.certificate_service import build_certificate_pdf, generate_certificate_id
+from services.certificate_service import build_certificate_pdf, build_certificate_pdf_report, generate_certificate_id
 from services.schedule_service import ScheduleService
 from services.storage_service import ensure_json_file, read_json, write_json
 from services.booking_service import (
@@ -434,6 +434,68 @@ def download_certificate(cert_id, lang):
     pdf_buffer = build_certificate_pdf(certificate, lang=lang)
     filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
     return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
+# ================= 新增：日期區間證書產生 API =================
+@app.route("/api/generate_certificate", methods=["POST"])
+def api_generate_certificate():
+    """根據日期區間產生減碳證書 PDF"""
+    try:
+        data = request.get_json()
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        company_name = data.get("company_name", "iMarine Customer")
+        
+        if not start_date or not end_date:
+            return jsonify({"error": "請提供開始和結束日期"}), 400
+        
+        history = load_history()
+        
+        # 篩選日期區間的記錄
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end = end.replace(hour=23, minute=59, second=59)
+        
+        filtered_records = []
+        for record in history:
+            try:
+                record_date_str = record.get("date", "").split(" ")[0]
+                if record_date_str:
+                    record_date = datetime.strptime(record_date_str, "%Y-%m-%d")
+                    if start <= record_date <= end:
+                        filtered_records.append(record)
+            except:
+                continue
+        
+        # 計算統計數據
+        total_containers = sum(r.get("containers", 0) for r in filtered_records)
+        total_carbon_saved = sum(r.get("carbon_improvement", 0) for r in filtered_records)
+        total_cost_saved = sum(r.get("savings_amount", 0) for r in filtered_records)
+        sea_count = len([r for r in filtered_records if r.get("best_mode") == "海運"])
+        road_count = len([r for r in filtered_records if r.get("best_mode") == "內陸運輸" or r.get("best_mode") == "公路"])
+        
+        # 產生證書 PDF
+        pdf_buffer = build_certificate_pdf_report(
+            company_name=company_name,
+            start_date=start_date,
+            end_date=end_date,
+            total_containers=total_containers,
+            total_carbon_saved=total_carbon_saved,
+            total_cost_saved=total_cost_saved,
+            sea_count=sea_count,
+            road_count=road_count,
+            records=filtered_records[:20]
+        )
+        
+        return send_file(
+            pdf_buffer, 
+            as_attachment=True, 
+            download_name=f"carbon_certificate_{start_date}_to_{end_date}.pdf",
+            mimetype="application/pdf"
+        )
+        
+    except Exception as e:
+        print(f"產生證書錯誤: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
