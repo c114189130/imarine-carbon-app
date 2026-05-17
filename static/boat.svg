@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <!-- 船身 -->
+  <path d="M 20 60 L 180 60 L 170 90 L 30 90 Z" fill="#ccc" stroke="#333" stroke-width="2" />
+  <!-- 船底 -->
+  <path d="M 30 90 L 170 90 L 160 100 L 40 100 Z" fill="#aaa" stroke="#333" stroke-width="2" />
+  <!-- 甲板 -->
+  <rect x="60" y="40" width="80" height="20" fill="#ddd" stroke="#333" stroke-width="2" />
+  <!-- 煙囪 -->
+  <rect x="80" y="10" width="15" height="30" fill="#e74c3c" stroke="#333" stroke-width="2" />
+  <rect x="105" y="15" width="15" height="25" fill="#e74c3c" stroke="#333" stroke-width="2" />
+  <!-- 上層建築 -->
+  <rect x="65" y="25" width="70" height="15" fill="#eee" stroke="#333" stroke-width="1" />
+</svg>

@@ -291,8 +291,8 @@
             <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option></select></div>
             <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="dangerous">危險品/特殊貨物</option></select></div>
-            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate" value="2026-05-20"></div>
-            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate" value="2026-05-25"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
+            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate"></div>
+            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 藍色公路 vs 內陸運輸 分析</button>
         </div>
 
@@ -657,9 +657,69 @@
             }
         }
         
+        // 船班顯示函數 - 根據要求到貨日期篩選
+        function displayShips(ships, requiredArrivalDate) {
+            if (!ships || ships.length === 0) {
+                document.getElementById('shipsList').innerHTML = '<div style="padding:2rem; text-align:center; color:#e74c3c">⚠️ 目前無可預訂的船班</div>';
+                return;
+            }
+            
+            // 根據要求到貨日期篩選船班
+            const requiredDate = new Date(requiredArrivalDate);
+            
+            const validShips = ships.filter(ship => {
+                const sailingDate = new Date(ship.sailing_date);
+                const arrivalDate = new Date(sailingDate);
+                arrivalDate.setDate(arrivalDate.getDate() + SEA_TRANSIT_DAYS);
+                return arrivalDate <= requiredDate;
+            });
+            
+            if (validShips.length === 0) {
+                document.getElementById('shipsList').innerHTML = `
+                    <div style="padding:2rem; text-align:center; background:rgba(231,76,60,0.1); border-radius:15px;">
+                        ⚠️ 在 ${requiredArrivalDate} 前沒有可抵達的船班<br>
+                        建議考慮內陸運輸或調整到貨日期
+                    </div>`;
+                return;
+            }
+            
+            let html = '<div style="display:grid; gap:1rem">';
+            validShips.forEach(ship => {
+                const sailingDate = new Date(ship.sailing_date);
+                const arrivalDate = new Date(sailingDate);
+                arrivalDate.setDate(arrivalDate.getDate() + SEA_TRANSIT_DAYS);
+                const fillPercent = ship.utilization || 50;
+                const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
+                html += `
+                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}', ${ship.remaining || 0})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
+                        <div><strong>🚢 ${ship.ship_name || '立昌輪'}</strong> (${ship.voyage_no || ''})</div>
+                        <div>📅 開航日：${ship.sailing_date} &nbsp; → &nbsp; 📍 預計抵達：${arrivalDate.toISOString().split('T')[0]}</div>
+                        <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
+                        <div>📦 剩餘艙位：<strong>${(ship.remaining || 0).toLocaleString()}</strong> / ${(ship.capacity || 0).toLocaleString()} TEU (${fillPercent}%)</div>
+                        <div>💰 運價：NT$ ${(ship.dynamic_price || 12000).toLocaleString()} / FEU</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('shipsList').innerHTML = html;
+        }
+        
         async function goToStep3() {
             const routeKey = document.getElementById('start').value === 'kaohsiung' ? 'KHH-TXG' : 'TXG-KHH';
             currentRouteKey = routeKey;
+            
+            // 獲取要求到貨日期
+            const requiredArrivalDate = document.getElementById('arrivalDate').value;
+            if (!requiredArrivalDate) {
+                alert('請先設定要求到貨日期');
+                return;
+            }
+            
+            if (!currentComparison) {
+                alert('請先進行運輸分析');
+                return;
+            }
+            
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('shipsList').innerHTML = '載入船班資料...';
             
@@ -669,41 +729,25 @@
                 const response = await fetch(`/api/ships/${routeKey}`);
                 let ships = await response.json();
                 if (!Array.isArray(ships)) ships = ships ? [ships] : [];
-                const validShips = ships.filter(ship => ship.sailing_date >= today);
-                displayShips(validShips);
+                
+                // 先過濾掉過去的船班
+                const futureShips = ships.filter(ship => ship.sailing_date >= today);
+                
+                // 傳入要求到貨日期進行篩選
+                displayShips(futureShips, requiredArrivalDate);
             } catch(err) {
-                displayShips([]);
+                console.error("載入船班失敗:", err);
+                displayShips([], requiredArrivalDate);
             }
             document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // 更新步驟顯示
             document.getElementById('step1').classList.remove('active');
             document.getElementById('step2').classList.remove('active');
             document.getElementById('step3').classList.add('active');
             document.getElementById('step1Panel').style.display = 'none';
             document.getElementById('step2Panel').style.display = 'none';
             document.getElementById('step3Panel').style.display = 'block';
-        }
-        
-        function displayShips(ships) {
-            if (!ships || ships.length === 0) {
-                document.getElementById('shipsList').innerHTML = '<div style="padding:2rem; text-align:center; color:#e74c3c">⚠️ 目前無可預訂的船班</div>';
-                return;
-            }
-            
-            let html = '<div style="display:grid; gap:1rem">';
-            ships.forEach(ship => {
-                const fillPercent = ship.utilization;
-                const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
-                html += `
-                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}', ${ship.remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
-                        <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no}) 📅 ${ship.sailing_date}</div>
-                        <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
-                        <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU (${fillPercent}%)</div>
-                        <div>💰 運價：NT$ ${ship.dynamic_price?.toLocaleString() || 12000} / FEU</div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            document.getElementById('shipsList').innerHTML = html;
         }
         
         function selectShip(sailingDate, remaining) {
@@ -721,6 +765,8 @@
             if (!companyName) { alert('請輸入公司名稱'); return; }
             const containers = parseInt(document.getElementById('bookContainers').value);
             const cargoType = document.getElementById('cargoType').value;
+            const contactPerson = document.getElementById('contactPerson').value;
+            const phone = document.getElementById('phone').value;
             
             const response = await fetch('/api/book-ship', {
                 method: 'POST',
@@ -731,8 +777,8 @@
                     containers: containers,
                     company_name: companyName,
                     cargo_type: cargoType,
-                    contact_person: document.getElementById('contactPerson').value,
-                    phone: document.getElementById('phone').value
+                    contact_person: contactPerson,
+                    phone: phone
                 })
             });
             const result = await response.json();
@@ -779,7 +825,7 @@
                 const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
-                await goToStep3();
+                backToStep1();
             } else {
                 alert(`❌ 訂艙失敗：${result.error}`);
                 showAssistantMessage(`❌ 訂艙失敗：${result.error}<br>請確認艙位數量或聯絡客服。`);
@@ -789,8 +835,10 @@
         function backToStep1() {
             document.getElementById('step1').classList.add('active');
             document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.remove('active');
             document.getElementById('step1Panel').style.display = 'block';
             document.getElementById('step2Panel').style.display = 'none';
+            document.getElementById('step3Panel').style.display = 'none';
         }
         
         function backToStep2() {
@@ -832,12 +880,20 @@
             setTimeout(() => addAssistantMessage(reply), 300);
         }
         
+        // 設定日期預設值
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const defaultArrival = new Date(today);
+        defaultArrival.setDate(defaultArrival.getDate() + 10);
+        
+        document.getElementById('departureDate').value = tomorrow.toISOString().split('T')[0];
+        document.getElementById('departureDate').min = tomorrow.toISOString().split('T')[0];
+        document.getElementById('arrivalDate').value = defaultArrival.toISOString().split('T')[0];
+        document.getElementById('arrivalDate').min = tomorrow.toISOString().split('T')[0];
+        
         loadTrafficAndSchedule();
         setInterval(loadTrafficAndSchedule, 60000);
-        
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('departureDate').min = today;
-        document.getElementById('arrivalDate').min = new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     </script>
 </body>
 </html>
