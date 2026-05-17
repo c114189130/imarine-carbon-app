@@ -183,10 +183,15 @@ def save_history_direct():
             return jsonify({"error": "無資料"}), 400
         
         # 確保必要欄位存在
-        if "savings_amount" not in data:
-            # 如果沒有 savings_amount，從 carbon_improvement 計算
+        if "id" not in data:
+            data["id"] = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+        if "date" not in data:
+            data["date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 確保 savings_amount 有值
+        if "savings_amount" not in data or data.get("savings_amount") is None:
             carbon_improvement = data.get("carbon_improvement", 0)
-            data["savings_amount"] = round(carbon_improvement * 0.3)  # 碳價 0.3 元/kg
+            data["savings_amount"] = round(carbon_improvement * 0.3)
         
         history = load_history()
         history.append(data)
@@ -270,11 +275,13 @@ def calculate():
         social_savings = road_total - sea_total
         carbon_improvement = road_carbon - sea_carbon
         baseline = road_carbon
+        savings_amount = road_total - sea_total
     else:
         best_mode = "公路"
         social_savings = sea_total - road_total
         carbon_improvement = sea_carbon - road_carbon
         baseline = sea_carbon
+        savings_amount = 0
 
     reduction_pct = (carbon_improvement / baseline * 100) if baseline > 0 else 0
 
@@ -293,6 +300,7 @@ def calculate():
         "reduction_pct": round(reduction_pct, 1),
         "best_mode": best_mode,
         "social_savings": round(social_savings),
+        "savings_amount": round(savings_amount),
         "road_total": round(road_total),
         "sea_total": round(sea_total),
     }
@@ -383,18 +391,6 @@ def download_certificate(cert_id, lang):
     pdf_buffer = build_certificate_pdf(certificate, lang=lang)
     filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
     return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
-import os
-import math
-import requests
-import random  # ⭐ 確保有這行
-from datetime import datetime
-from uuid import uuid4
-from flask import Flask, jsonify, render_template, request, send_file
 
-# ... 其他導入 ...
-
-# 常數設定
-MAX_HISTORY_RECORDS = 200  # 確保有這行
-    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

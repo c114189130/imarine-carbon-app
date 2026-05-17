@@ -86,7 +86,6 @@
     <div class="container">
         <h1>📊 貨櫃指派/訂艙歷史記錄</h1>
         
-        <!-- 簡易統計摘要 -->
         <div class="stats-summary" id="statsSummary">
             <div class="stat-item">
                 <div class="stat-value" id="totalRecords">0</div>
@@ -145,11 +144,9 @@
                     return;
                 }
                 
-                // 計算統計
                 let totalContainers = 0;
                 let totalCarbonReduction = 0;
                 
-                // 顯示最近50筆，最新的在上面
                 const reversed = [...data].reverse();
                 reversed.forEach(record => {
                     totalContainers += record.containers || 0;
@@ -174,7 +171,6 @@
                     `;
                 });
                 
-                // 更新統計摘要
                 document.getElementById('totalRecords').innerText = data.length;
                 document.getElementById('totalContainers').innerText = totalContainers.toLocaleString();
                 document.getElementById('totalCarbonReduction').innerText = totalCarbonReduction.toLocaleString();
