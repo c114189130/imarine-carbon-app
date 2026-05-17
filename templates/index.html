@@ -334,6 +334,7 @@
         </div>
     </div>
 
+    <!-- 小助理 -->
     <div class="ai-assistant" id="aiAssistant">
         <div class="assistant-chat" id="assistantChat" style="display: none;">
             <div class="assistant-header" onclick="toggleAssistantChat()">
@@ -419,19 +420,6 @@
         
         function formatDate(date) { return date.toISOString().split('T')[0]; }
         
-        // 🔥 取得台灣時間 (UTC+8)
-        function getTaiwanTime() {
-            const now = new Date();
-            const taiwanTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-            return taiwanTime.toISOString().replace('Z', '+08:00');
-        }
-        
-        // 🔥 格式化成台灣時間字串
-        function formatTaiwanTime(date) {
-            const taiwanDate = new Date(date.getTime() + (8 * 60 * 60 * 1000));
-            return taiwanDate.toISOString().replace('T', ' ').substring(0, 19);
-        }
-        
         function showAssistantMessage(message) {
             const chatDiv = document.getElementById('assistantChat');
             const messagesDiv = document.getElementById('assistantMessages');
@@ -473,7 +461,6 @@
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
-        // 🔥 動態計算減碳比例（核心修正）
         function calculateCarbonReduction(containers) {
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
             const seaCarbon = SEA_CARBON_RATE * DISTANCE * containers;
@@ -496,10 +483,8 @@
             const departureDate = new Date(departureDateStr);
             const arrivalRequirement = new Date(arrivalRequirementStr);
             
-            // 動態計算碳排
             const { roadCarbon, seaCarbon, carbonSaved, reductionPct } = calculateCarbonReduction(containers);
             
-            // 成本計算
             const seaCost = SEA_COST_PER_FEU * containers;
             const roadCost = ROAD_COST_PER_FEU * containers;
             const costSaved = roadCost - seaCost;
@@ -614,7 +599,6 @@
             document.getElementById('comparisonResult').innerHTML = html;
         }
         
-        // 🔥 確認採納內陸運輸
         async function confirmRoadTransport() {
             if (!currentComparison) { alert('請先進行分析'); return; }
             
@@ -625,31 +609,30 @@
             const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
             const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
             
-            // 正確計算公路碳排
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
-            const seaCarbon = 0;
-            const carbonImprovement = 0;
-            const reductionPct = 0;
             
-            // 🔥 使用台灣時間
+            // 正確的時間格式 (YYYY-MM-DD HH:MM:SS)
             const now = new Date();
-            const taiwanTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-            const formattedDate = taiwanTime.toISOString().replace('Z', '+08:00');
-            const displayDate = `${taiwanTime.getFullYear()}-${String(taiwanTime.getMonth()+1).padStart(2,'0')}-${String(taiwanTime.getDate()).padStart(2,'0')} ${String(taiwanTime.getHours()).padStart(2,'0')}:${String(taiwanTime.getMinutes()).padStart(2,'0')}:${String(taiwanTime.getSeconds()).padStart(2,'0')}`;
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
             
             const historyRecord = {
                 id: Date.now().toString(),
                 date: formattedDate,
-                display_date: displayDate,
                 start: startName,
                 end: endName,
                 containers: containers,
                 cargo_type: cargoType,
                 base_distance: DISTANCE,
                 road_carbon: roadCarbon,
-                sea_carbon: seaCarbon,
-                carbon_improvement: carbonImprovement,
-                reduction_pct: reductionPct,
+                sea_carbon: roadCarbon,
+                carbon_improvement: 0,
+                reduction_pct: 0,
                 best_mode: "內陸運輸",
                 social_savings: 0,
                 road_total: currentComparison.roadCost,
@@ -664,7 +647,7 @@
                 });
                 
                 if (response.ok) {
-                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 時間：${displayDate}<br>📌 已加入歷史記錄，可至儀表板查看詳細數據。`);
+                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>📅 時間：${formattedDate}<br>📌 已加入歷史記錄，可至儀表板查看詳細數據。`);
                     alert('✅ 已記錄內陸運輸決策！');
                     backToStep1();
                 } else {
@@ -734,7 +717,6 @@
             document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 50, remaining);
         }
         
-        // 🔥 確認訂艙（修正：不重複記錄歷史）
         async function confirmBooking() {
             if (!selectedShip) { alert('請先選擇船班'); return; }
             const companyName = document.getElementById('companyName').value;
@@ -758,42 +740,46 @@
             const result = await response.json();
             
             if (result.success) {
-                // 🔥 計算正確的減碳比例（動態）
-                const { roadCarbon, seaCarbon, carbonSaved, reductionPct } = calculateCarbonReduction(containers);
+                const { seaCarbon } = calculateCarbonReduction(containers);
+                const start = document.getElementById('start').value;
+                const end = document.getElementById('end').value;
+                const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
+                const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
                 
-                // 🔥 使用台灣時間
                 const now = new Date();
-                const taiwanTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-                const formattedDate = taiwanTime.toISOString().replace('Z', '+08:00');
-                const displayDate = `${taiwanTime.getFullYear()}-${String(taiwanTime.getMonth()+1).padStart(2,'0')}-${String(taiwanTime.getDate()).padStart(2,'0')} ${String(taiwanTime.getHours()).padStart(2,'0')}:${String(taiwanTime.getMinutes()).padStart(2,'0')}:${String(taiwanTime.getSeconds()).padStart(2,'0')}`;
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
                 
                 const historyRecord = {
                     id: result.booking_id,
                     date: formattedDate,
-                    display_date: displayDate,
-                    start: document.getElementById('start').value === 'kaohsiung' ? '高雄港' : '台中港',
-                    end: document.getElementById('end').value === 'kaohsiung' ? '高雄港' : '台中港',
+                    start: startName,
+                    end: endName,
                     containers: containers,
                     cargo_type: cargoType,
                     base_distance: DISTANCE,
-                    road_carbon: roadCarbon,
+                    road_carbon: 0,
                     sea_carbon: seaCarbon,
-                    carbon_improvement: carbonSaved,
-                    reduction_pct: reductionPct,
+                    carbon_improvement: seaCarbon,
+                    reduction_pct: 66.7,
                     best_mode: "海運",
                     social_savings: 0,
                     road_total: 0,
                     sea_total: result.total_price
                 };
                 
-                // 🔥 只儲存一次歷史記錄
                 await fetch('/save_history_direct', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(historyRecord)
                 });
                 
-                const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>📊 剩餘艙位：${result.remaining} / ${result.capacity} TEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br>🌱 減碳效益：${carbonSaved.toFixed(0)} kg (${reductionPct}%)<br><br>📌 艙位已保留！`;
+                const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>📊 剩餘艙位：${result.remaining} / ${result.capacity} TEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
                 await goToStep3();
@@ -821,7 +807,9 @@
             const chat = document.getElementById('assistantChat');
             chat.style.display = chat.style.display === 'none' ? 'block' : 'none';
         }
+        
         function closeAssistant() { document.getElementById('assistantChat').style.display = 'none'; }
+        
         function addAssistantMessage(text, isUser = false) {
             const container = document.getElementById('assistantMessages');
             const div = document.createElement('div');
@@ -831,6 +819,7 @@
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
+        
         async function sendAssistantMessage() {
             const input = document.getElementById('assistantInput');
             const msg = input.value.trim();
