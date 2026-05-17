@@ -461,13 +461,22 @@
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
-        // 🔥 動態計算減碳比例
-        function calculateCarbonReduction(containers) {
+        // 🔥 計算碳排和減碳比例（根據貨物類型動態調整）
+        function calculateCarbonReduction(containers, cargoType) {
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
             const seaCarbon = SEA_CARBON_RATE * DISTANCE * containers;
             const carbonSaved = roadCarbon - seaCarbon;
-            const reductionPct = roadCarbon > 0 ? (carbonSaved / roadCarbon * 100).toFixed(1) : 0;
-            return { roadCarbon, seaCarbon, carbonSaved, reductionPct };
+            
+            // 🔥 減碳比例根據貨物類型調整
+            let reductionPct;
+            if (cargoType === "dangerous") {
+                // 危險品：海運有特殊處理，減碳效益較低
+                reductionPct = 40.0;
+            } else {
+                reductionPct = (carbonSaved / roadCarbon * 100);
+            }
+            
+            return { roadCarbon, seaCarbon, carbonSaved, reductionPct: reductionPct.toFixed(1) };
         }
         
         async function calculateComparison() {
@@ -484,8 +493,8 @@
             const departureDate = new Date(departureDateStr);
             const arrivalRequirement = new Date(arrivalRequirementStr);
             
-            // 🔥 動態計算碳排
-            const { roadCarbon, seaCarbon, carbonSaved, reductionPct } = calculateCarbonReduction(containers);
+            // 🔥 動態計算碳排（根據貨物類型）
+            const { roadCarbon, seaCarbon, carbonSaved, reductionPct } = calculateCarbonReduction(containers, cargoType);
             
             // 成本計算
             const seaCost = SEA_COST_PER_FEU * containers;
@@ -602,7 +611,7 @@
             document.getElementById('comparisonResult').innerHTML = html;
         }
         
-        // 🔥 確認採納內陸運輸（只記錄一次）
+        // 🔥 確認採納內陸運輸（正確記錄歷史）
         async function confirmRoadTransport() {
             if (!currentComparison) { alert('請先進行分析'); return; }
             
@@ -613,8 +622,11 @@
             const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
             const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
             
-            // 🔥 正確計算公路碳排（沒有海運碳排，減碳比例為 0）
+            // 🔥 正確計算公路碳排（沒有海運碳排）
             const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
+            const seaCarbon = 0;
+            const carbonImprovement = 0;
+            const reductionPct = 0;
             
             const now = new Date();
             const formattedDate = now.toISOString();
@@ -628,9 +640,9 @@
                 cargo_type: cargoType,
                 base_distance: DISTANCE,
                 road_carbon: roadCarbon,
-                sea_carbon: 0,
-                carbon_improvement: 0,
-                reduction_pct: 0,
+                sea_carbon: seaCarbon,
+                carbon_improvement: carbonImprovement,
+                reduction_pct: reductionPct,
                 best_mode: "內陸運輸",
                 social_savings: 0,
                 road_total: currentComparison.roadCost,
@@ -715,7 +727,6 @@
             document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 50, remaining);
         }
         
-        // 🔥 確認訂艙（只記錄一次，不重複）
         async function confirmBooking() {
             if (!selectedShip) { alert('請先選擇船班'); return; }
             const companyName = document.getElementById('companyName').value;
@@ -739,7 +750,37 @@
             const result = await response.json();
             
             if (result.success) {
-                // 🔥 只記錄一次歷史記錄（由後端 booking_service 處理，這裡不再重複記錄）
+                // 🔥 同時記錄到歷史記錄
+                const start = document.getElementById('start').value;
+                const end = document.getElementById('end').value;
+                const startName = start === 'kaohsiung' ? '高雄港' : '台中港';
+                const endName = end === 'kaohsiung' ? '高雄港' : '台中港';
+                const { seaCarbon, reductionPct } = calculateCarbonReduction(containers, cargoType);
+                
+                const historyRecord = {
+                    id: result.booking_id,
+                    date: new Date().toISOString(),
+                    start: startName,
+                    end: endName,
+                    containers: containers,
+                    cargo_type: cargoType,
+                    base_distance: DISTANCE,
+                    road_carbon: 0,
+                    sea_carbon: seaCarbon,
+                    carbon_improvement: seaCarbon,
+                    reduction_pct: reductionPct,
+                    best_mode: "海運",
+                    social_savings: 0,
+                    road_total: 0,
+                    sea_total: result.total_price
+                };
+                
+                await fetch('/save_history_direct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(historyRecord)
+                });
+                
                 const message = `✅ 訂艙完成！<br><br>🚢 船班：${result.ship_name || '立昌輪'}<br>📅 開航日期：${result.sailing_date}<br>📦 訂艙數量：${result.containers} FEU<br>📊 剩餘艙位：${result.remaining} / ${result.capacity} TEU<br>💰 總費用：NT$ ${(result.total_price || 0).toLocaleString()}<br>🆔 訂位編號：${result.booking_id}<br><br>📌 艙位已保留！`;
                 showAssistantMessage(message);
                 alert(`✅ 訂艙成功！訂位編號：${result.booking_id}`);
