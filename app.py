@@ -176,33 +176,25 @@ def book_ship():
 
 @app.route("/save_history_direct", methods=["POST"])
 def save_history_direct():
-    """直接保存歷史記錄（用於內陸運輸確認和訂艙記錄）"""
+    """直接保存歷史記錄（用於內陸運輸確認和訂艙）"""
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "無資料"}), 400
         
-        # 修正時間格式：統一使用 YYYY-MM-DD HH:MM:SS 格式
-        if 'date' in data:
-            try:
-                # 處理 ISO 格式時間
-                if 'T' in data['date']:
-                    dt = datetime.fromisoformat(data['date'].replace('Z', '+00:00'))
-                    data['date'] = dt.strftime('%Y-%m-%d %H:%M:%S')
-            except:
-                pass
-        
-        # 如果是陸運，修正顯示邏輯
-        if data.get('best_mode') == '內陸運輸':
-            if data.get('road_carbon', 0) > 0:
-                data['sea_carbon'] = data.get('road_carbon', 0)
-                data['carbon_improvement'] = 0
-                data['reduction_pct'] = 0
+        # 確保必要欄位存在
+        if "savings_amount" not in data:
+            # 如果沒有 savings_amount，從 carbon_improvement 計算
+            carbon_improvement = data.get("carbon_improvement", 0)
+            data["savings_amount"] = round(carbon_improvement * 0.3)  # 碳價 0.3 元/kg
         
         history = load_history()
         history.append(data)
+        
+        # 保留最近 MAX_HISTORY_RECORDS 筆
         if len(history) > MAX_HISTORY_RECORDS:
             history = history[-MAX_HISTORY_RECORDS:]
+        
         write_json(HISTORY_FILE, history)
         return jsonify({"success": True})
     except Exception as e:
@@ -391,6 +383,49 @@ def download_certificate(cert_id, lang):
     pdf_buffer = build_certificate_pdf(certificate, lang=lang)
     filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
     return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
+import os
+import math
+import requests
+import random  # ⭐ 確保有這行
+from datetime import datetime
+from uuid import uuid4
+from flask import Flask, jsonify, render_template, request, send_file
 
+# ... 其他導入 ...
+
+# 常數設定
+MAX_HISTORY_RECORDS = 200  # 確保有這行
+
+# ... 其他程式碼 ...
+
+# 在檔案結尾附近加入新路由
+@app.route("/save_history_direct", methods=["POST"])
+def save_history_direct():
+    """直接保存歷史記錄（用於內陸運輸確認和訂艙）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "無資料"}), 400
+        
+        # 確保有必要的欄位
+        if 'id' not in data:
+            data['id'] = datetime.now().strftime('%Y%m%d%H%M%S') + str(random.randint(1000, 9999))
+        if 'date' not in data:
+            data['date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # 載入現有歷史
+        history = load_history()
+        history.append(data)
+        
+        # 保留最近 MAX_HISTORY_RECORDS 筆
+        if len(history) > MAX_HISTORY_RECORDS:
+            history = history[-MAX_HISTORY_RECORDS:]
+        
+        write_json(HISTORY_FILE, history)
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"保存歷史錯誤: {e}")
+        return jsonify({"error": str(e)}), 500
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
