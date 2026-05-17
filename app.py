@@ -395,37 +395,6 @@ from flask import Flask, jsonify, render_template, request, send_file
 
 # 常數設定
 MAX_HISTORY_RECORDS = 200  # 確保有這行
-
-# ... 其他程式碼 ...
-
-# 在檔案結尾附近加入新路由
-@app.route("/save_history_direct", methods=["POST"])
-def save_history_direct():
-    """直接保存歷史記錄（用於內陸運輸確認和訂艙）"""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "無資料"}), 400
-        
-        # 確保有必要的欄位
-        if 'id' not in data:
-            data['id'] = datetime.now().strftime('%Y%m%d%H%M%S') + str(random.randint(1000, 9999))
-        if 'date' not in data:
-            data['date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # 載入現有歷史
-        history = load_history()
-        history.append(data)
-        
-        # 保留最近 MAX_HISTORY_RECORDS 筆
-        if len(history) > MAX_HISTORY_RECORDS:
-            history = history[-MAX_HISTORY_RECORDS:]
-        
-        write_json(HISTORY_FILE, history)
-        return jsonify({"success": True})
-    except Exception as e:
-        print(f"保存歷史錯誤: {e}")
-        return jsonify({"error": str(e)}), 500
     
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
