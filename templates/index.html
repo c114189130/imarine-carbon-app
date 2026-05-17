@@ -450,17 +450,28 @@
             } catch(e) { console.error("載入路況失敗:", e); }
             
             try {
-                const schedules = [
-                    { voyage: "UNI-PROSPER 0729-513B",高雄: "5/20",台中: "5/23",台北: "5/26" },
-                    { voyage: "UNI-PROSPER 0730-514B",高雄: "5/27",台中: "5/30",台北: "6/01" },
-                    { voyage: "UNI-PROSPER 0731-515B",高雄: "6/03",台中: "6/06",台北: "6/09" }
-                ];
-                let html = '<div style="display:flex; flex-direction:column; gap:0.3rem">';
-                schedules.forEach(s => {
-                    html += `<div class="schedule-item"><span class="schedule-voyage">🚢 ${s.voyage}</span><span>📅 高雄:${s.高雄} 台中:${s.台中} 台北:${s.台北}</span></div>`;
-                });
-                html += '</div>';
-                document.getElementById('scheduleList').innerHTML = html;
+                // 載入船期 (使用真實 UNI-PROSPER 船期)
+const schedules = [
+    { voyage: "UNI-PROSPER 0728-512B", 高雄抵達: "5/13", 高雄出發: "5/16", 台中抵達: "5/16", 台中出發: "5/17", 台北抵達: "5/19", 台北出發: "5/19" },
+    { voyage: "UNI-PROSPER 0729-513B", 高雄抵達: "5/20", 高雄出發: "5/23", 台中抵達: "5/23", 台中出發: "5/24", 台北抵達: "5/26", 台北出發: "5/26" },
+    { voyage: "UNI-PROSPER 0730-514B", 高雄抵達: "5/27", 高雄出發: "5/30", 台中抵達: "5/30", 台中出發: "5/31", 台北抵達: "6/01", 台北出發: "6/01" },
+    { voyage: "UNI-PROSPER 0731-515B", 高雄抵達: "6/03", 高雄出發: "6/06", 台中抵達: "6/06", 台中出發: "6/07", 台北抵達: "6/09", 台北出發: "6/09" },
+    { voyage: "UNI-PROSPER 0732-516B", 高雄抵達: "6/10", 高雄出發: "6/13", 台中抵達: "6/13", 台中出發: "6/14", 台北抵達: "6/16", 台北出發: "6/16" },
+    { voyage: "UNI-PROSPER 0733-517B", 高雄抵達: "6/17", 高雄出發: "6/21", 台中抵達: "6/21", 台中出發: "6/22", 台北抵達: "6/23", 台北出發: "6/23" },
+    { voyage: "UNI-PROSPER 0734-518B", 高雄抵達: "6/25", 高雄出發: "6/28", 台中抵達: "6/28", 台中出發: "6/29", 台北抵達: "6/30", 台北出發: "6/30" }
+];
+
+let html = '<div style="display:flex; flex-direction:column; gap:0.5rem">';
+schedules.forEach(s => {
+    html += `<div class="schedule-item">
+        <span class="schedule-voyage">🚢 ${s.voyage}</span>
+        <span>📅 高雄:${s.高雄抵達}抵/${s.高雄出發}發</span>
+        <span>台中:${s.台中抵達}抵/${s.台中出發}發</span>
+        <span>台北:${s.台北抵達}抵/${s.台北出發}發</span>
+    </div>`;
+});
+html += '</div>';
+document.getElementById('scheduleList').innerHTML = html;
             } catch(e) { console.error("載入船期失敗:", e); }
         }
         
