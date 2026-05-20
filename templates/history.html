@@ -71,6 +71,82 @@
             font-size: 0.8rem;
             color: #ccc;
         }
+        
+        /* 可展開明細樣式 */
+        .detail-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .detail-row:hover {
+            background: #e8f4f8 !important;
+        }
+        .expand-icon {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            font-weight: bold;
+            color: #0077b6;
+        }
+        .detail-panel {
+            display: none;
+            background: #f8f9fa;
+            border-top: 2px solid #0077b6;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-panel.show {
+            display: table-row;
+        }
+        .detail-content {
+            padding: 15px 20px;
+            background: #f8f9fa;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .detail-card-mini {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid #0077b6;
+        }
+        .detail-card-mini .label {
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .detail-card-mini .value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #1a5276;
+        }
+        .detail-card-mini .value.highlight {
+            color: #27ae60;
+        }
+        .detail-card-mini .value.warning {
+            color: #e74c3c;
+        }
+        .btn-view-detail {
+            background: #0077b6;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .btn-view-detail:hover {
+            background: #00b4d8;
+        }
+        
+        @media (max-width: 768px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -99,6 +175,10 @@
                 <div class="stat-value" id="totalCarbonReduction">0</div>
                 <div class="stat-label">總減碳量 (kg)</div>
             </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalSavings">0</div>
+                <div class="stat-label">總節省金額 (NTD)</div>
+            </div>
         </div>
         
         <div class="card fade-in">
@@ -106,19 +186,20 @@
                 <table class="history-table">
                     <thead>
                         <tr>
+                            <th></th>
                             <th>時間</th>
                             <th>起點</th>
                             <th>終點</th>
                             <th>貨櫃數(FEU)</th>
                             <th>貨物類型</th>
-                            <th>距離(km)</th>
-                            <th>碳排放(kg)</th>
                             <th>運輸模式</th>
                             <th>減碳量(kg)</th>
+                            <th>節省金額(NTD)</th>
+                            <th>明細</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody">
-                        <tr><td colspan="9">載入中...</td></tr>
+                        <tr><td colspan="10">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -132,6 +213,36 @@
     </div>
     
     <script>
+        // 儲存展開狀態
+        let expandedRows = {};
+        
+        function getSavingsAmount(record) {
+            let savings = record.savings_amount || 0;
+            if (!savings && record.carbon_improvement) {
+                savings = Math.round(record.carbon_improvement * 0.3);
+            }
+            return savings;
+        }
+        
+        function toggleDetail(recordId) {
+            const panel = document.getElementById(`detail-panel-${recordId}`);
+            const icon = document.getElementById(`expand-icon-${recordId}`);
+            if (panel) {
+                if (panel.classList.contains('show')) {
+                    panel.classList.remove('show');
+                    if (icon) icon.innerHTML = '▶';
+                } else {
+                    panel.classList.add('show');
+                    if (icon) icon.innerHTML = '▼';
+                }
+            }
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return dateStr.split(' ')[0];
+        }
+        
         async function loadHistory() {
             try {
                 const response = await fetch('/get_history');
@@ -140,44 +251,153 @@
                 tbody.innerHTML = '';
                 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
                     return;
                 }
                 
                 let totalContainers = 0;
                 let totalCarbonReduction = 0;
+                let totalSavings = 0;
                 
+                // 顯示最近50筆，最新的在上面
                 const reversed = [...data].reverse();
                 reversed.forEach(record => {
                     totalContainers += record.containers || 0;
                     totalCarbonReduction += record.carbon_improvement || 0;
+                    totalSavings += getSavingsAmount(record);
                     
                     const modeBadge = record.best_mode === '海運' 
                         ? '<span class="badge-sea">🚢 海運</span>' 
                         : '<span class="badge-road">🚛 公路</span>';
                     
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${record.date || '-'}</td>
-                            <td>${record.start || '-'}</td>
-                            <td>${record.end || '-'}</td>
-                            <td>${(record.containers || 0).toLocaleString()}</td>
-                            <td>${record.cargo_type || '一般'}</td>
-                            <td>${record.base_distance || '-'}</td>
-                            <td>${(record.sea_carbon || 0).toLocaleString()}</td>
-                            <td>${modeBadge}</td>
-                            <td style="color: #27ae60; font-weight: bold;">${(record.carbon_improvement || 0).toLocaleString()}</td>
-                        </tr>
+                    const recordId = record.id || Date.now() + Math.random();
+                    const savingsAmount = getSavingsAmount(record);
+                    
+                    // 主行
+                    const row = document.createElement('tr');
+                    row.className = 'detail-row';
+                    row.onclick = () => toggleDetail(recordId);
+                    row.innerHTML = `
+                        <td><span class="expand-icon" id="expand-icon-${recordId}">▶</span></td>
+                        <td>${record.date || '-'}</td>
+                        <td>${record.start || '-'}</td>
+                        <td>${record.end || '-'}</td>
+                        <td>${(record.containers || 0).toLocaleString()}</td>
+                        <td>${record.cargo_type === 'dangerous' ? '⚠️ 危險品' : (record.cargo_type || '一般')}</td>
+                        <td>${modeBadge}</td>
+                        <td style="color: #27ae60; font-weight: bold;">${(record.carbon_improvement || 0).toLocaleString()}</td>
+                        <td style="color: #27ae60; font-weight: bold;">NT$ ${savingsAmount.toLocaleString()}</td>
+                        <td><button class="btn-view-detail" onclick="event.stopPropagation(); toggleDetail('${recordId}')">📋 查看明細</button></td>
                     `;
+                    tbody.appendChild(row);
+                    
+                    // 明細面板
+                    const detailRow = document.createElement('tr');
+                    detailRow.id = `detail-panel-${recordId}`;
+                    detailRow.className = 'detail-panel';
+                    
+                    // 計算額外資訊
+                    const roadCarbon = record.road_carbon || 0;
+                    const seaCarbon = record.sea_carbon || 0;
+                    const carbonFee = (record.carbon_improvement || 0) * 0.3;
+                    const carbonCredit = (record.carbon_improvement || 0) * 0.32;
+                    const distance = record.base_distance || 215;
+                    
+                    detailRow.innerHTML = `
+                        <td colspan="10">
+                            <div class="detail-content">
+                                <div class="detail-grid">
+                                    <div class="detail-card-mini">
+                                        <div class="label">📅 貨物抵達港口日期</div>
+                                        <div class="value">${formatDate(record.departure_date) || formatDate(record.date) || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">📅 要求提貨日期</div>
+                                        <div class="value">${formatDate(record.arrival_requirement) || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🚢 海運預計到港日</div>
+                                        <div class="value">${record.sea_arrival_date || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🚛 公路預計到港日</div>
+                                        <div class="value">${record.road_arrival_date || '-'}</div>
+                                    </div>
+                                </div>
+                                <div class="detail-grid">
+                                    <div class="detail-card-mini">
+                                        <div class="label">📦 貨櫃數量</div>
+                                        <div class="value">${record.containers || 0} FEU</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🗺️ 運輸距離</div>
+                                        <div class="value">${distance} km</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🌱 公路碳排放</div>
+                                        <div class="value warning">${roadCarbon.toLocaleString()} kg</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🌱 海運碳排放</div>
+                                        <div class="value highlight">${seaCarbon.toLocaleString()} kg</div>
+                                    </div>
+                                </div>
+                                <div class="detail-grid">
+                                    <div class="detail-card-mini">
+                                        <div class="label">💰 公路運費</div>
+                                        <div class="value warning">NT$ ${(record.road_total || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">💰 海運運費</div>
+                                        <div class="value highlight">NT$ ${(record.sea_total || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">💰 節省金額</div>
+                                        <div class="value highlight">NT$ ${savingsAmount.toLocaleString()}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">💎 碳權價值</div>
+                                        <div class="value highlight">NT$ ${Math.round(carbonCredit).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                ${record.best_mode === '海運' && record.ship_date ? `
+                                <div class="detail-grid">
+                                    <div class="detail-card-mini">
+                                        <div class="label">🚢 船班航次</div>
+                                        <div class="value">${record.voyage_no || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">📅 開航日期</div>
+                                        <div class="value">${record.ship_date || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">🏢 公司名稱</div>
+                                        <div class="value">${record.company_name || '-'}</div>
+                                    </div>
+                                    <div class="detail-card-mini">
+                                        <div class="label">📞 聯絡人</div>
+                                        <div class="value">${record.contact_person || '-'}</div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                <div style="margin-top: 10px; font-size: 0.7rem; color: #999; text-align: center;">
+                                    記錄編號: ${record.id} | 建立時間: ${record.date || '-'}
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(detailRow);
                 });
                 
+                // 更新統計摘要
                 document.getElementById('totalRecords').innerText = data.length;
                 document.getElementById('totalContainers').innerText = totalContainers.toLocaleString();
                 document.getElementById('totalCarbonReduction').innerText = totalCarbonReduction.toLocaleString();
+                document.getElementById('totalSavings').innerText = totalSavings.toLocaleString();
                 
             } catch(e) {
                 console.error("載入失敗:", e);
-                document.getElementById('historyBody').innerHTML = '<tr><td colspan="9">載入失敗</td></tr>';
+                document.getElementById('historyBody').innerHTML = '<tr><td colspan="10">載入失敗</td></tr>';
             }
         }
         

@@ -386,7 +386,7 @@
     <script>
         let currentComparison = null;
         let selectedShip = null;
-        let currentRouteKey = null;
+        let selectedShipData = null;
 
         // ==================== 根據船期表定義真實船班 ====================
         const REAL_SCHEDULE = [
@@ -417,11 +417,6 @@
         // 每 FEU 每公里碳排 (kg/km/FEU) = 係數(g/tkm) × 載重(噸) ÷ 1000
         const ROAD_CARBON_RATE_PER_KM = (ROAD_CARBON_FACTOR_G_PER_TKM * CARGO_WEIGHT_PER_FEU) / 1000;
         const SEA_CARBON_RATE_PER_KM = (SEA_CARBON_FACTOR_G_PER_TKM * CARGO_WEIGHT_PER_FEU) / 1000;
-        
-        // 計算結果驗證 (10 FEU)：
-        // 公路：130 × 22.5 × 215 × 10 ÷ 1000 = 6,288.75 kg
-        // 海運：30 × 22.5 × 215 × 10 ÷ 1000 = 1,451.25 kg
-        // 減碳：4,837.5 kg ✅
 
         // 成本數據 (NTD/FEU)
         const SEA_COST_PER_FEU = 2787;
@@ -718,6 +713,7 @@
                 seaArrivalDate: seaArrivalDateStr,
                 roadArrivalDate: roadArrivalDateStr,
                 arrivalRequirement: arrivalRequirementStr,
+                departureDate: departureDateStr,
                 startPort: startPort,
                 endPort: endPort,
                 selectedShip: selectedShip,
@@ -803,7 +799,7 @@
             const startName = start === 'kaohsiung' ? '高雄港' : (start === 'taichung' ? '台中港' : '台北港');
             const endName = end === 'kaohsiung' ? '高雄港' : (end === 'taichung' ? '台中港' : '台北港');
             
-            const { roadCarbon, roadCost, roadCarbonFee } = calculateCarbonAndCost(containers);
+            const { roadCarbon, roadCost, roadCarbonFee, roadCarbonCredit } = calculateCarbonAndCost(containers);
             
             const now = new Date();
             const formattedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
@@ -822,7 +818,13 @@
                 savings_amount: 0,
                 best_mode: "內陸運輸",
                 road_total: roadCost,
-                sea_total: 0
+                sea_total: 0,
+                // 新增明細欄位
+                departure_date: currentComparison.departureDate,
+                arrival_requirement: currentComparison.arrivalRequirement,
+                road_arrival_date: currentComparison.roadArrivalDate,
+                road_carbon_fee: roadCarbonFee,
+                road_carbon_credit: roadCarbonCredit
             };
             
             try {
@@ -845,7 +847,10 @@
             }
         }
         
-        function getAvailableShipsForBooking(startPort, endPort, requiredArrivalDate) {
+        // 🔥 關鍵修改：只顯示船班出發日期 >= 使用者選擇的貨物抵達日期
+        function getAvailableShipsForBooking(startPort, endPort, departureDate, requiredArrivalDate) {
+            const targetDeparture = new Date(departureDate);
+            targetDeparture.setHours(0, 0, 0, 0);
             const requiredDate = new Date(requiredArrivalDate);
             requiredDate.setHours(23, 59, 59, 999);
             const today = new Date();
@@ -867,22 +872,27 @@
                     continue;
                 }
                 
-                if (sailingDate < today) continue;
-                
-                const canArriveOnTime = arrivalDate <= requiredDate;
-                
-                ships.push({
-                    ship_name: "UNI-PROSPER",
-                    voyage_no: schedule.voyage,
-                    sailing_date: formatDate(sailingDate),
-                    arrival_date: formatDate(arrivalDate),
-                    capacity: 500,
-                    remaining: 350,
-                    utilization: 30,
-                    dynamic_price: 12000,
-                    can_arrive_on_time: canArriveOnTime
-                });
+                // 🔥 只顯示船班出發日期 >= 使用者選擇的貨物抵達日期
+                // 不顯示之前的船班，避免使用者誤選
+                if (sailingDate >= targetDeparture) {
+                    const canArriveOnTime = arrivalDate <= requiredDate;
+                    
+                    ships.push({
+                        ship_name: "UNI-PROSPER",
+                        voyage_no: schedule.voyage,
+                        sailing_date: formatDate(sailingDate),
+                        arrival_date: formatDate(arrivalDate),
+                        capacity: 500,
+                        remaining: 350,
+                        utilization: 30,
+                        dynamic_price: 12000,
+                        can_arrive_on_time: canArriveOnTime
+                    });
+                }
             }
+            
+            // 按出發日期排序（從早到晚）
+            ships.sort((a, b) => new Date(a.sailing_date) - new Date(b.sailing_date));
             
             return ships;
         }
@@ -927,7 +937,7 @@
                 const fillPercent = ship.utilization;
                 const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
                 html += `
-                    <div class="ship-card" onclick="selectShipForBooking('${ship.sailing_date}', ${ship.remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
+                    <div class="ship-card" onclick="selectShipForBooking('${ship.sailing_date}', ${ship.remaining}, '${ship.voyage_no}')" id="ship_${ship.sailing_date.replace(/-/g, '')}">
                         <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div>
                         <div>📅 開航日：${ship.sailing_date} &nbsp; → &nbsp; 📍 預計抵達：${ship.arrival_date} ✅ 可準時抵達</div>
                         <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
@@ -940,24 +950,26 @@
             document.getElementById('shipsList').innerHTML = html;
         }
         
-        function selectShipForBooking(sailingDate, remaining) {
+        function selectShipForBooking(sailingDate, remaining, voyageNo) {
             document.querySelectorAll('.ship-card').forEach(card => card.classList.remove('selected'));
             const shipId = `ship_${sailingDate.replace(/-/g, '')}`;
             const selectedCard = document.getElementById(shipId);
             if (selectedCard) selectedCard.classList.add('selected');
             selectedShip = sailingDate;
+            selectedShipData = { sailingDate, voyageNo };
             document.getElementById('bookContainers').max = remaining;
-            document.getElementById('bookingLimitHint').innerHTML = `📌 最多可訂 ${remaining} FEU，已選中此船班`;
+            document.getElementById('bookingLimitHint').innerHTML = `📌 最多可訂 ${remaining} FEU，已選中此船班 (${voyageNo})`;
             document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 10, remaining);
         }
         
         async function goToStep3() {
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
+            const departureDate = document.getElementById('departureDate').value;
             const requiredArrivalDate = document.getElementById('arrivalDate').value;
             
-            if (!requiredArrivalDate) {
-                alert('請先設定提貨日期');
+            if (!departureDate || !requiredArrivalDate) {
+                alert('請先設定貨物抵達日期和提貨日期');
                 return;
             }
             
@@ -969,7 +981,8 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('shipsList').innerHTML = '載入船班資料...';
             
-            const ships = getAvailableShipsForBooking(startPort, endPort, requiredArrivalDate);
+            // 傳入 departureDate 進行篩選
+            const ships = getAvailableShipsForBooking(startPort, endPort, departureDate, requiredArrivalDate);
             
             setTimeout(() => {
                 displayShips(ships, requiredArrivalDate);
@@ -1022,7 +1035,15 @@
                 road_total: 0,
                 sea_total: seaCost,
                 booking_id: Date.now().toString(),
-                ship_date: selectedShip
+                ship_date: selectedShip,
+                // 新增明細欄位
+                departure_date: currentComparison?.departureDate || document.getElementById('departureDate').value,
+                arrival_requirement: currentComparison?.arrivalRequirement || document.getElementById('arrivalDate').value,
+                sea_arrival_date: currentComparison?.seaArrivalDate,
+                road_arrival_date: currentComparison?.roadArrivalDate,
+                voyage_no: selectedShipData?.voyageNo || '',
+                sea_carbon_fee: seaCarbonFee,
+                sea_carbon_credit: seaCarbonCredit
             };
             
             try {
@@ -1033,7 +1054,7 @@
                 });
                 
                 if (response.ok) {
-                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>💰 節省碳費：NT$ ${Math.round(seaCarbonFee).toLocaleString()}<br>💎 碳權價值：NT$ ${Math.round(seaCarbonCredit).toLocaleString()}`;
+                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER ${selectedShipData?.voyageNo || ''}<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>💰 節省碳費：NT$ ${Math.round(seaCarbonFee).toLocaleString()}<br>💎 碳權價值：NT$ ${Math.round(seaCarbonCredit).toLocaleString()}`;
                     showAssistantMessage(message);
                     alert(`✅ 訂艙成功！節省 NT$ ${costSaved.toLocaleString()}`);
                     
@@ -1042,6 +1063,7 @@
                     document.getElementById('phone').value = '';
                     document.getElementById('bookContainers').value = '0';
                     selectedShip = null;
+                    selectedShipData = null;
                     
                     backToStep1();
                 } else {

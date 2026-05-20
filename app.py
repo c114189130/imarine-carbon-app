@@ -236,6 +236,18 @@ def save_history_direct():
             carbon_improvement = data.get("carbon_improvement", 0)
             data["savings_amount"] = round(carbon_improvement * 0.3)
         
+        # 確保明細欄位存在（如果前端有傳入）
+        optional_fields = [
+            "departure_date", "arrival_requirement", "sea_arrival_date", 
+            "road_arrival_date", "voyage_no", "ship_date", "company_name",
+            "contact_person", "phone", "sea_carbon_fee", "sea_carbon_credit",
+            "road_carbon_fee", "road_carbon_credit", "base_distance",
+            "road_carbon", "sea_carbon", "road_total", "sea_total"
+        ]
+        for field in optional_fields:
+            if field not in data:
+                data[field] = None
+        
         history = load_history()
         history.append(data)
         
@@ -284,9 +296,14 @@ def calculate():
     # 獲取船期
     ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
 
-    # 計算碳排
-    road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
-    sea_carbon = EMISSION_FACTORS["sea"] * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
+    # 計算碳排 - 使用修正後的公式（根據 Merk 2014 文獻）
+    # 公路：130 g/tkm × 22.5噸 = 2.925 kg/km/FEU
+    # 海運：30 g/tkm × 22.5噸 = 0.675 kg/km/FEU
+    ROAD_CARBON_RATE_PER_KM = 2.925
+    SEA_CARBON_RATE_PER_KM = 0.675
+    
+    road_carbon = ROAD_CARBON_RATE_PER_KM * road_distance * containers
+    sea_carbon = SEA_CARBON_RATE_PER_KM * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
 
     # 計算成本
     road_freight = TRANSPORT_COST_RATES["road"] * road_distance * containers
