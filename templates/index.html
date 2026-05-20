@@ -305,8 +305,8 @@
         <div id="step1Panel" class="card">
             <h3>📦 貨櫃運輸需求</h3>
             <div class="form-group"><label>📍 起點港口</label><select id="start"><option value="kaohsiung">高雄港</option><option value="taichung">台中港</option></select></div>
-            <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taichung">台中港</option><option value="kaohsiung">高雄港</option><option value="taipei">台北港</option></select></div>
-            <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="50"></div>
+            <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taipei">台北港</option><option value="taichung">台中港</option></select></div>
+            <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="10"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="dangerous">危險品/特殊貨物</option></select></div>
             <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate"></div>
             <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
@@ -398,14 +398,6 @@
             { voyage: "0732-516B", kaohsiung_depart: "2026-06-10", taichung_arrive: "2026-06-13", taipei_arrive: "2026-06-16" },
             { voyage: "0733-517B", kaohsiung_depart: "2026-06-17", taichung_arrive: "2026-06-21", taipei_arrive: "2026-06-23" },
             { voyage: "0734-518B", kaohsiung_depart: "2026-06-25", taichung_arrive: "2026-06-28", taipei_arrive: "2026-06-30" },
-            { voyage: "0735-519B", kaohsiung_depart: "2026-07-02", taichung_arrive: "2026-07-05", taipei_arrive: "2026-07-07" },
-            { voyage: "0736-520B", kaohsiung_depart: "2026-07-09", taichung_arrive: "2026-07-12", taipei_arrive: "2026-07-14" },
-            { voyage: "0737-521B", kaohsiung_depart: "2026-07-16", taichung_arrive: "2026-07-19", taipei_arrive: "2026-07-21" },
-            { voyage: "0738-522B", kaohsiung_depart: "2026-07-23", taichung_arrive: "2026-07-26", taipei_arrive: "2026-07-28" },
-            { voyage: "0739-523B", kaohsiung_depart: "2026-07-30", taichung_arrive: "2026-08-02", taipei_arrive: "2026-08-04" },
-            { voyage: "0740-524B", kaohsiung_depart: "2026-08-06", taichung_arrive: "2026-08-09", taipei_arrive: "2026-08-11" },
-            { voyage: "0741-525B", kaohsiung_depart: "2026-08-13", taichung_arrive: "2026-08-16", taipei_arrive: "2026-08-18" },
-            { voyage: "0742-526B", kaohsiung_depart: "2026-08-20", taichung_arrive: "2026-08-23", taipei_arrive: "2026-08-25" },
         ];
 
         // 成本數據
@@ -415,7 +407,6 @@
         const SEA_CARBON_RATE = 0.02;
         const ROAD_CARBON_RATE = 0.06;
         const ROAD_CARBON_FEE_PER_FEU = 78.21;
-        const SEA_TRANSIT_DAYS = 5;
         const ROAD_TRANSIT_DAYS = 1;
         
         function formatDate(date) { 
@@ -466,17 +457,19 @@
             const roadCost = ROAD_COST_PER_FEU * containers;
             const seaCost = SEA_COST_PER_FEU * containers;
             const costSaved = roadCost - seaCost;
-            return { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved };
+            const roadCarbonFee = ROAD_CARBON_FEE_PER_FEU * containers;
+            return { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved, roadCarbonFee };
         }
         
-        // 根據起點終點取得符合條件的船班
-        function getAvailableShips(startPort, endPort, requiredArrivalDate) {
-            const requiredDate = new Date(requiredArrivalDate);
-            requiredDate.setHours(23, 59, 59, 999);
+        // 根據起點終點和出發日期，找到最接近且未出發的船班
+        function getBestAvailableShip(startPort, endPort, departureDate) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const targetDate = new Date(departureDate);
+            targetDate.setHours(0, 0, 0, 0);
             
-            const ships = [];
+            let bestShip = null;
+            let bestDiff = Infinity;
             
             for (const schedule of REAL_SCHEDULE) {
                 let sailingDate = null;
@@ -488,30 +481,30 @@
                 } else if (startPort === 'kaohsiung' && endPort === 'taichung') {
                     sailingDate = new Date(schedule.kaohsiung_depart);
                     arrivalDate = new Date(schedule.taichung_arrive);
-                } else if (startPort === 'taichung' && endPort === 'taipei') {
-                    sailingDate = new Date(schedule.taichung_arrive);
-                    arrivalDate = new Date(schedule.taipei_arrive);
                 } else {
                     continue;
                 }
                 
+                // 只考慮未出發的船班
                 if (sailingDate < today) continue;
                 
-                const canArriveOnTime = arrivalDate <= requiredDate;
-                
-                ships.push({
-                    ship_name: "UNI-PROSPER",
-                    voyage_no: schedule.voyage,
-                    sailing_date: formatDate(sailingDate),
-                    arrival_date: formatDate(arrivalDate),
-                    capacity: 500,
-                    remaining: Math.floor(300 + Math.random() * 200),
-                    utilization: Math.floor(20 + Math.random() * 60),
-                    dynamic_price: 12000 + Math.floor(Math.random() * 2000),
-                    can_arrive_on_time: canArriveOnTime
-                });
+                const diff = Math.abs(sailingDate - targetDate);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestShip = {
+                        ship_name: "UNI-PROSPER",
+                        voyage_no: schedule.voyage,
+                        sailing_date: formatDate(sailingDate),
+                        arrival_date: formatDate(arrivalDate),
+                        capacity: 500,
+                        remaining: 350,
+                        utilization: 30,
+                        dynamic_price: 12000
+                    };
+                }
             }
-            return ships;
+            
+            return bestShip;
         }
         
         async function calculateComparison() {
@@ -527,96 +520,142 @@
             
             const departureDate = new Date(departureDateStr);
             const arrivalRequirement = new Date(arrivalRequirementStr);
-            
-            const { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved } = calculateCarbonAndCost(containers);
-            const roadCarbonFee = ROAD_CARBON_FEE_PER_FEU * containers;
+            arrivalRequirement.setHours(23, 59, 59, 999);
             
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
-            const availableShips = getAvailableShips(startPort, endPort, arrivalRequirementStr);
             
-            let seaArrivalDate = arrivalRequirement;
-            if (availableShips.length > 0 && availableShips[0].can_arrive_on_time) {
-                seaArrivalDate = new Date(availableShips[0].arrival_date);
-            } else {
-                seaArrivalDate = new Date(departureDate);
-                seaArrivalDate.setDate(seaArrivalDate.getDate() + SEA_TRANSIT_DAYS);
-            }
+            // 計算成本和碳排放
+            const { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved, roadCarbonFee } = calculateCarbonAndCost(containers);
             
-            const roadArrivalDate = new Date(departureDate);
-            roadArrivalDate.setDate(roadArrivalDate.getDate() + ROAD_TRANSIT_DAYS);
+            // 1. 計算海運可行性 - 根據船期
+            let seaArrivalDate = null;
+            let selectedShip = null;
+            let seaFeasible = false;
+            let shipFound = false;
             
-            const seaFeasible = seaArrivalDate <= arrivalRequirement;
-            const roadFeasible = roadArrivalDate <= arrivalRequirement;
+            // 尋找適合的船班（出發日期 >= 使用者選擇的出發日期）
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const targetDeparture = new Date(departureDateStr);
+            targetDeparture.setHours(0, 0, 0, 0);
             
-            let recommendMode = "", trafficLight = "", recommendation = "", reasons = [], selectedMode = "";
-            
-            if (cargoType === "dangerous") {
-                recommendMode = "sea"; selectedMode = "sea"; trafficLight = "🟢";
-                recommendation = "危險品/特殊貨物，依法規強制採海運";
-                reasons.push("⚠️ 危險品依法規必須採海運運輸");
-            }
-            else if (!seaFeasible && !roadFeasible) {
-                recommendMode = "road"; selectedMode = "road"; trafficLight = "🔴";
-                recommendation = `⚠️ 海運與公路皆無法在 ${arrivalRequirementStr} 前送達`;
-                reasons.push(`⏰ 海運需約 ${SEA_TRANSIT_DAYS} 天，預計 ${formatDate(seaArrivalDate)} 到港`);
-                reasons.push(`⏰ 公路需 ${ROAD_TRANSIT_DAYS} 天，預計 ${formatDate(roadArrivalDate)} 到港`);
-            }
-            else if (!seaFeasible && roadFeasible) {
-                recommendMode = "road"; selectedMode = "road"; trafficLight = "🔴";
-                recommendation = `海運無法在 ${arrivalRequirementStr} 前送達`;
-                reasons.push(`⏰ 海運需約 ${SEA_TRANSIT_DAYS} 天，預計 ${formatDate(seaArrivalDate)} 到港`);
-                reasons.push(`✅ 公路僅需 ${ROAD_TRANSIT_DAYS} 天`);
-            }
-            else if (!roadFeasible && seaFeasible) {
-                recommendMode = "sea"; selectedMode = "sea"; trafficLight = "🟡";
-                recommendation = `公路無法在 ${arrivalRequirementStr} 前送達，建議採藍色公路`;
-                reasons.push(`⏰ 公路需 ${ROAD_TRANSIT_DAYS} 天`);
-                reasons.push(`✅ 海運可在 ${formatDate(seaArrivalDate)} 前送達`);
-            }
-            else {
-                if (costSaved > 0) {
-                    recommendMode = "sea"; selectedMode = "sea"; trafficLight = "🟢";
-                    recommendation = `藍色公路可節省成本 NT$ ${costSaved.toLocaleString()}，減少碳排 ${carbonSaved.toFixed(0)} kg`;
-                    reasons.push(`💰 藍色公路節省成本 NT$ ${costSaved.toLocaleString()}`);
-                    reasons.push(`🌱 減少碳排 ${carbonSaved.toFixed(0)} kg`);
+            for (const schedule of REAL_SCHEDULE) {
+                let sailingDate = null;
+                let arrivalDate = null;
+                
+                if (startPort === 'kaohsiung' && endPort === 'taipei') {
+                    sailingDate = new Date(schedule.kaohsiung_depart);
+                    arrivalDate = new Date(schedule.taipei_arrive);
+                } else if (startPort === 'kaohsiung' && endPort === 'taichung') {
+                    sailingDate = new Date(schedule.kaohsiung_depart);
+                    arrivalDate = new Date(schedule.taichung_arrive);
                 } else {
-                    recommendMode = "road"; selectedMode = "road"; trafficLight = "🟡";
-                    recommendation = `內陸運輸成本較低 (節省 NT$ ${(-costSaved).toLocaleString()})`;
-                    reasons.push(`💰 內陸運輸成本較低`);
+                    continue;
+                }
+                
+                // 船班出發日期必須 >= 使用者選擇的出發日期
+                if (sailingDate >= targetDeparture) {
+                    seaArrivalDate = arrivalDate;
+                    selectedShip = schedule;
+                    shipFound = true;
+                    break;
                 }
             }
             
-            currentComparison = {
-                containers, cargoType, seaCost, roadCost, costSaved,
-                seaCarbon, roadCarbon, carbonSaved,
-                roadCarbonFee,
-                recommendMode, recommendation, reasons, selectedMode,
-                seaArrivalDate: formatDate(seaArrivalDate),
-                roadArrivalDate: formatDate(roadArrivalDate),
-                arrivalRequirement: arrivalRequirementStr,
-                seaTransitDays: SEA_TRANSIT_DAYS, roadTransitDays: ROAD_TRANSIT_DAYS,
-                startPort: startPort,
-                endPort: endPort
-            };
-            
-            let detailHtml = '';
-            if (selectedMode === 'sea') {
-                detailHtml = `<div class="detail-card"><div class="detail-title">🚢 藍色公路 運輸明細</div><div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${containers} FEU</span></div><div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${seaCost.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${seaCarbon.toFixed(0)} kg</span></div><div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${SEA_TRANSIT_DAYS} 天</span></div><div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${formatDate(seaArrivalDate)}</span></div></div>`;
+            if (shipFound && seaArrivalDate) {
+                seaFeasible = seaArrivalDate <= arrivalRequirement;
             } else {
-                detailHtml = `<div class="detail-card"><div class="detail-title">🚛 內陸運輸 運輸明細</div><div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${containers} FEU</span></div><div class="detail-row"><span class="detail-label">💰 總運費</span><span class="detail-value">NT$ ${roadCost.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${roadCarbon.toFixed(0)} kg</span></div><div class="detail-row"><span class="detail-label">💰 碳排費用</span><span class="detail-value">NT$ ${roadCarbonFee.toLocaleString()}</span></div><div class="detail-row"><span class="detail-label">⏰ 運輸時間</span><span class="detail-value">約 ${ROAD_TRANSIT_DAYS} 天</span></div><div class="detail-row"><span class="detail-label">📅 預計抵達</span><span class="detail-value">${formatDate(roadArrivalDate)}</span></div></div>`;
+                // 沒有找到合適的船班，使用預設值（出發日 + 5天）
+                seaArrivalDate = new Date(departureDate);
+                seaArrivalDate.setDate(seaArrivalDate.getDate() + 5);
+                seaFeasible = seaArrivalDate <= arrivalRequirement;
             }
             
-            let html = `
-                <div class="result-box ${recommendMode === 'sea' ? 'sea-recommend' : 'road-recommend'}">
-                    <h3>🤖 AI 比較分析結果</h3>
-                    <div style="display:flex; align-items:center; gap:1rem"><div style="font-size:2rem">${trafficLight || '🟢'}</div><div><strong>綜合評價：</strong> ${recommendMode === 'sea' ? '✅ 建議採藍色公路' : '⚠️ 建議採內陸運輸'}</div></div>
-                    <p><strong>💡 決策說明：</strong><br>${recommendation}</p>
-                </div>
-                ${detailHtml}
-                <div class="result-box"><h3>📝 決策理由詳解</h3><ul>${reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>
-            `;
-            document.getElementById('comparisonResult').innerHTML = html;
+            // 2. 計算公路可行性（出發日 + 1天）
+            const roadArrivalDate = new Date(departureDate);
+            roadArrivalDate.setDate(roadArrivalDate.getDate() + ROAD_TRANSIT_DAYS);
+            const roadFeasible = roadArrivalDate <= arrivalRequirement;
+            
+            // 3. 決策邏輯
+            let recommendMode = "";
+            let recommendation = "";
+            let reasons = [];
+            let trafficLight = "";
+            
+            // 危險品強制海運
+            if (cargoType === "dangerous") {
+                recommendMode = "sea";
+                trafficLight = "🟢";
+                recommendation = "櫃型為特殊櫃、時間充足足夠以海運運送";
+                reasons.push("⚠️ 危險品/特殊貨物依法規必須採海運運輸");
+                reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
+                reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
+                reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+            }
+            // 海運不可行但公路可行
+            else if (!seaFeasible && roadFeasible) {
+                recommendMode = "road";
+                trafficLight = "🔴";
+                recommendation = `藍色公路無法在 ${arrivalRequirementStr} 前送達`;
+                reasons.push(`⏰ 藍色公路需約 5 天，預計 ${formatDate(seaArrivalDate)} 到港，無法在要求日期前送達`);
+                reasons.push(`💰 運費成本：NT$ ${roadCost.toLocaleString()}`);
+                reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbon * 0.3).toLocaleString()}）`);
+                reasons.push(`📅 預計到港日：${formatDate(roadArrivalDate)}`);
+            }
+            // 公路不可行但海運可行
+            else if (!roadFeasible && seaFeasible) {
+                recommendMode = "sea";
+                trafficLight = "🟡";
+                recommendation = `內陸運輸無法在 ${arrivalRequirementStr} 前送達，建議採藍色公路`;
+                reasons.push(`⏰ 內陸運輸需 1 天，預計 ${formatDate(roadArrivalDate)} 到港，無法在要求日期前送達`);
+                reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
+                reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
+                reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+            }
+            // 兩者皆可行，比較成本
+            else if (seaFeasible && roadFeasible) {
+                if (costSaved > 0) {
+                    recommendMode = "sea";
+                    trafficLight = "🟢";
+                    recommendation = "藍色公路成本較低，建議採海運";
+                    reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
+                    reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
+                    reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+                } else {
+                    recommendMode = "road";
+                    trafficLight = "🟡";
+                    recommendation = "內陸運輸成本較低，建議採公路";
+                    reasons.push(`💰 運費成本：NT$ ${roadCost.toLocaleString()}（相較海運可節省 NT$ ${(-costSaved).toLocaleString()}）`);
+                    reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbon * 0.3).toLocaleString()}）`);
+                    reasons.push(`📅 預計到港日：${formatDate(roadArrivalDate)}`);
+                }
+            }
+            // 兩者皆不可行
+            else {
+                recommendMode = "road";
+                trafficLight = "🔴";
+                recommendation = `⚠️ 海運與公路皆無法在 ${arrivalRequirementStr} 前送達`;
+                reasons.push(`⏰ 海運需約 5 天，預計 ${formatDate(seaArrivalDate)} 到港`);
+                reasons.push(`⏰ 公路需 1 天，預計 ${formatDate(roadArrivalDate)} 到港`);
+                reasons.push(`💡 建議調整到貨日期或提前出發`);
+            }
+            
+            // 儲存比較結果
+            currentComparison = {
+                containers, cargoType, seaCost, roadCost, costSaved,
+                seaCarbon, roadCarbon, carbonSaved, roadCarbonFee,
+                recommendMode, recommendation, reasons,
+                seaArrivalDate: seaArrivalDate ? formatDate(seaArrivalDate) : formatDate(new Date()),
+                roadArrivalDate: formatDate(roadArrivalDate),
+                arrivalRequirement: arrivalRequirementStr,
+                startPort: startPort,
+                endPort: endPort,
+                selectedShip: selectedShip
+            };
+            
+            // 顯示結果
+            displayComparisonResult();
             
             document.getElementById('step1').classList.remove('active');
             document.getElementById('step2').classList.add('active');
@@ -633,6 +672,51 @@
                 goToBookingBtn.style.display = 'none';
                 confirmRoadBtn.style.display = 'inline-block';
             }
+        }
+        
+        function displayComparisonResult() {
+            const c = currentComparison;
+            
+            let detailHtml = '';
+            if (c.recommendMode === 'sea') {
+                detailHtml = `
+                    <div class="detail-card">
+                        <div class="detail-title">🚢 藍色公路 運輸明細</div>
+                        <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
+                        <div class="detail-row"><span class="detail-label">💰 運費成本</span><span class="detail-value">NT$ ${c.seaCost.toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.seaCarbon.toFixed(1)} kg</span></div>
+                        <div class="detail-row"><span class="detail-label">📅 預計到港日</span><span class="detail-value">${c.seaArrivalDate}</span></div>
+                    </div>
+                `;
+            } else {
+                detailHtml = `
+                    <div class="detail-card">
+                        <div class="detail-title">🚛 內陸運輸 運輸明細</div>
+                        <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
+                        <div class="detail-row"><span class="detail-label">💰 運費成本</span><span class="detail-value">NT$ ${c.roadCost.toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.roadCarbon.toFixed(1)} kg</span></div>
+                        <div class="detail-row"><span class="detail-label">💰 碳排費用</span><span class="detail-value">NT$ ${Math.round(c.roadCarbon * 0.3).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">📅 預計到港日</span><span class="detail-value">${c.roadArrivalDate}</span></div>
+                    </div>
+                `;
+            }
+            
+            let html = `
+                <div class="result-box ${c.recommendMode === 'sea' ? 'sea-recommend' : 'road-recommend'}">
+                    <h3>🤖 AI 比較分析結果</h3>
+                    <div style="display:flex; align-items:center; gap:1rem">
+                        <div style="font-size:2rem">${c.trafficLight || '🟢'}</div>
+                        <div><strong>綜合評價：</strong> ${c.recommendMode === 'sea' ? '✅ 建議採藍色公路' : '⚠️ 建議採內陸運輸'}</div>
+                    </div>
+                    <p><strong>💡 決策說明：</strong><br>${c.recommendation}</p>
+                </div>
+                ${detailHtml}
+                <div class="result-box">
+                    <h3>📝 決策理由詳解</h3>
+                    <ul>${c.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+                </div>
+            `;
+            document.getElementById('comparisonResult').innerHTML = html;
         }
         
         async function confirmRoadTransport() {
@@ -687,13 +771,61 @@
             }
         }
         
+        function getAvailableShipsForBooking(startPort, endPort, departureDate) {
+            const targetDate = new Date(departureDate);
+            targetDate.setHours(0, 0, 0, 0);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const ships = [];
+            
+            for (const schedule of REAL_SCHEDULE) {
+                let sailingDate = null;
+                let arrivalDate = null;
+                
+                if (startPort === 'kaohsiung' && endPort === 'taipei') {
+                    sailingDate = new Date(schedule.kaohsiung_depart);
+                    arrivalDate = new Date(schedule.taipei_arrive);
+                } else if (startPort === 'kaohsiung' && endPort === 'taichung') {
+                    sailingDate = new Date(schedule.kaohsiung_depart);
+                    arrivalDate = new Date(schedule.taichung_arrive);
+                } else {
+                    continue;
+                }
+                
+                if (sailingDate < today) continue;
+                
+                const canArriveOnTime = arrivalDate <= targetDate;
+                
+                ships.push({
+                    ship_name: "UNI-PROSPER",
+                    voyage_no: schedule.voyage,
+                    sailing_date: formatDate(sailingDate),
+                    arrival_date: formatDate(arrivalDate),
+                    capacity: 500,
+                    remaining: 350,
+                    utilization: 30,
+                    dynamic_price: 12000,
+                    can_arrive_on_time: canArriveOnTime
+                });
+            }
+            
+            return ships;
+        }
+        
         function displayShips(ships, requiredArrivalDate) {
             if (!ships || ships.length === 0) {
                 document.getElementById('shipsList').innerHTML = '<div style="padding:2rem; text-align:center; color:#e74c3c">⚠️ 目前無可預訂的船班</div>';
                 return;
             }
             
-            const validShips = ships.filter(ship => ship.can_arrive_on_time === true);
+            const requiredDate = new Date(requiredArrivalDate);
+            requiredDate.setHours(23, 59, 59, 999);
+            
+            const validShips = ships.filter(ship => {
+                const arrivalDate = new Date(ship.arrival_date);
+                return arrivalDate <= requiredDate;
+            });
             
             if (validShips.length === 0) {
                 let html = '<div style="padding:1rem; background:#fff3cd; border-radius:15px; margin-bottom:1rem;">⚠️ 以下船班可能無法在要求日期前抵達：</div>';
@@ -702,11 +834,11 @@
                     const fillPercent = ship.utilization;
                     const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
                     html += `
-                        <div class="ship-card" style="opacity:0.5; cursor:not-allowed">
+                        <div class="ship-card" style="opacity:0.6; cursor:not-allowed">
                             <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div>
-                            <div>📅 開航日：${ship.sailing_date} &nbsp; → &nbsp; 📍 預計抵達：${ship.arrival_date} <span style="color:#e74c3c">⚠️ 可能延遲</span></div>
+                            <div>📅 開航日：${ship.sailing_date} &nbsp; → &nbsp; 📍 預計抵達：${ship.arrival_date} <span style="color:#e74c3c">⚠️ 無法準時</span></div>
                             <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
-                            <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU (${fillPercent}%)</div>
+                            <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU</div>
                         </div>
                     `;
                 });
@@ -721,11 +853,11 @@
                 const fillPercent = ship.utilization;
                 const fillColor = fillPercent > 85 ? '#e74c3c' : (fillPercent > 70 ? '#f39c12' : '#27ae60');
                 html += `
-                    <div class="ship-card" onclick="selectShip('${ship.sailing_date}', ${ship.remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
+                    <div class="ship-card" onclick="selectShipForBooking('${ship.sailing_date}', ${ship.remaining})" id="ship_${ship.sailing_date.replace(/-/g, '')}">
                         <div><strong>🚢 ${ship.ship_name}</strong> (${ship.voyage_no})</div>
                         <div>📅 開航日：${ship.sailing_date} &nbsp; → &nbsp; 📍 預計抵達：${ship.arrival_date} ✅ 可準時抵達</div>
                         <div class="capacity-bar"><div class="capacity-fill" style="width:${fillPercent}%; background:${fillColor}"></div></div>
-                        <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU (${fillPercent}%)</div>
+                        <div>📦 剩餘艙位：<strong>${ship.remaining.toLocaleString()}</strong> / ${ship.capacity.toLocaleString()} TEU</div>
                         <div>💰 運價：NT$ ${ship.dynamic_price.toLocaleString()} / FEU</div>
                     </div>
                 `;
@@ -734,13 +866,25 @@
             document.getElementById('shipsList').innerHTML = html;
         }
         
+        function selectShipForBooking(sailingDate, remaining) {
+            document.querySelectorAll('.ship-card').forEach(card => card.classList.remove('selected'));
+            const shipId = `ship_${sailingDate.replace(/-/g, '')}`;
+            const selectedCard = document.getElementById(shipId);
+            if (selectedCard) selectedCard.classList.add('selected');
+            selectedShip = sailingDate;
+            document.getElementById('bookContainers').max = remaining;
+            document.getElementById('bookingLimitHint').innerHTML = `📌 最多可訂 ${remaining} FEU，已選中此船班`;
+            document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 10, remaining);
+        }
+        
         async function goToStep3() {
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
+            const departureDate = document.getElementById('departureDate').value;
             const requiredArrivalDate = document.getElementById('arrivalDate').value;
             
-            if (!requiredArrivalDate) {
-                alert('請先設定要求到貨日期');
+            if (!departureDate || !requiredArrivalDate) {
+                alert('請先設定日期');
                 return;
             }
             
@@ -752,7 +896,7 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('shipsList').innerHTML = '載入船班資料...';
             
-            const ships = getAvailableShips(startPort, endPort, requiredArrivalDate);
+            const ships = getAvailableShipsForBooking(startPort, endPort, requiredArrivalDate);
             
             setTimeout(() => {
                 displayShips(ships, requiredArrivalDate);
@@ -765,17 +909,6 @@
             document.getElementById('step1Panel').style.display = 'none';
             document.getElementById('step2Panel').style.display = 'none';
             document.getElementById('step3Panel').style.display = 'block';
-        }
-        
-        function selectShip(sailingDate, remaining) {
-            document.querySelectorAll('.ship-card').forEach(card => card.classList.remove('selected'));
-            const shipId = `ship_${sailingDate.replace(/-/g, '')}`;
-            const selectedCard = document.getElementById(shipId);
-            if (selectedCard) selectedCard.classList.add('selected');
-            selectedShip = sailingDate;
-            document.getElementById('bookContainers').max = remaining;
-            document.getElementById('bookingLimitHint').innerHTML = `📌 最多可訂 ${remaining} FEU，已選中此船班`;
-            document.getElementById('bookContainers').value = Math.min(currentComparison?.containers || 50, remaining);
         }
         
         async function confirmBooking() {
@@ -827,7 +960,7 @@
                 });
                 
                 if (response.ok) {
-                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br><br>📌 艙位已保留！`;
+                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}`;
                     showAssistantMessage(message);
                     alert(`✅ 訂艙成功！節省 NT$ ${costSaved.toLocaleString()}`);
                     
