@@ -308,8 +308,8 @@
             <div class="form-group"><label>📍 終點港口</label><select id="end"><option value="taipei">台北港</option><option value="taichung">台中港</option></select></div>
             <div class="form-group"><label>📦 貨櫃數量 (FEU)</label><input type="number" id="containers" min="1" value="10"></div>
             <div class="form-group"><label>⚠️ 貨物類型</label><select id="cargoType"><option value="normal">一般貨物</option><option value="dangerous">危險品/特殊貨物</option></select></div>
-            <div class="form-group"><label>📅 預計出發日期</label><input type="date" id="departureDate"></div>
-            <div class="form-group"><label>📅 希望抵達目的地日期</label><input type="date" id="arrivalDate"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
+            <div class="form-group"><label>📅 預計貨物抵達港口日期</label><input type="date" id="departureDate"></div>
+            <div class="form-group"><label>📅 希望提貨日期</label><input type="date" id="arrivalDate"><p style="font-size:0.8rem; color:#666">※ 藍色公路約需 5 天，內陸運輸約需 1 天</p></div>
             <button class="btn btn-primary" onclick="calculateComparison()" style="width:100%">🚀 藍色公路 vs 內陸運輸 分析</button>
         </div>
 
@@ -400,13 +400,39 @@
             { voyage: "0734-518B", kaohsiung_depart: "2026-06-25", taichung_arrive: "2026-06-28", taipei_arrive: "2026-06-30" },
         ];
 
-        // 成本數據
+        // ==================== 修正後的碳排計算常數 ====================
+        // 根據 Merk (2014) 文獻：
+        // 公路運輸：80-180 g CO₂e/噸公里，取中間值 130 g/tkm
+        // 海運運輸：0-60 g CO₂e/噸公里，取中間值 30 g/tkm
+        // 每個 FEU (40呎貨櫃) 平均載重 22.5 噸
+        // 高雄到台中距離 215 公里
+        
+        const DISTANCE = 215;
+        const CARGO_WEIGHT_PER_FEU = 22.5;
+        
+        // 碳排係數 (g CO₂e / 噸公里)
+        const ROAD_CARBON_FACTOR_G_PER_TKM = 130;
+        const SEA_CARBON_FACTOR_G_PER_TKM = 30;
+        
+        // 每 FEU 每公里碳排 (kg/km/FEU) = 係數(g/tkm) × 載重(噸) ÷ 1000
+        const ROAD_CARBON_RATE_PER_KM = (ROAD_CARBON_FACTOR_G_PER_TKM * CARGO_WEIGHT_PER_FEU) / 1000;
+        const SEA_CARBON_RATE_PER_KM = (SEA_CARBON_FACTOR_G_PER_TKM * CARGO_WEIGHT_PER_FEU) / 1000;
+        
+        // 計算結果驗證 (10 FEU)：
+        // 公路：130 × 22.5 × 215 × 10 ÷ 1000 = 6,288.75 kg
+        // 海運：30 × 22.5 × 215 × 10 ÷ 1000 = 1,451.25 kg
+        // 減碳：4,837.5 kg ✅
+
+        // 成本數據 (NTD/FEU)
         const SEA_COST_PER_FEU = 2787;
         const ROAD_COST_PER_FEU = 7218;
-        const DISTANCE = 215;
-        const SEA_CARBON_RATE = 0.02;
-        const ROAD_CARBON_RATE = 0.06;
-        const ROAD_CARBON_FEE_PER_FEU = 78.21;
+        
+        // 碳費價格 (NTD/kg) - 每噸 300 元
+        const CARBON_FEE_RATE = 0.3;
+        
+        // 碳權價格 (NTD/kg) - 每噸 10 美元 ≈ 320 NTD
+        const CARBON_CREDIT_RATE = 0.32;
+        
         const ROAD_TRANSIT_DAYS = 1;
         
         function formatDate(date) { 
@@ -444,32 +470,49 @@
             // 顯示船期表
             let html = '<table class="ship-schedule-table"><thead><tr><th>航次</th><th>高雄出發</th><th>台中抵達</th><th>台北抵達</th></tr></thead><tbody>';
             REAL_SCHEDULE.forEach(s => {
-                html += `<tr><td>${s.voyage}</td><td>${s.kaohsiung_depart}</td><td>${s.taichung_arrive}</td><td>${s.taipei_arrive}</td></tr>`;
+                html += `<tr><td style="color:#1a1a1a">${s.voyage}</td><td style="color:#1a1a1a">${s.kaohsiung_depart}</td><td style="color:#1a1a1a">${s.taichung_arrive}</td><td style="color:#1a1a1a">${s.taipei_arrive}</td></tr>`;
             });
             html += '</tbody></table>';
             document.getElementById('scheduleList').innerHTML = html;
         }
         
         function calculateCarbonAndCost(containers) {
-            const roadCarbon = ROAD_CARBON_RATE * DISTANCE * containers;
-            const seaCarbon = SEA_CARBON_RATE * DISTANCE * containers;
+            // 使用修正後的碳排計算公式 (基於 Merk 2014 文獻)
+            const roadCarbon = ROAD_CARBON_RATE_PER_KM * DISTANCE * containers;
+            const seaCarbon = SEA_CARBON_RATE_PER_KM * DISTANCE * containers;
             const carbonSaved = roadCarbon - seaCarbon;
+            
+            // 運費成本 (NTD)
             const roadCost = ROAD_COST_PER_FEU * containers;
             const seaCost = SEA_COST_PER_FEU * containers;
             const costSaved = roadCost - seaCost;
-            const roadCarbonFee = ROAD_CARBON_FEE_PER_FEU * containers;
-            return { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved, roadCarbonFee };
+            
+            // 碳費估算 (每公斤 0.3 元 = 每噸 300 元)
+            const roadCarbonFee = roadCarbon * CARBON_FEE_RATE;
+            const seaCarbonFee = seaCarbon * CARBON_FEE_RATE;
+            
+            // 碳權價值估算 (每公斤 0.32 元 = 每噸 10 美元 ≈ 320 NTD)
+            const roadCarbonCredit = roadCarbon * CARBON_CREDIT_RATE;
+            const seaCarbonCredit = seaCarbon * CARBON_CREDIT_RATE;
+            
+            return { 
+                roadCarbon, seaCarbon, carbonSaved, 
+                roadCost, seaCost, costSaved,
+                roadCarbonFee, seaCarbonFee,
+                roadCarbonCredit, seaCarbonCredit
+            };
         }
         
-        // 根據起點終點和出發日期，找到最接近且未出發的船班
-        function getBestAvailableShip(startPort, endPort, departureDate) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const targetDate = new Date(departureDate);
-            targetDate.setHours(0, 0, 0, 0);
+        // 根據起點終點和出發日期，找到最接近要求到港日的船班
+        function getBestAvailableShip(startPort, endPort, departureDate, requiredArrivalDate) {
+            const targetDeparture = new Date(departureDate);
+            targetDeparture.setHours(0, 0, 0, 0);
+            const requiredDate = new Date(requiredArrivalDate);
+            requiredDate.setHours(23, 59, 59, 999);
             
             let bestShip = null;
             let bestDiff = Infinity;
+            let bestArrivalDate = null;
             
             for (const schedule of REAL_SCHEDULE) {
                 let sailingDate = null;
@@ -485,26 +528,50 @@
                     continue;
                 }
                 
-                // 只考慮未出發的船班
-                if (sailingDate < today) continue;
-                
-                const diff = Math.abs(sailingDate - targetDate);
-                if (diff < bestDiff) {
-                    bestDiff = diff;
-                    bestShip = {
-                        ship_name: "UNI-PROSPER",
-                        voyage_no: schedule.voyage,
-                        sailing_date: formatDate(sailingDate),
-                        arrival_date: formatDate(arrivalDate),
-                        capacity: 500,
-                        remaining: 350,
-                        utilization: 30,
-                        dynamic_price: 12000
-                    };
+                // 船班出發日期必須 >= 使用者選擇的貨物抵達日期
+                if (sailingDate >= targetDeparture) {
+                    // 計算抵達日期與要求提貨日期的差距 (抵達日期不能超過要求日期)
+                    const diffMs = arrivalDate - requiredDate;
+                    
+                    // 只考慮不晚於要求提貨日期的船班 (diffMs <= 0)
+                    // 且選擇差距最小的 (最接近要求日期)
+                    if (diffMs <= 0 && Math.abs(diffMs) < bestDiff) {
+                        bestDiff = Math.abs(diffMs);
+                        bestShip = schedule;
+                        bestArrivalDate = arrivalDate;
+                    }
                 }
             }
             
-            return bestShip;
+            // 如果沒有找到不晚於要求日期的船班，找最接近的 (可能會晚到)
+            if (!bestShip && REAL_SCHEDULE.length > 0) {
+                let minDelay = Infinity;
+                for (const schedule of REAL_SCHEDULE) {
+                    let sailingDate = null;
+                    let arrivalDate = null;
+                    
+                    if (startPort === 'kaohsiung' && endPort === 'taipei') {
+                        sailingDate = new Date(schedule.kaohsiung_depart);
+                        arrivalDate = new Date(schedule.taipei_arrive);
+                    } else if (startPort === 'kaohsiung' && endPort === 'taichung') {
+                        sailingDate = new Date(schedule.kaohsiung_depart);
+                        arrivalDate = new Date(schedule.taichung_arrive);
+                    } else {
+                        continue;
+                    }
+                    
+                    if (sailingDate >= targetDeparture) {
+                        const delayMs = arrivalDate - requiredDate;
+                        if (delayMs < minDelay) {
+                            minDelay = delayMs;
+                            bestShip = schedule;
+                            bestArrivalDate = arrivalDate;
+                        }
+                    }
+                }
+            }
+            
+            return { bestShip, bestArrivalDate };
         }
         
         async function calculateComparison() {
@@ -525,57 +592,54 @@
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
             
-            // 計算成本和碳排放
-            const { roadCarbon, seaCarbon, carbonSaved, roadCost, seaCost, costSaved, roadCarbonFee } = calculateCarbonAndCost(containers);
+            // 計算成本和碳排放 (使用修正後的公式)
+            const { 
+                roadCarbon, seaCarbon, carbonSaved, 
+                roadCost, seaCost, costSaved, 
+                roadCarbonFee, seaCarbonFee,
+                roadCarbonCredit, seaCarbonCredit 
+            } = calculateCarbonAndCost(containers);
             
-            // 1. 計算海運可行性 - 根據船期
+            // 1. 計算海運可行性 - 找最適合的船班
             let seaArrivalDate = null;
             let selectedShip = null;
             let seaFeasible = false;
-            let shipFound = false;
+            let daysEarly = 0;
+            let daysLate = 0;
             
-            // 尋找適合的船班（出發日期 >= 使用者選擇的出發日期）
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const targetDeparture = new Date(departureDateStr);
-            targetDeparture.setHours(0, 0, 0, 0);
+            const { bestShip, bestArrivalDate } = getBestAvailableShip(startPort, endPort, departureDateStr, arrivalRequirementStr);
             
-            for (const schedule of REAL_SCHEDULE) {
-                let sailingDate = null;
-                let arrivalDate = null;
+            if (bestShip && bestArrivalDate) {
+                seaArrivalDate = bestArrivalDate;
+                selectedShip = bestShip;
                 
-                if (startPort === 'kaohsiung' && endPort === 'taipei') {
-                    sailingDate = new Date(schedule.kaohsiung_depart);
-                    arrivalDate = new Date(schedule.taipei_arrive);
-                } else if (startPort === 'kaohsiung' && endPort === 'taichung') {
-                    sailingDate = new Date(schedule.kaohsiung_depart);
-                    arrivalDate = new Date(schedule.taichung_arrive);
+                // 計算提前或延遲天數
+                const diffDays = (seaArrivalDate - arrivalRequirement) / (1000 * 60 * 60 * 24);
+                if (diffDays <= 0) {
+                    seaFeasible = true;
+                    daysEarly = Math.abs(Math.floor(diffDays));
                 } else {
-                    continue;
+                    seaFeasible = false;
+                    daysLate = Math.floor(diffDays);
                 }
-                
-                // 船班出發日期必須 >= 使用者選擇的出發日期
-                if (sailingDate >= targetDeparture) {
-                    seaArrivalDate = arrivalDate;
-                    selectedShip = schedule;
-                    shipFound = true;
-                    break;
-                }
-            }
-            
-            if (shipFound && seaArrivalDate) {
-                seaFeasible = seaArrivalDate <= arrivalRequirement;
             } else {
                 // 沒有找到合適的船班，使用預設值（出發日 + 5天）
                 seaArrivalDate = new Date(departureDate);
                 seaArrivalDate.setDate(seaArrivalDate.getDate() + 5);
                 seaFeasible = seaArrivalDate <= arrivalRequirement;
+                if (!seaFeasible) {
+                    daysLate = Math.floor((seaArrivalDate - arrivalRequirement) / (1000 * 60 * 60 * 24));
+                }
             }
             
             // 2. 計算公路可行性（出發日 + 1天）
             const roadArrivalDate = new Date(departureDate);
             roadArrivalDate.setDate(roadArrivalDate.getDate() + ROAD_TRANSIT_DAYS);
             const roadFeasible = roadArrivalDate <= arrivalRequirement;
+            
+            // 格式化日期字串
+            const seaArrivalDateStr = formatDate(seaArrivalDate);
+            const roadArrivalDateStr = formatDate(roadArrivalDate);
             
             // 3. 決策邏輯
             let recommendMode = "";
@@ -588,30 +652,30 @@
                 recommendMode = "sea";
                 trafficLight = "🟢";
                 recommendation = "櫃型為特殊櫃、時間充足足夠以海運運送";
-                reasons.push("⚠️ 危險品/特殊貨物依法規必須採海運運輸");
+                reasons.push(`⚠️ 危險品/特殊貨物依法規必須採海運運輸`);
                 reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
                 reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
-                reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+                reasons.push(`📅 預計到港日：${seaArrivalDateStr}${daysEarly > 0 ? `（提前 ${daysEarly} 天到港）` : ''}`);
             }
             // 海運不可行但公路可行
             else if (!seaFeasible && roadFeasible) {
                 recommendMode = "road";
                 trafficLight = "🔴";
                 recommendation = `藍色公路無法在 ${arrivalRequirementStr} 前送達`;
-                reasons.push(`⏰ 藍色公路需約 5 天，預計 ${formatDate(seaArrivalDate)} 到港，無法在要求日期前送達`);
+                reasons.push(`⏰ 藍色公路預計 ${seaArrivalDateStr} 到港${daysLate > 0 ? `（延遲 ${daysLate} 天）` : ''}，無法在要求日期前送達`);
                 reasons.push(`💰 運費成本：NT$ ${roadCost.toLocaleString()}`);
-                reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbon * 0.3).toLocaleString()}）`);
-                reasons.push(`📅 預計到港日：${formatDate(roadArrivalDate)}`);
+                reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbonFee).toLocaleString()}）`);
+                reasons.push(`📅 預計到港日：${roadArrivalDateStr}`);
             }
             // 公路不可行但海運可行
             else if (!roadFeasible && seaFeasible) {
                 recommendMode = "sea";
                 trafficLight = "🟡";
                 recommendation = `內陸運輸無法在 ${arrivalRequirementStr} 前送達，建議採藍色公路`;
-                reasons.push(`⏰ 內陸運輸需 1 天，預計 ${formatDate(roadArrivalDate)} 到港，無法在要求日期前送達`);
+                reasons.push(`⏰ 內陸運輸預計 ${roadArrivalDateStr} 到港，無法在要求日期前送達`);
                 reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
                 reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
-                reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+                reasons.push(`📅 預計到港日：${seaArrivalDateStr}${daysEarly > 0 ? `（提前 ${daysEarly} 天到港）` : ''}`);
             }
             // 兩者皆可行，比較成本
             else if (seaFeasible && roadFeasible) {
@@ -621,14 +685,16 @@
                     recommendation = "藍色公路成本較低，建議採海運";
                     reasons.push(`💰 運費成本：NT$ ${seaCost.toLocaleString()}（相較陸運可節省 NT$ ${costSaved.toLocaleString()}）`);
                     reasons.push(`🌱 碳排放：${seaCarbon.toFixed(1)} kg（相較陸運可節省 ${carbonSaved.toFixed(1)} kg）`);
-                    reasons.push(`📅 預計到港日：${formatDate(seaArrivalDate)}`);
+                    reasons.push(`💎 碳權價值：NT$ ${Math.round(seaCarbonCredit).toLocaleString()}`);
+                    reasons.push(`📅 預計到港日：${seaArrivalDateStr}${daysEarly > 0 ? `（提前 ${daysEarly} 天到港）` : ''}`);
                 } else {
                     recommendMode = "road";
                     trafficLight = "🟡";
                     recommendation = "內陸運輸成本較低，建議採公路";
                     reasons.push(`💰 運費成本：NT$ ${roadCost.toLocaleString()}（相較海運可節省 NT$ ${(-costSaved).toLocaleString()}）`);
-                    reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbon * 0.3).toLocaleString()}）`);
-                    reasons.push(`📅 預計到港日：${formatDate(roadArrivalDate)}`);
+                    reasons.push(`🌱 碳排放：${roadCarbon.toFixed(1)} kg（碳費約 NT$ ${Math.round(roadCarbonFee).toLocaleString()}）`);
+                    reasons.push(`💎 碳權價值：NT$ ${Math.round(roadCarbonCredit).toLocaleString()}`);
+                    reasons.push(`📅 預計到港日：${roadArrivalDateStr}`);
                 }
             }
             // 兩者皆不可行
@@ -636,22 +702,27 @@
                 recommendMode = "road";
                 trafficLight = "🔴";
                 recommendation = `⚠️ 海運與公路皆無法在 ${arrivalRequirementStr} 前送達`;
-                reasons.push(`⏰ 海運需約 5 天，預計 ${formatDate(seaArrivalDate)} 到港`);
-                reasons.push(`⏰ 公路需 1 天，預計 ${formatDate(roadArrivalDate)} 到港`);
-                reasons.push(`💡 建議調整到貨日期或提前出發`);
+                reasons.push(`⏰ 海運預計 ${seaArrivalDateStr} 到港${daysLate > 0 ? `（延遲 ${daysLate} 天）` : ''}`);
+                reasons.push(`⏰ 公路預計 ${roadArrivalDateStr} 到港`);
+                reasons.push(`💡 建議調整提貨日期或提前貨物抵達時間`);
             }
             
             // 儲存比較結果
             currentComparison = {
-                containers, cargoType, seaCost, roadCost, costSaved,
-                seaCarbon, roadCarbon, carbonSaved, roadCarbonFee,
+                containers, cargoType, 
+                seaCost, roadCost, costSaved,
+                seaCarbon, roadCarbon, carbonSaved,
+                seaCarbonFee, roadCarbonFee,
+                seaCarbonCredit, roadCarbonCredit,
                 recommendMode, recommendation, reasons,
-                seaArrivalDate: seaArrivalDate ? formatDate(seaArrivalDate) : formatDate(new Date()),
-                roadArrivalDate: formatDate(roadArrivalDate),
+                seaArrivalDate: seaArrivalDateStr,
+                roadArrivalDate: roadArrivalDateStr,
                 arrivalRequirement: arrivalRequirementStr,
                 startPort: startPort,
                 endPort: endPort,
-                selectedShip: selectedShip
+                selectedShip: selectedShip,
+                daysEarly: daysEarly,
+                daysLate: daysLate
             };
             
             // 顯示結果
@@ -685,6 +756,8 @@
                         <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
                         <div class="detail-row"><span class="detail-label">💰 運費成本</span><span class="detail-value">NT$ ${c.seaCost.toLocaleString()}</span></div>
                         <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.seaCarbon.toFixed(1)} kg</span></div>
+                        <div class="detail-row"><span class="detail-label">💰 碳費估算</span><span class="detail-value">NT$ ${Math.round(c.seaCarbonFee).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">💎 碳權價值</span><span class="detail-value">NT$ ${Math.round(c.seaCarbonCredit).toLocaleString()}</span></div>
                         <div class="detail-row"><span class="detail-label">📅 預計到港日</span><span class="detail-value">${c.seaArrivalDate}</span></div>
                     </div>
                 `;
@@ -695,7 +768,8 @@
                         <div class="detail-row"><span class="detail-label">📦 貨櫃數量</span><span class="detail-value">${c.containers} FEU</span></div>
                         <div class="detail-row"><span class="detail-label">💰 運費成本</span><span class="detail-value">NT$ ${c.roadCost.toLocaleString()}</span></div>
                         <div class="detail-row"><span class="detail-label">🌱 碳排放</span><span class="detail-value">${c.roadCarbon.toFixed(1)} kg</span></div>
-                        <div class="detail-row"><span class="detail-label">💰 碳排費用</span><span class="detail-value">NT$ ${Math.round(c.roadCarbon * 0.3).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">💰 碳費估算</span><span class="detail-value">NT$ ${Math.round(c.roadCarbonFee).toLocaleString()}</span></div>
+                        <div class="detail-row"><span class="detail-label">💎 碳權價值</span><span class="detail-value">NT$ ${Math.round(c.roadCarbonCredit).toLocaleString()}</span></div>
                         <div class="detail-row"><span class="detail-label">📅 預計到港日</span><span class="detail-value">${c.roadArrivalDate}</span></div>
                     </div>
                 `;
@@ -729,7 +803,7 @@
             const startName = start === 'kaohsiung' ? '高雄港' : (start === 'taichung' ? '台中港' : '台北港');
             const endName = end === 'kaohsiung' ? '高雄港' : (end === 'taichung' ? '台中港' : '台北港');
             
-            const { roadCarbon, roadCost } = calculateCarbonAndCost(containers);
+            const { roadCarbon, roadCost, roadCarbonFee } = calculateCarbonAndCost(containers);
             
             const now = new Date();
             const formattedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
@@ -759,7 +833,7 @@
                 });
                 
                 if (response.ok) {
-                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>💰 總費用：NT$ ${roadCost.toLocaleString()}<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e`);
+                    showAssistantMessage(`✅ 已記錄您選擇「內陸運輸」！<br><br>📦 貨櫃數量：${containers} FEU<br>💰 總費用：NT$ ${roadCost.toLocaleString()}<br>🌱 碳排：${roadCarbon.toFixed(0)} kg CO₂e<br>💰 碳費：NT$ ${Math.round(roadCarbonFee).toLocaleString()}`);
                     alert('✅ 已記錄內陸運輸決策！');
                     backToStep1();
                 } else {
@@ -771,9 +845,9 @@
             }
         }
         
-        function getAvailableShipsForBooking(startPort, endPort, departureDate) {
-            const targetDate = new Date(departureDate);
-            targetDate.setHours(0, 0, 0, 0);
+        function getAvailableShipsForBooking(startPort, endPort, requiredArrivalDate) {
+            const requiredDate = new Date(requiredArrivalDate);
+            requiredDate.setHours(23, 59, 59, 999);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -795,7 +869,7 @@
                 
                 if (sailingDate < today) continue;
                 
-                const canArriveOnTime = arrivalDate <= targetDate;
+                const canArriveOnTime = arrivalDate <= requiredDate;
                 
                 ships.push({
                     ship_name: "UNI-PROSPER",
@@ -880,11 +954,10 @@
         async function goToStep3() {
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
-            const departureDate = document.getElementById('departureDate').value;
             const requiredArrivalDate = document.getElementById('arrivalDate').value;
             
-            if (!departureDate || !requiredArrivalDate) {
-                alert('請先設定日期');
+            if (!requiredArrivalDate) {
+                alert('請先設定提貨日期');
                 return;
             }
             
@@ -922,7 +995,7 @@
             const startPort = document.getElementById('start').value;
             const endPort = document.getElementById('end').value;
             
-            const { seaCost, seaCarbon, carbonSaved, costSaved } = calculateCarbonAndCost(containers);
+            const { seaCost, seaCarbon, carbonSaved, costSaved, seaCarbonFee, seaCarbonCredit } = calculateCarbonAndCost(containers);
             
             const startName = startPort === 'kaohsiung' ? '高雄港' : (startPort === 'taichung' ? '台中港' : '台北港');
             const endName = endPort === 'kaohsiung' ? '高雄港' : (endPort === 'taichung' ? '台中港' : '台北港');
@@ -960,7 +1033,7 @@
                 });
                 
                 if (response.ok) {
-                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}`;
+                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} FEU<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>💰 節省碳費：NT$ ${Math.round(seaCarbonFee).toLocaleString()}<br>💎 碳權價值：NT$ ${Math.round(seaCarbonCredit).toLocaleString()}`;
                     showAssistantMessage(message);
                     alert(`✅ 訂艙成功！節省 NT$ ${costSaved.toLocaleString()}`);
                     
@@ -1026,9 +1099,11 @@
             } else if (lowerMsg.includes('成本')) {
                 reply = `💰 單一FEU成本：藍色公路 NT$ ${SEA_COST_PER_FEU.toLocaleString()}，內陸運輸 NT$ ${ROAD_COST_PER_FEU.toLocaleString()}`;
             } else if (lowerMsg.includes('碳排')) {
-                reply = `🌱 碳排比較：藍色公路 ${(SEA_CARBON_RATE * DISTANCE).toFixed(1)} kg/FEU，內陸運輸 ${(ROAD_CARBON_RATE * DISTANCE).toFixed(1)} kg/FEU`;
+                reply = `🌱 碳排比較（10 FEU）：藍色公路 ${(SEA_CARBON_RATE_PER_KM * DISTANCE * 10).toFixed(0)} kg，內陸運輸 ${(ROAD_CARBON_RATE_PER_KM * DISTANCE * 10).toFixed(0)} kg`;
+            } else if (lowerMsg.includes('碳費')) {
+                reply = `💰 碳費估算：每噸 300 元。10 FEU 海運碳費約 NT$ ${(SEA_CARBON_RATE_PER_KM * DISTANCE * 10 * 0.3).toFixed(0)}，公路碳費約 NT$ ${(ROAD_CARBON_RATE_PER_KM * DISTANCE * 10 * 0.3).toFixed(0)}`;
             } else {
-                reply = '您好！請問需要什麼協助？試試問「船班」、「成本」、「碳排」、「推薦」等關鍵字。';
+                reply = '您好！請問需要什麼協助？試試問「船班」、「成本」、「碳排」、「碳費」等關鍵字。';
             }
             setTimeout(() => addAssistantMessage(reply), 300);
         }
