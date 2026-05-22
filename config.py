@@ -1,46 +1,69 @@
-from pathlib import Path
+# 應用程式標題
+APP_TITLE = "iMarine 智慧海運碳排管理平台"
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-TEMPLATES_DIR = BASE_DIR / "templates"
-STATIC_DIR = BASE_DIR / "static"
+# 檔案路徑
+HISTORY_FILE = "history.json"
+CERTIFICATE_FILE = "certificates.json"
 
-DATA_DIR.mkdir(exist_ok=True)
+# 貨物價值 (NTD)
+CARGO_VALUE = 5000000
 
-APP_TITLE = "iMarine 智慧海運碳排管理系統"
-SECRET_KEY = "change-me-in-production"
-
-# TDX API 憑證（請填入你的）
-TDX_CLIENT_ID = "你的App ID"
-TDX_CLIENT_SECRET = "你的App Key"
-
-# ================= 參數設定 =================
-EMISSION_FACTORS = {"road": 0.06, "sea": 0.02}
-TRANSPORT_COST_RATES = {"road": 60, "sea": 24}
-RISK_COST_RATES = {"road": 1.36, "sea": 0.18}
-SOCIAL_COST_RATES = {"road": 3.70, "sea": 0.64}
-SOCIAL_COST_OF_CARBON = 10.0
-TIME_VALUE_PER_HOUR = 57           # ← 加入這行
-ROAD_SPEED_KMH = 60
-SEA_SPEED_KMH = 46
-PORT_HANDLING_EMISSION_PER_CONTAINER = 8.0
-CARGO_VALUE = 10_000_000
+# 年利率 (%)
 INTEREST_RATE = 0.05
+
+# 最大歷史記錄筆數
 MAX_HISTORY_RECORDS = 200
 
-# ================= 港口資料 =================
+# 運輸速度 (km/h)
+ROAD_SPEED_KMH = 60
+SEA_SPEED_KMH = 30
+
+# 港口資訊
 PORTS = {
-    "kaohsiung": {"name": "高雄港", "lat": 22.616, "lon": 120.300, "code": "KHH"},
-    "taichung": {"name": "台中港", "lat": 24.270, "lon": 120.520, "code": "TXG"},
+    "kaohsiung": {"name": "高雄港", "lat": 22.6163, "lon": 120.2833, "code": "KHH"},
+    "taichung": {"name": "台中港", "lat": 24.2833, "lon": 120.5167, "code": "TXG"},
+    "taipei": {"name": "台北港", "lat": 25.1500, "lon": 121.3833, "code": "TPE"},
 }
 
-# ================= 檔案路徑 =================
-HISTORY_FILE = DATA_DIR / "history.json"
-CERTIFICATE_FILE = DATA_DIR / "certificates.json"
-SCHEDULE_FILE = DATA_DIR / "evergreen_schedule.json"
+# 港口處理碳排放 (kg/櫃)
+PORT_HANDLING_EMISSION_PER_CONTAINER = 10
 
-# ================= 預設船期 =================
-DEFAULT_SCHEDULE = {
-    "KHH": {"port_name": "高雄港", "ships": [{"name": "Evergreen TBS2", "eta_hours": 18, "available": 320, "destination": "台中港", "route": "TBS2", "eta": "FRI"}]},
-    "TXG": {"port_name": "台中港", "ships": [{"name": "Evergreen TBS", "eta_hours": 24, "available": 560, "destination": "高雄港", "route": "TBS", "eta": "THU"}]},
+# 碳的社會成本 (NTD/kg)
+SOCIAL_COST_OF_CARBON = 0.5
+
+# 社會成本費率 (NTD/km/櫃)
+SOCIAL_COST_RATES = {
+    "road": 0.5,
+    "sea": 0.2
 }
+
+# 風險成本費率 (NTD/km/櫃)
+RISK_COST_RATES = {
+    "road": 1.2,
+    "sea": 0.3
+}
+
+# 運輸成本費率 (NTD/km/櫃)
+TRANSPORT_COST_RATES = {
+    "road": 33.5,
+    "sea": 12.9
+}
+
+# 碳排係數 (kg CO2e/km/櫃)
+EMISSION_FACTORS = {
+    "road": 2.925,
+    "sea": 0.675
+}
+
+# 碳費價格 (NTD/kg)
+CARBON_FEE_RATE = 0.3
+
+# 碳權價格 (NTD/kg)
+CARBON_CREDIT_RATE = 0.32
+
+# SECRET KEY
+SECRET_KEY = "your-secret-key-here-change-in-production"
+
+# TDX API 憑證 (選用)
+TDX_CLIENT_ID = ""
+TDX_CLIENT_SECRET = ""
