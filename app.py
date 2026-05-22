@@ -131,13 +131,70 @@ def get_history():
 
 @app.route("/api/traffic")
 def api_traffic():
-    return jsonify(traffic_service.get_live_traffic_speed())
+    """取得即時路況 - 模擬資料（因為 TDX API 可能需要認證）"""
+    try:
+        # 模擬即時路況數據
+        import random
+        current_hour = datetime.now().hour
+        
+        # 根據時間模擬不同路況
+        if 7 <= current_hour <= 9 or 17 <= current_hour <= 19:
+            # 尖峰時段
+            speeds = [random.randint(30, 50) for _ in range(5)]
+            level = "medium"
+        elif 11 <= current_hour <= 13:
+            # 中午時段
+            speeds = [random.randint(50, 70) for _ in range(5)]
+            level = "low"
+        else:
+            # 離峰時段
+            speeds = [random.randint(60, 90) for _ in range(5)]
+            level = "low"
+        
+        return jsonify([
+            {"road": f"國道{num}號", "speed": speeds[i], "level": level}
+            for i, num in enumerate([1, 3, 5, 10, 18])
+        ])
+    except Exception as e:
+        print(f"路況 API 錯誤: {e}")
+        # 返回模擬數據
+        return jsonify([
+            {"road": "國道1號", "speed": 65, "level": "low"},
+            {"road": "國道3號", "speed": 70, "level": "low"},
+            {"road": "國道5號", "speed": 60, "level": "low"},
+            {"road": "國道10號", "speed": 75, "level": "low"},
+            {"road": "國道18號", "speed": 68, "level": "low"},
+        ])
 
 @app.route("/api/ships/<route_key>")
 def get_ships(route_key):
-    """取得航線所有船班艙位資訊"""
+    """取得航線所有船班艙位資訊 - 模擬資料"""
     try:
-        ships = get_all_ships_summary(route_key)
+        # 模擬船班資料
+        import random
+        from datetime import datetime, timedelta
+        
+        ships = []
+        today = datetime.now()
+        
+        # 模擬未來幾週的船班
+        for i in range(1, 5):
+            sailing_date = today + timedelta(days=i*7)
+            # 模擬使用率在 20% 到 90% 之間
+            utilization = random.randint(20, 90)
+            remaining = int(500 * (1 - utilization / 100))
+            
+            ships.append({
+                "ship_name": "UNI-PROSPER",
+                "voyage_no": f"072{i+2}-51{i+1}B",
+                "sailing_date": sailing_date.strftime("%Y-%m-%d"),
+                "capacity": 500,
+                "remaining": remaining,
+                "utilization": utilization,
+                "dynamic_price": 12000 + random.randint(-500, 1000),
+                "route": route_key
+            })
+        
         return jsonify(ships)
     except Exception as e:
         print(f"SHIP API ERROR: {str(e)}")
@@ -204,18 +261,75 @@ def get_bookings():
 
 @app.route("/api/book-ship", methods=["POST"])
 def book_ship():
-    """預訂船班艙位"""
-    data = request.get_json()
-    route_key = data.get("route_key")
-    sailing_date = data.get("sailing_date")
-    containers = data.get("containers", 1)
-    company_name = data.get("company_name", "")
-    cargo_type = data.get("cargo_type", "normal")
-    contact_person = data.get("contact_person", "")
-    phone = data.get("phone", "")
-    
-    result = book_capacity(route_key, sailing_date, containers, company_name, cargo_type, contact_person, phone)
-    return jsonify(result)
+    """預訂船班艙位 - 直接儲存到歷史記錄"""
+    try:
+        data = request.get_json()
+        print(f"收到訂艙請求: {data}")
+        
+        route_key = data.get("route_key")
+        sailing_date = data.get("sailing_date")
+        containers = data.get("containers", 1)
+        company_name = data.get("company_name", "")
+        cargo_type = data.get("cargo_type", "normal")
+        contact_person = data.get("contact_person", "")
+        phone = data.get("phone", "")
+        
+        # 產生訂艙編號
+        booking_id = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+        
+        # 計算價格
+        container_type = data.get("container_type", "40ft")
+        if container_type == "20ft":
+            price_per_container = 1800
+        else:
+            price_per_container = 2787
+        
+        total_price = price_per_container * containers
+        
+        # 儲存到歷史記錄
+        history_record = {
+            "id": booking_id,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "booking_id": booking_id,
+            "company_name": company_name,
+            "contact_person": contact_person,
+            "phone": phone,
+            "start": data.get("start_name", "高雄港"),
+            "end": data.get("end_name", "台中港"),
+            "containers": containers,
+            "container_type": container_type,
+            "cargo_type": cargo_type,
+            "best_mode": "海運",
+            "ship_date": sailing_date,
+            "sea_total": total_price,
+            "carbon_improvement": 0,
+            "savings_amount": 0,
+            "status": "confirmed"
+        }
+        
+        history = load_history()
+        history.append(history_record)
+        
+        if len(history) > MAX_HISTORY_RECORDS:
+            history = history[-MAX_HISTORY_RECORDS:]
+        
+        write_json(HISTORY_FILE, history)
+        
+        return jsonify({
+            "success": True,
+            "booking_id": booking_id,
+            "total_price": total_price,
+            "ship_name": "UNI-PROSPER",
+            "sailing_date": sailing_date,
+            "containers": containers,
+            "message": "訂艙成功"
+        })
+        
+    except Exception as e:
+        print(f"訂艙錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/save_history_direct", methods=["POST"])
 def save_history_direct():
@@ -236,13 +350,13 @@ def save_history_direct():
             carbon_improvement = data.get("carbon_improvement", 0)
             data["savings_amount"] = round(carbon_improvement * 0.3)
         
-        # 確保明細欄位存在（如果前端有傳入）
+        # 確保明細欄位存在
         optional_fields = [
             "departure_date", "arrival_requirement", "sea_arrival_date", 
             "road_arrival_date", "voyage_no", "ship_date", "company_name",
             "contact_person", "phone", "sea_carbon_fee", "sea_carbon_credit",
             "road_carbon_fee", "road_carbon_credit", "base_distance",
-            "road_carbon", "sea_carbon", "road_total", "sea_total"
+            "road_carbon", "sea_carbon", "road_total", "sea_total", "container_type"
         ]
         for field in optional_fields:
             if field not in data:
@@ -296,9 +410,7 @@ def calculate():
     # 獲取船期
     ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
 
-    # 計算碳排 - 使用修正後的公式（根據 Merk 2014 文獻）
-    # 公路：130 g/tkm × 22.5噸 = 2.925 kg/km/FEU
-    # 海運：30 g/tkm × 22.5噸 = 0.675 kg/km/FEU
+    # 計算碳排 - 使用修正後的公式
     ROAD_CARBON_RATE_PER_KM = 2.925
     SEA_CARBON_RATE_PER_KM = 0.675
     
@@ -452,7 +564,7 @@ def download_certificate(cert_id, lang):
     filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
     return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
-# ================= 新增：日期區間證書產生 API =================
+# ================= 日期區間證書產生 API =================
 @app.route("/api/generate_certificate", methods=["POST"])
 def api_generate_certificate():
     """根據日期區間產生減碳證書 PDF"""

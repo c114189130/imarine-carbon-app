@@ -971,29 +971,56 @@
             document.getElementById('step3Panel').style.display = 'block';
         }
         
-        async function confirmBooking() {
-            if (!selectedShip) { alert('請先選擇船班'); return; }
-            const companyName = document.getElementById('companyName').value;
-            if (!companyName) { alert('請輸入公司名稱'); return; }
-            const containers = parseInt(document.getElementById('bookContainers').value);
-            const cargoType = document.getElementById('cargoType').value;
-            const contactPerson = document.getElementById('contactPerson').value;
-            const phone = document.getElementById('phone').value;
-            const startPort = document.getElementById('start').value;
-            const endPort = document.getElementById('end').value;
-            const containerType = getContainerType();
-            
+     async function confirmBooking() {
+    if (!selectedShip) { alert('請先選擇船班'); return; }
+    const companyName = document.getElementById('companyName').value;
+    if (!companyName) { alert('請輸入公司名稱'); return; }
+    const containers = parseInt(document.getElementById('bookContainers').value);
+    const cargoType = document.getElementById('cargoType').value;
+    const contactPerson = document.getElementById('contactPerson').value;
+    const phone = document.getElementById('phone').value;
+    const startPort = document.getElementById('start').value;
+    const endPort = document.getElementById('end').value;
+    const containerType = getContainerType();
+    
+    const startName = startPort === 'kaohsiung' ? '高雄港' : (startPort === 'taichung' ? '台中港' : '台北港');
+    const endName = endPort === 'kaohsiung' ? '高雄港' : (endPort === 'taichung' ? '台中港' : '台北港');
+    
+    // 顯示載入狀態
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = '⏳ 處理中...';
+    btn.disabled = true;
+    
+    try {
+        // 先呼叫訂艙 API
+        const bookResponse = await fetch('/api/book-ship', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                route_key: currentRouteKey || 'KHH-TXG',
+                sailing_date: selectedShip,
+                containers: containers,
+                company_name: companyName,
+                cargo_type: cargoType,
+                contact_person: contactPerson,
+                phone: phone,
+                container_type: containerType,
+                start_name: startName,
+                end_name: endName
+            })
+        });
+        
+        const bookResult = await bookResponse.json();
+        
+        if (bookResult.success) {
+            // 計算碳排和節省金額
             const { seaCost, seaCarbon, carbonSaved, costSaved, seaCarbonFee, seaCarbonCredit } = calculateCarbonAndCost(containers);
             
-            const startName = startPort === 'kaohsiung' ? '高雄港' : (startPort === 'taichung' ? '台中港' : '台北港');
-            const endName = endPort === 'kaohsiung' ? '高雄港' : (endPort === 'taichung' ? '台中港' : '台北港');
-            
-            const now = new Date();
-            const formattedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-            
+            // 儲存到歷史記錄
             const historyRecord = {
-                id: Date.now().toString(),
-                date: formattedDate,
+                id: bookResult.booking_id,
+                date: new Date().toISOString().slice(0, 19).replace('T', ' '),
                 start: startName,
                 end: endName,
                 containers: containers,
@@ -1002,54 +1029,48 @@
                 company_name: companyName,
                 contact_person: contactPerson,
                 phone: phone,
-                base_distance: DISTANCE,
-                road_carbon: 0,
-                sea_carbon: seaCarbon,
+                best_mode: "海運",
+                sea_total: bookResult.total_price,
                 carbon_improvement: carbonSaved,
                 savings_amount: costSaved,
-                best_mode: "海運",
-                road_total: 0,
-                sea_total: seaCost,
-                booking_id: Date.now().toString(),
                 ship_date: selectedShip,
-                departure_date: currentComparison?.departureDate || document.getElementById('departureDate').value,
-                arrival_requirement: currentComparison?.arrivalRequirement || document.getElementById('arrivalDate').value,
-                sea_arrival_date: currentComparison?.seaArrivalDate,
-                road_arrival_date: currentComparison?.roadArrivalDate,
                 voyage_no: selectedShipData?.voyageNo || '',
+                sea_carbon: seaCarbon,
                 sea_carbon_fee: seaCarbonFee,
                 sea_carbon_credit: seaCarbonCredit
             };
             
-            try {
-                const response = await fetch('/save_history_direct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(historyRecord)
-                });
-                
-                if (response.ok) {
-                    const containerTypeText = containerType === '20ft' ? '20呎' : '40呎';
-                    const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER ${selectedShipData?.voyageNo || ''}<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} ${containerTypeText}櫃<br>💰 總費用：NT$ ${seaCost.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>💰 節省碳費：NT$ ${Math.round(seaCarbonFee).toLocaleString()}<br>💎 碳權價值：NT$ ${Math.round(seaCarbonCredit).toLocaleString()}`;
-                    showAssistantMessage(message);
-                    alert(`✅ 訂艙成功！節省 NT$ ${costSaved.toLocaleString()}`);
-                    
-                    document.getElementById('companyName').value = '';
-                    document.getElementById('contactPerson').value = '';
-                    document.getElementById('phone').value = '';
-                    document.getElementById('bookContainers').value = '0';
-                    selectedShip = null;
-                    selectedShipData = null;
-                    
-                    backToStep1();
-                } else {
-                    alert('❌ 訂艙失敗，請稍後再試');
-                }
-            } catch(err) {
-                console.error("訂艙失敗:", err);
-                alert('❌ 訂艙失敗，請檢查網路連線');
-            }
+            await fetch('/save_history_direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(historyRecord)
+            });
+            
+            const containerTypeText = containerType === '20ft' ? '20呎' : '40呎';
+            const message = `✅ 訂艙完成！<br><br>🚢 船班：UNI-PROSPER ${selectedShipData?.voyageNo || ''}<br>📅 開航日期：${selectedShip}<br>📦 訂艙數量：${containers} ${containerTypeText}櫃<br>💰 總費用：NT$ ${bookResult.total_price.toLocaleString()}<br>🌱 減碳量：${carbonSaved.toFixed(0)} kg<br>💰 節省成本：NT$ ${costSaved.toLocaleString()}<br>🆔 訂位編號：${bookResult.booking_id}`;
+            showAssistantMessage(message);
+            alert(`✅ 訂艙成功！訂位編號：${bookResult.booking_id}`);
+            
+            // 清空表單
+            document.getElementById('companyName').value = '';
+            document.getElementById('contactPerson').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('bookContainers').value = '0';
+            selectedShip = null;
+            selectedShipData = null;
+            
+            backToStep1();
+        } else {
+            alert('❌ 訂艙失敗：' + (bookResult.error || '請稍後再試'));
         }
+    } catch(err) {
+        console.error("訂艙失敗:", err);
+        alert('❌ 訂艙失敗，請檢查網路連線');
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
         
         function backToStep1() {
             document.getElementById('step1').classList.add('active');
