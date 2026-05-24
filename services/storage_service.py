@@ -1,21 +1,20 @@
 import json
-from pathlib import Path
+import os
 
+def ensure_json_file(file_path, default_content):
+    """確保 JSON 檔案存在"""
+    if not os.path.exists(file_path):
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(default_content, f, ensure_ascii=False, indent=2)
 
-def ensure_json_file(filepath, default_data=None):
-    if not filepath.exists():
-        write_json(filepath, default_data if default_data is not None else [])
+def read_json(file_path):
+    """讀取 JSON 檔案"""
+    if not os.path.exists(file_path):
+        return []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-
-def read_json(filepath, default=None):
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return default
-
-
-def write_json(filepath, data):
-    filepath.parent.mkdir(parents=True, exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as f:
+def write_json(file_path, data):
+    """寫入 JSON 檔案"""
+    with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
