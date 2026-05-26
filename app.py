@@ -562,6 +562,9 @@ def create_certificate():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
-# ================= 啟動伺服器 =================
+# 删除或注释掉原来的启动代码，改成：
 if __name__ == '__main__':
+    # 本地开发用
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+# 不需要额外添加其他代码，gunicorn 会直接调用 app 对象
