@@ -7,10 +7,10 @@ def ensure_json_file(file_path, default_content):
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(default_content, f, ensure_ascii=False, indent=2)
 
-def read_json(file_path):
-    """讀取 JSON 檔案"""
+def read_json(file_path, default=None):
+    """讀取 JSON 檔案，支援預設值"""
     if not os.path.exists(file_path):
-        return []
+        return default if default is not None else []
     with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
