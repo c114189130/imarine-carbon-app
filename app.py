@@ -1,63 +1,108 @@
 import os
 import math
-import requests
+import json
 import random
 from datetime import datetime, timedelta
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request, send_file
-
-from config import (
-    APP_TITLE,
-    CERTIFICATE_FILE,
-    CARGO_VALUE,
-    HISTORY_FILE,
-    INTEREST_RATE,
-    MAX_HISTORY_RECORDS,
-    PORTS,
-    PORT_HANDLING_EMISSION_PER_CONTAINER,
-    ROAD_SPEED_KMH,
-    RISK_COST_RATES,
-    SECRET_KEY,
-    SEA_SPEED_KMH,
-    SOCIAL_COST_OF_CARBON,
-    SOCIAL_COST_RATES,
-    TRANSPORT_COST_RATES,
-    EMISSION_FACTORS,
-    TDX_CLIENT_ID,
-    TDX_CLIENT_SECRET,
-)
-from optimization_model import compare_modes, calculate_optimal_transfer_ratio
-from services.certificate_service import build_certificate_pdf, generate_certificate_id
-from services.schedule_service import ScheduleService
-from services.storage_service import ensure_json_file, read_json, write_json
-from services.booking_service import (
-    get_available_capacity,
-    get_total_capacity,
-    book_capacity,
-    get_route_summary,
-    get_all_ships_summary,
-    get_customer_bookings,
-    get_upcoming_ships,
-    get_booking_summary,
-    init_market_simulation
-)
-from services.carbon_service import get_esg_report
-from services.traffic_service import TrafficService
+from flask_cors import CORS
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = SECRET_KEY
+CORS(app)
 
-schedule_service = ScheduleService()
-traffic_service = TrafficService(app_id=TDX_CLIENT_ID, app_key=TDX_CLIENT_SECRET)
+# ================= 設定 =================
+APP_TITLE = "iMarine 智慧海運碳排管理平台"
+HISTORY_FILE = "history.json"
+CERTIFICATE_FILE = "certificates.json"
+MAX_HISTORY_RECORDS = 200
 
-ensure_json_file(HISTORY_FILE, [])
-ensure_json_file(CERTIFICATE_FILE, [])
+# 港口資料
+PORTS = {
+    "kaohsiung": {"name": "高雄港", "lat": 22.6163, "lon": 120.2682, "code": "KHH"},
+    "taichung": {"name": "台中港", "lat": 24.2667, "lon": 120.5333, "code": "TXG"},
+    "taipei": {"name": "台北港", "lat": 25.1500, "lon": 121.4000, "code": "TPE"}
+}
 
-# 初始化市場模擬
-init_market_simulation()
+# 運輸參數
+CARGO_VALUE = 5000000  # 貨物價值 (NTD/FEU)
+INTEREST_RATE = 0.05   # 年利率
+ROAD_SPEED_KMH = 60    # 公路速度
+SEA_SPEED_KMH = 25     # 海運速度
+
+# 運輸成本費率 (NTD/km/FEU)
+TRANSPORT_COST_RATES = {
+    "road": 33.5,
+    "sea": 12.8
+}
+
+# 碳排係數 (kg CO2e/km/FEU)
+EMISSION_FACTORS = {
+    "road": 0.062,
+    "sea": 0.018
+}
+
+# 社會成本費率 (NTD/km/FEU)
+SOCIAL_COST_RATES = {
+    "road": 8.5,
+    "sea": 3.2
+}
+
+# 風險成本費率 (NTD/km/FEU)
+RISK_COST_RATES = {
+    "road": 12.0,
+    "sea": 5.5
+}
+
+# 港口裝卸碳排 (kg CO2e/FEU)
+PORT_HANDLING_EMISSION_PER_CONTAINER = 15
+
+# 碳的社會成本 (NTD/kg CO2e)
+SOCIAL_COST_OF_CARBON = 0.39
+
+# 碳權價格 (NTD/kg)
+CARBON_PRICE = 0.3
+
+# 海運 vs 公路成本
+SEA_COST_PER_FEU = 2787
+ROAD_COST_PER_FEU = 7218
+DISTANCE_KM = 215
+SEA_TRANSIT_DAYS = 5
+ROAD_TRANSIT_DAYS = 1
+
+# 人命價值 VSL 階段 (NTD)
+VSL_STAGES = {
+    10: 408700, 15: 613050, 20: 817400, 25: 1021750, 30: 1226100,
+    35: 1430450, 40: 1634800, 45: 1839150, 50: 2043500, 55: 2247850,
+    60: 2452200, 65: 2656550, 70: 2860900, 75: 3065250, 80: 3269600,
+    85: 3473950, 90: 3678300, 95: 3882650
+}
+
+# 真實船期資料
+REAL_SHIP_SCHEDULE = [
+    {"voyage": "0727-511B", "sailing_date": "2026-05-07", "kaohsiung": "05/07", "taichung": "05/08", "taipei": "05/12"},
+    {"voyage": "0728-512B", "sailing_date": "2026-05-13", "kaohsiung": "05/13", "taichung": "05/14", "taipei": "05/19"},
+    {"voyage": "0729-513B", "sailing_date": "2026-05-20", "kaohsiung": "05/20", "taichung": "05/21", "taipei": "05/26"},
+    {"voyage": "0730-514B", "sailing_date": "2026-05-27", "kaohsiung": "05/27", "taichung": "05/28", "taipei": "06/01"},
+    {"voyage": "0731-515B", "sailing_date": "2026-06-03", "kaohsiung": "06/03", "taichung": "06/04", "taipei": "06/09"},
+    {"voyage": "0732-516B", "sailing_date": "2026-06-10", "kaohsiung": "06/10", "taichung": "06/12", "taipei": "06/16"},
+    {"voyage": "0733-517B", "sailing_date": "2026-06-17", "kaohsiung": "06/17", "taichung": "06/19", "taipei": "06/23"},
+    {"voyage": "0734-518B", "sailing_date": "2026-06-25", "kaohsiung": "06/25", "taichung": "06/26", "taipei": "06/30"},
+    {"voyage": "0735-519B", "sailing_date": "2026-07-02", "kaohsiung": "07/02", "taichung": "07/04", "taipei": "07/07"},
+    {"voyage": "0736-520B", "sailing_date": "2026-07-09", "kaohsiung": "07/09", "taichung": "07/11", "taipei": "07/14"},
+    {"voyage": "0737-521B", "sailing_date": "2026-07-16", "kaohsiung": "07/16", "taichung": "07/18", "taipei": "07/21"},
+    {"voyage": "0738-522B", "sailing_date": "2026-07-23", "kaohsiung": "07/23", "taichung": "07/25", "taipei": "07/28"},
+    {"voyage": "0739-523B", "sailing_date": "2026-07-30", "kaohsiung": "07/30", "taichung": "08/01", "taipei": "08/04"},
+    {"voyage": "0740-524B", "sailing_date": "2026-08-06", "kaohsiung": "08/06", "taichung": "08/08", "taipei": "08/11"},
+    {"voyage": "0741-525B", "sailing_date": "2026-08-13", "kaohsiung": "08/13", "taichung": "08/15", "taipei": "08/18"},
+    {"voyage": "0742-526B", "sailing_date": "2026-08-20", "kaohsiung": "08/20", "taichung": "08/22", "taipei": "08/25"},
+    {"voyage": "0743-527B", "sailing_date": "2026-08-27", "kaohsiung": "08/27", "taichung": "08/29", "taipei": "09/01"},
+    {"voyage": "0744-528B", "sailing_date": "2026-09-03", "kaohsiung": "09/03", "taichung": "09/05", "taipei": "09/08"},
+    {"voyage": "0745-529B", "sailing_date": "2026-09-10", "kaohsiung": "09/10", "taichung": "09/12", "taipei": "09/14"}
+]
 
 # ================= 輔助函數 =================
 def haversine_distance(lat1, lon1, lat2, lon2):
+    """計算兩點之間的球面距離 (km)"""
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -65,315 +110,458 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 def estimate_route_distance(base_distance_km, mode):
+    """估算實際運輸距離"""
     multiplier = 1.22 if mode == "road" else 1.08
     return round(base_distance_km * multiplier, 2)
 
 def calculate_financing_time_cost(distance_km, mode, containers, time_sensitivity=0.3):
+    """計算在途資金成本"""
     hours = distance_km / (ROAD_SPEED_KMH if mode == "road" else SEA_SPEED_KMH)
     sensitivity_multiplier = 1 + time_sensitivity * 2
     value_per_hour = (CARGO_VALUE * INTEREST_RATE) / (365 * 24)
     return value_per_hour * hours * containers * sensitivity_multiplier
 
-def load_history():
-    return read_json(HISTORY_FILE, [])
+def get_vsl_by_utilization(utilization):
+    """根據艙位使用率取得 VSL 值"""
+    keys = sorted(VSL_STAGES.keys())
+    closest = keys[0]
+    for k in keys:
+        if k <= utilization:
+            closest = k
+    return VSL_STAGES[closest]
 
-def save_history(record):
+def load_history():
+    """載入歷史記錄"""
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
+
+def save_history_record(record):
+    """儲存歷史記錄"""
     history = load_history()
     history.append(record)
-    history = history[-MAX_HISTORY_RECORDS:]
-    write_json(HISTORY_FILE, history)
+    if len(history) > MAX_HISTORY_RECORDS:
+        history = history[-MAX_HISTORY_RECORDS:]
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
 
 def load_certificates():
-    return read_json(CERTIFICATE_FILE, [])
+    """載入證書"""
+    if os.path.exists(CERTIFICATE_FILE):
+        with open(CERTIFICATE_FILE, 'r', encoding='utf-8') as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
 
 def save_certificate(certificate):
-    rows = load_certificates()
-    rows.append(certificate)
-    write_json(CERTIFICATE_FILE, rows)
+    """儲存證書"""
+    certificates = load_certificates()
+    certificates.append(certificate)
+    with open(CERTIFICATE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(certificates, f, ensure_ascii=False, indent=2)
 
 def get_history_record(record_id):
+    """根據 ID 取得歷史記錄"""
     for record in load_history():
-        if record["id"] == record_id:
+        if record.get("id") == record_id:
             return record
     return None
 
 def get_certificate(cert_id):
+    """根據證書 ID 取得證書"""
     for cert in load_certificates():
-        if cert["cert_id"] == cert_id:
+        if cert.get("cert_id") == cert_id:
             return cert
     return None
 
+def generate_certificate_id():
+    """產生證書編號"""
+    return f"CERT-{datetime.now().strftime('%Y%m%d')}-{uuid4().hex[:6].upper()}"
+
 # ================= 路由 =================
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html", app_title=APP_TITLE)
+    return render_template('index.html', app_title=APP_TITLE)
 
-@app.route("/history_page")
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html', app_title=APP_TITLE)
+
+@app.route('/history_page')
 def history_page():
-    return render_template("history.html", app_title=APP_TITLE)
+    return render_template('history.html', app_title=APP_TITLE)
 
-@app.route("/dashboard")
-def dashboard_page():
-    return render_template("dashboard.html", app_title=APP_TITLE)
-
-@app.route("/certificate_page")
+@app.route('/certificate_page')
 def certificate_page():
-    return render_template("certificate.html", app_title=APP_TITLE)
+    return render_template('certificate.html', app_title=APP_TITLE)
 
-@app.route("/verify/<cert_id>")
+@app.route('/verify/<cert_id>')
 def verify_certificate(cert_id):
     certificate = get_certificate(cert_id)
-    return render_template("verify.html", valid=bool(certificate), cert=certificate, app_title=APP_TITLE)
+    return render_template('verify.html', valid=bool(certificate), cert=certificate, app_title=APP_TITLE)
 
-@app.route("/get_history")
-def get_history():
-    return jsonify(load_history())
-
-@app.route("/api/traffic")
+# ================= API：即時路況 =================
+@app.route('/api/traffic')
 def api_traffic():
-    return jsonify(traffic_service.get_live_traffic_speed())
+    """模擬即時路況資料"""
+    roads = [
+        {"road": "國道1號", "speed": random.randint(40, 95), "congestion": random.choice(["順暢", "車多", "壅塞"])},
+        {"road": "國道3號", "speed": random.randint(45, 100), "congestion": random.choice(["順暢", "車多", "壅塞"])},
+        {"road": "台61線", "speed": random.randint(50, 90), "congestion": random.choice(["順暢", "車多", "壅塞"])},
+        {"road": "台17線", "speed": random.randint(35, 70), "congestion": random.choice(["順暢", "車多", "壅塞"])}
+    ]
+    return jsonify(roads)
 
-@app.route("/api/ships/<route_key>")
-def get_ships(route_key):
-    """取得航線所有船班艙位資訊"""
-    try:
-        ships = get_all_ships_summary(route_key)
-        return jsonify(ships)
-    except Exception as e:
-        print(f"SHIP API ERROR: {str(e)}")
-        return jsonify({"error": str(e), "success": False}), 500
-
-@app.route("/api/booking-summary")
-def booking_summary():
-    """取得訂票摘要統計"""
-    summary = get_booking_summary()
-    return jsonify(summary)
-
-@app.route("/api/bookings")
-def get_bookings():
-    """取得訂票記錄"""
-    company = request.args.get("company")
-    if company:
-        bookings = get_customer_bookings(company)
-    else:
-        bookings = get_customer_bookings()
-    return jsonify(bookings)
-
-@app.route("/api/book-ship", methods=["POST"])
-def book_ship():
-    """預訂船班艙位"""
-    data = request.get_json()
-    route_key = data.get("route_key")
-    sailing_date = data.get("sailing_date")
-    containers = data.get("containers", 1)
-    company_name = data.get("company_name", "")
-    cargo_type = data.get("cargo_type", "normal")
-    contact_person = data.get("contact_person", "")
-    phone = data.get("phone", "")
+# ================= API：船班資料 =================
+@app.route('/api/ships/<route_key>')
+def api_ships(route_key):
+    """根據航線回傳船班資料"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    ships = []
     
-    result = book_capacity(route_key, sailing_date, containers, company_name, cargo_type, contact_person, phone)
-    return jsonify(result)
+    for s in REAL_SHIP_SCHEDULE:
+        if s["sailing_date"] >= today:
+            # 隨機模擬艙位使用率 (20-95%)
+            utilization = random.randint(20, 95)
+            capacity = 1618
+            remaining = int(capacity * (1 - utilization/100))
+            
+            # 根據使用率調整價格
+            price_multiplier = 1 + (utilization - 50) / 100
+            dynamic_price = int(SEA_COST_PER_FEU * price_multiplier)
+            
+            ships.append({
+                "ship_name": "UNI-PROSPER",
+                "voyage_no": s["voyage"],
+                "sailing_date": s["sailing_date"],
+                "capacity": capacity,
+                "remaining": max(0, remaining),
+                "utilization": utilization,
+                "dynamic_price": max(SEA_COST_PER_FEU, dynamic_price),
+                "route": route_key
+            })
+    
+    # 按日期排序
+    ships.sort(key=lambda x: x["sailing_date"])
+    return jsonify(ships)
 
-@app.route("/save_history_direct", methods=["POST"])
-def save_history_direct():
-    """直接保存歷史記錄（用於內陸運輸確認和訂艙）"""
+# ================= API：碳排計算 =================
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    """計算碳排和成本比較"""
     try:
         data = request.get_json()
+        start = data.get('start', 'kaohsiung')
+        end = data.get('end', 'taichung')
+        containers = int(data.get('containers', 50))
+        cargo_type = data.get('cargo_type', 'normal')
+        
+        # 獲取港口資訊
+        p1 = PORTS.get(start, PORTS['kaohsiung'])
+        p2 = PORTS.get(end, PORTS['taichung'])
+        
+        # 計算距離
+        base_distance = haversine_distance(p1['lat'], p1['lon'], p2['lat'], p2['lon'])
+        road_distance = estimate_route_distance(base_distance, "road")
+        sea_distance = estimate_route_distance(base_distance, "sea")
+        
+        # 計算碳排
+        road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
+        sea_carbon = EMISSION_FACTORS["sea"] * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
+        
+        # 計算成本
+        road_freight = TRANSPORT_COST_RATES["road"] * road_distance * containers
+        sea_freight = TRANSPORT_COST_RATES["sea"] * sea_distance * containers
+        
+        # 計算時間成本
+        road_time_cost = calculate_financing_time_cost(road_distance, "road", containers)
+        sea_time_cost = calculate_financing_time_cost(sea_distance, "sea", containers)
+        
+        # 社會成本
+        road_social = SOCIAL_COST_RATES["road"] * road_distance * containers
+        sea_social = SOCIAL_COST_RATES["sea"] * sea_distance * containers
+        
+        # 風險成本
+        road_risk = RISK_COST_RATES["road"] * road_distance * containers
+        sea_risk = RISK_COST_RATES["sea"] * sea_distance * containers
+        
+        # 碳排外部成本
+        road_carbon_externality = road_carbon * SOCIAL_COST_OF_CARBON
+        sea_carbon_externality = sea_carbon * SOCIAL_COST_OF_CARBON
+        
+        # 總成本
+        road_total = road_freight + road_time_cost + road_social + road_risk + road_carbon_externality
+        sea_total = sea_freight + sea_time_cost + sea_social + sea_risk + sea_carbon_externality
+        
+        # 決定最佳方案
+        if sea_total < road_total:
+            best_mode = "海運"
+            social_savings = road_total - sea_total
+            carbon_improvement = road_carbon - sea_carbon
+            baseline = road_carbon
+            savings_amount = road_total - sea_total
+        else:
+            best_mode = "公路"
+            social_savings = sea_total - road_total
+            carbon_improvement = sea_carbon - road_carbon
+            baseline = sea_carbon
+            savings_amount = 0
+        
+        reduction_pct = (carbon_improvement / baseline * 100) if baseline > 0 else 0
+        
+        # 計算抵達日期
+        departure_date = data.get('departure_date', datetime.now().strftime("%Y-%m-%d"))
+        sea_arrival = (datetime.strptime(departure_date, "%Y-%m-%d") + timedelta(days=SEA_TRANSIT_DAYS)).strftime("%Y-%m-%d")
+        road_arrival = (datetime.strptime(departure_date, "%Y-%m-%d") + timedelta(days=ROAD_TRANSIT_DAYS)).strftime("%Y-%m-%d")
+        
+        # 儲存歷史記錄
+        record = {
+            "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "start": p1["name"],
+            "end": p2["name"],
+            "containers": containers,
+            "cargo_type": cargo_type,
+            "base_distance": round(base_distance, 2),
+            "road_carbon": round(road_carbon, 2),
+            "sea_carbon": round(sea_carbon, 2),
+            "carbon_improvement": round(carbon_improvement, 2),
+            "reduction_pct": round(reduction_pct, 1),
+            "best_mode": best_mode,
+            "social_savings": round(social_savings),
+            "savings_amount": round(savings_amount),
+            "road_total": round(road_total),
+            "sea_total": round(sea_total),
+            "sea_arrival_date": sea_arrival,
+            "road_arrival_date": road_arrival
+        }
+        save_history_record(record)
+        
+        return jsonify({
+            "success": True,
+            "record_id": record["id"],
+            "distance": round(base_distance, 2),
+            "containers": containers,
+            "start_name": p1["name"],
+            "end_name": p2["name"],
+            "road": {
+                "freight": round(road_freight),
+                "time_cost": round(road_time_cost),
+                "social": round(road_social),
+                "risk": round(road_risk),
+                "carbon": round(road_carbon, 2),
+                "carbon_externality": round(road_carbon_externality),
+                "total": round(road_total),
+                "arrival_date": road_arrival
+            },
+            "sea": {
+                "freight": round(sea_freight),
+                "time_cost": round(sea_time_cost),
+                "social": round(sea_social),
+                "risk": round(sea_risk),
+                "carbon": round(sea_carbon, 2),
+                "carbon_externality": round(sea_carbon_externality),
+                "total": round(sea_total),
+                "arrival_date": sea_arrival
+            },
+            "best_mode": best_mode,
+            "social_savings": round(social_savings),
+            "carbon_improvement": round(carbon_improvement, 2),
+            "reduction_pct": round(reduction_pct, 1),
+            "recommendation": f"選擇 {best_mode} 可減少 {carbon_improvement:.0f} kg CO2e，約 {reduction_pct:.1f}%"
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+# ================= API：訂艙 =================
+@app.route('/api/book-ship', methods=['POST'])
+def api_book_ship():
+    """處理訂艙請求"""
+    try:
+        data = request.get_json()
+        
+        route_key = data.get('route_key')
+        sailing_date = data.get('sailing_date')
+        containers = int(data.get('containers', 1))
+        company_name = data.get('company_name', '')
+        cargo_type = data.get('cargo_type', 'normal')
+        contact_person = data.get('contact_person', '')
+        phone = data.get('phone', '')
+        
+        # 找到對應的船班
+        ship_info = None
+        for s in REAL_SHIP_SCHEDULE:
+            if s["sailing_date"] == sailing_date:
+                ship_info = s
+                break
+        
+        if not ship_info:
+            ship_info = {"voyage": "未知", "sailing_date": sailing_date}
+        
+        # 計算總價
+        total_price = containers * SEA_COST_PER_FEU
+        
+        # 計算減碳量
+        road_carbon = EMISSION_FACTORS["road"] * DISTANCE_KM * containers
+        sea_carbon = EMISSION_FACTORS["sea"] * DISTANCE_KM * containers
+        carbon_saved = road_carbon - sea_carbon
+        cost_saved = (ROAD_COST_PER_FEU - SEA_COST_PER_FEU) * containers
+        
+        # 產生訂單編號
+        booking_id = f"BK{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(100, 999)}"
+        
+        # 儲存到歷史記錄
+        start_name = "高雄港" if "KHH" in route_key else "台中港"
+        end_name = "台中港" if "KHH" in route_key else "高雄港"
+        
+        history_record = {
+            "id": booking_id,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "start": start_name,
+            "end": end_name,
+            "containers": containers,
+            "cargo_type": cargo_type,
+            "base_distance": DISTANCE_KM,
+            "road_carbon": round(road_carbon, 2),
+            "sea_carbon": round(sea_carbon, 2),
+            "carbon_improvement": round(carbon_saved, 2),
+            "reduction_pct": round((carbon_saved / road_carbon) * 100, 1) if road_carbon > 0 else 0,
+            "savings_amount": round(cost_saved, 2),
+            "best_mode": "海運",
+            "company_name": company_name,
+            "booking_id": booking_id,
+            "sailing_date": sailing_date,
+            "voyage_no": ship_info["voyage"]
+        }
+        save_history_record(history_record)
+        
+        return jsonify({
+            "success": True,
+            "booking_id": booking_id,
+            "containers": containers,
+            "ship_name": "UNI-PROSPER",
+            "voyage_no": ship_info["voyage"],
+            "sailing_date": sailing_date,
+            "total_price": total_price,
+            "carbon_saved": round(carbon_saved, 2),
+            "cost_saved": round(cost_saved, 2)
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+# ================= API：保存歷史記錄 =================
+@app.route('/save_history_direct', methods=['POST'])
+def save_history_direct():
+    """直接保存歷史記錄（用於內陸運輸確認）"""
+    try:
+        data = request.get_json()
+        
         if not data:
             return jsonify({"error": "無資料"}), 400
         
-        # 確保必要欄位存在
-        if "id" not in data:
-            data["id"] = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
-        if "date" not in data:
-            data["date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # 確保必要欄位
+        if 'id' not in data:
+            data['id'] = datetime.now().strftime('%Y%m%d%H%M%S') + str(random.randint(1000, 9999))
+        if 'date' not in data:
+            data['date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         # 確保 savings_amount 有值
-        if "savings_amount" not in data or data["savings_amount"] == 0:
-            carbon_improvement = data.get("carbon_improvement", 0)
-            data["savings_amount"] = round(carbon_improvement * 0.3, 2)
+        if 'savings_amount' not in data or data.get('savings_amount') is None:
+            carbon_improvement = data.get('carbon_improvement', 0)
+            data['savings_amount'] = round(carbon_improvement * CARBON_PRICE, 2)
         
-        history = load_history()
-        history.append(data)
-        
-        if len(history) > MAX_HISTORY_RECORDS:
-            history = history[-MAX_HISTORY_RECORDS:]
-        
-        write_json(HISTORY_FILE, history)
+        save_history_record(data)
         return jsonify({"success": True})
+        
     except Exception as e:
         print(f"保存歷史錯誤: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/calculate", methods=["POST"])
-def calculate():
-    data = request.get_json(silent=True) or {}
-    start = data.get("start")
-    end = data.get("end")
-    containers = data.get("containers")
-    cargo_type = data.get("cargo_type", "normal")
-    time_requirement = data.get("time_requirement", 48)
+# ================= API：取得歷史記錄 =================
+@app.route('/get_history')
+def get_history():
+    """取得所有歷史記錄"""
+    history = load_history()
+    # 按日期排序（最新的在前）
+    history.sort(key=lambda x: x.get('date', ''), reverse=True)
+    return jsonify(history)
 
-    if start not in PORTS or end not in PORTS:
-        return jsonify({"error": "港口代碼無效"}), 400
-    if start == end:
-        return jsonify({"error": "起點與終點不可相同"}), 400
-
-    try:
-        containers = int(containers)
-    except (TypeError, ValueError):
-        return jsonify({"error": "貨櫃數量格式錯誤"}), 400
-
-    if containers <= 0 or containers > 5000:
-        return jsonify({"error": "貨櫃數量需介於 1 到 5000 之間"}), 400
-
-    p1 = PORTS[start]
-    p2 = PORTS[end]
-    base_distance = haversine_distance(p1["lat"], p1["lon"], p2["lat"], p2["lon"])
-    road_distance = estimate_route_distance(base_distance, "road")
-    sea_distance = estimate_route_distance(base_distance, "sea")
-
-    road_condition = traffic_service.summarize_traffic()
-    ship_schedule = schedule_service.get_ship_schedule(p1["code"], p2["name"])
-
-    road_carbon = EMISSION_FACTORS["road"] * road_distance * containers
-    sea_carbon = EMISSION_FACTORS["sea"] * sea_distance * containers + PORT_HANDLING_EMISSION_PER_CONTAINER * containers * 2
-
-    road_freight = TRANSPORT_COST_RATES["road"] * road_distance * containers
-    sea_freight = TRANSPORT_COST_RATES["sea"] * sea_distance * containers
-
-    road_time = calculate_financing_time_cost(road_distance, "road", containers)
-    sea_time = calculate_financing_time_cost(sea_distance, "sea", containers)
-
-    road_social = SOCIAL_COST_RATES["road"] * road_distance * containers
-    sea_social = SOCIAL_COST_RATES["sea"] * sea_distance * containers
-
-    road_risk = RISK_COST_RATES["road"] * road_distance * containers
-    sea_risk = RISK_COST_RATES["sea"] * sea_distance * containers
-
-    road_carbon_externality = road_carbon * SOCIAL_COST_OF_CARBON
-    sea_carbon_externality = sea_carbon * SOCIAL_COST_OF_CARBON
-
-    road_total = road_freight + road_time + road_social + road_risk + road_carbon_externality
-    sea_total = sea_freight + sea_time + sea_social + sea_risk + sea_carbon_externality
-
-    if sea_total < road_total:
-        best_mode = "海運"
-        social_savings = road_total - sea_total
-        carbon_improvement = road_carbon - sea_carbon
-        baseline = road_carbon
-    else:
-        best_mode = "公路"
-        social_savings = sea_total - road_total
-        carbon_improvement = sea_carbon - road_carbon
-        baseline = sea_carbon
-
-    reduction_pct = (carbon_improvement / baseline * 100) if baseline > 0 else 0
-
-    record = {
-        "id": datetime.now().strftime("%Y%m%d%H%M%S") + uuid4().hex[:4],
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "start": p1["name"],
-        "end": p2["name"],
-        "containers": containers,
-        "cargo_type": cargo_type,
-        "base_distance": round(base_distance, 2),
-        "road_carbon": round(road_carbon, 2),
-        "sea_carbon": round(sea_carbon, 2),
-        "carbon_improvement": round(carbon_improvement, 2),
-        "reduction_pct": round(reduction_pct, 1),
-        "best_mode": best_mode,
-        "social_savings": round(social_savings),
-        "savings_amount": round(carbon_improvement * 0.3, 2),
-        "road_total": round(road_total),
-        "sea_total": round(sea_total),
-    }
-    save_history(record)
-
+# ================= API：訂艙統計摘要 =================
+@app.route('/api/booking-summary')
+def booking_summary():
+    """取得訂艙統計摘要"""
+    history = load_history()
+    
+    total_bookings = len(history)
+    total_containers = sum(h.get('containers', 0) for h in history)
+    total_revenue = sum(h.get('sea_total', 0) for h in history if h.get('best_mode') == '海運')
+    total_carbon_saved = sum(h.get('carbon_improvement', 0) for h in history)
+    total_cost_saved = sum(h.get('savings_amount', 0) for h in history)
+    
+    # 計算海運比例
+    sea_count = sum(1 for h in history if h.get('best_mode') == '海運')
+    sea_rate = round((sea_count / total_bookings) * 100, 1) if total_bookings > 0 else 0
+    
     return jsonify({
-        "record_id": record["id"],
-        "distance": round(base_distance, 2),
-        "containers": containers,
-        "start_name": p1["name"],
-        "end_name": p2["name"],
-        "start_lat": p1["lat"],
-        "start_lon": p1["lon"],
-        "end_lat": p2["lat"],
-        "end_lon": p2["lon"],
-        "road": {
-            "freight": round(road_freight),
-            "time": round(road_time),
-            "social": round(road_social),
-            "risk": round(road_risk),
-            "carbon": round(road_carbon, 2),
-            "total": round(road_total),
-        },
-        "sea": {
-            "freight": round(sea_freight),
-            "time": round(sea_time),
-            "social": round(sea_social),
-            "risk": round(sea_risk),
-            "carbon": round(sea_carbon, 2),
-            "total": round(sea_total),
-        },
-        "best_mode": best_mode,
-        "social_savings": round(social_savings),
-        "carbon_improvement": round(carbon_improvement, 2),
-        "reduction_pct": round(reduction_pct, 1),
-        "recommendation": f"選擇 {best_mode} 可減少 {carbon_improvement:.0f} kg CO2e，約 {reduction_pct:.1f}%",
-        "road_condition": {
-            "level": road_condition["level"],
-            "level_text": "🟢 順暢" if road_condition["level"] == "low" else "🟡 車多" if road_condition["level"] == "medium" else "🔴 壅塞",
-            "avg_speed": road_condition["avg_speed"],
-        },
-        "ship_schedule": ship_schedule,
+        "total_bookings": total_bookings,
+        "total_containers": total_containers,
+        "total_revenue": total_revenue,
+        "total_carbon_saved": round(total_carbon_saved, 2),
+        "total_cost_saved": round(total_cost_saved, 2),
+        "sea_rate": sea_rate,
+        "avg_containers": round(total_containers / total_bookings, 1) if total_bookings > 0 else 0
     })
 
-@app.route("/certificate", methods=["POST"])
+# ================= API：證書 =================
+@app.route('/certificate', methods=['POST'])
 def create_certificate():
-    data = request.get_json(silent=True) or {}
-    record_id = data.get("record_id")
-    company_name = (data.get("company_name") or "").strip()
+    """建立減碳證書"""
+    try:
+        data = request.get_json()
+        record_id = data.get('record_id')
+        company_name = data.get('company_name', '').strip()
+        
+        if not company_name:
+            return jsonify({"error": "請輸入公司名稱"}), 400
+        if not record_id:
+            return jsonify({"error": "缺少計算紀錄 ID"}), 400
+        
+        record = get_history_record(record_id)
+        if not record:
+            return jsonify({"error": "查無對應的計算紀錄"}), 404
+        
+        cert_id = generate_certificate_id()
+        certificate = {
+            "cert_id": cert_id,
+            "company_name": company_name,
+            "issued_at": datetime.now().strftime("%Y-%m-%d"),
+            "record_id": record_id,
+            "record": record
+        }
+        save_certificate(certificate)
+        
+        return jsonify({
+            "success": True,
+            "cert_id": cert_id,
+            "company_name": company_name,
+            "issued_at": certificate["issued_at"],
+            "route": f"{record['start']} → {record['end']}",
+            "containers": record["containers"],
+            "carbon_improvement": record["carbon_improvement"],
+            "reduction_pct": record.get("reduction_pct", 0)
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
 
-    if not company_name:
-        return jsonify({"error": "請輸入公司名稱"}), 400
-    if not record_id:
-        return jsonify({"error": "缺少計算紀錄 ID"}), 400
-
-    record = get_history_record(record_id)
-    if not record:
-        return jsonify({"error": "查無對應的計算紀錄"}), 404
-
-    cert_id = generate_certificate_id()
-    certificate = {
-        "cert_id": cert_id,
-        "company_name": company_name,
-        "issued_at": datetime.now().strftime("%Y-%m-%d"),
-        "record_id": record_id,
-        "record": record,
-    }
-    save_certificate(certificate)
-
-    return jsonify({
-        "cert_id": cert_id,
-        "company_name": company_name,
-        "issued_at": certificate["issued_at"],
-        "route": f"{record['start']} → {record['end']}",
-        "containers": record["containers"],
-        "carbon_improvement": record["carbon_improvement"],
-        "reduction_pct": record["reduction_pct"],
-    })
-
-@app.route("/download_certificate/<cert_id>/<lang>")
-def download_certificate(cert_id, lang):
-    certificate = get_certificate(cert_id)
-    if not certificate:
-        return jsonify({"error": "查無證書"}), 404
-
-    lang = "en" if lang == "en" else "zh"
-    pdf_buffer = build_certificate_pdf(certificate, lang=lang)
-    filename = f"certificate_{cert_id}_{'english' if lang == 'en' else 'chinese'}.pdf"
-    return send_file(pdf_buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+# ================= 啟動伺服器 =================
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
