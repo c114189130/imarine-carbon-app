@@ -5,10 +5,8 @@ import random
 from datetime import datetime, timedelta
 from uuid import uuid4
 from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 
 # ================= 設定 =================
 APP_TITLE = "iMarine 智慧海運碳排管理平台"
