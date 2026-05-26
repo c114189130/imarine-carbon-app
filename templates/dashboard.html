@@ -300,6 +300,7 @@
         .booking-table tr:hover { background: rgba(255, 255, 255, 0.05); }
         .badge-sea { background: #0077b6; color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.7rem; }
         .badge-road { background: #f39c12; color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.7rem; }
+        .badge-size { background: #475569; color: white; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.7rem; }
         
         .btn-outline {
             background: rgba(255, 255, 255, 0.05);
@@ -478,43 +479,43 @@
             </div>
         </div>
 
-        <!-- KPI 卡片 -->
+        <!-- KPI 卡片（修改單位：加「櫃」） -->
         <div class="kpi-grid">
             <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🌿</span><span class="kpi-trend" id="carbonTrend">+0%</span></div><div class="kpi-value" id="totalReduction">0</div><div class="kpi-label">總減碳量 (kg CO₂e)</div></div>
             <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">💎</span><span class="kpi-trend">碳權價值</span></div><div class="kpi-value" id="carbonCredit">0</div><div class="kpi-label">碳權價值 (NTD)</div></div>
             <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">💰</span><span class="kpi-trend">總節省金額</span></div><div class="kpi-value" id="totalSavings">0</div><div class="kpi-label">累積節省金額 (NTD)</div></div>
-            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">📦</span><span class="kpi-trend" id="containerTrend">+0%</span></div><div class="kpi-value" id="totalContainers">0</div><div class="kpi-label">總處理貨櫃量</div></div>
+            <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">📦</span><span class="kpi-trend" id="containerTrend">+0%</span></div><div class="kpi-value" id="totalContainers">0</div><div class="kpi-label">總處理貨櫃量 (櫃)</div></div>
             <div class="kpi-card"><div class="kpi-header"><span class="kpi-icon">🚢</span><span class="kpi-trend">藍色公路使用率</span></div><div class="kpi-value" id="seaRate">0%</div><div class="kpi-label">低碳航線滲透率</div></div>
         </div>
 
-        <!-- 訂艙統計總覽 -->
+        <!-- 訂艙統計總覽（修改單位：加「櫃」） -->
         <div class="fleet-card">
             <div class="section-title">🎟️ 訂艙統計總覽</div>
             <div class="booking-stats">
                 <div class="booking-stat-card"><div class="booking-stat-value" id="totalBookings">0</div><div class="booking-stat-label">總訂艙次數</div></div>
-                <div class="booking-stat-card"><div class="booking-stat-value" id="totalBookedContainers">0</div><div class="booking-stat-label">總訂艙量</div></div>
+                <div class="booking-stat-card"><div class="booking-stat-value" id="totalBookedContainers">0</div><div class="booking-stat-label">總訂艙量 (櫃)</div></div>
                 <div class="booking-stat-card"><div class="booking-stat-value" id="totalRevenue">0</div><div class="booking-stat-label">總營收 (NTD)</div></div>
-                <div class="booking-stat-card"><div class="booking-stat-value" id="avgBookingSize">0</div><div class="booking-stat-label">平均訂艙量</div></div>
+                <div class="booking-stat-card"><div class="booking-stat-value" id="avgBookingSize">0</div><div class="booking-stat-label">平均訂艙量 (櫃)</div></div>
             </div>
         </div>
 
-        <!-- 運輸模式分析 -->
+        <!-- 運輸模式分析（修改單位：加「櫃」） -->
         <div class="fleet-card">
             <div class="section-title">📊 運輸模式分析</div>
             <div class="stats-card">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                     <span>🚢 藍色公路運輸量</span>
-                    <span id="seaVolumeTotal" class="status-green">0</span>
+                    <span id="seaVolumeTotal" class="status-green">0 櫃</span>
                 </div>
                 <div class="stat-bar"><div id="seaBarFill" class="stat-bar-fill sea-fill" style="width:0%">0%</div></div>
                 <div style="display: flex; justify-content: space-between; margin-top: 0.8rem; margin-bottom: 0.5rem;">
                     <span>🚛 內陸運輸量</span>
-                    <span id="roadVolumeTotal" style="color:#f39c12">0</span>
+                    <span id="roadVolumeTotal" style="color:#f39c12">0 櫃</span>
                 </div>
                 <div class="stat-bar"><div id="roadBarFill" class="stat-bar-fill road-fill" style="width:0%">0%</div></div>
                 <div style="margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
                     <span>📊 總運輸量</span>
-                    <span id="totalVolume" style="font-weight: bold;">0</span>
+                    <span id="totalVolume" style="font-weight: bold;">0 櫃</span>
                 </div>
             </div>
             <div style="margin-top: 1rem;">
@@ -538,7 +539,7 @@
             </div>
         </div>
 
-        <!-- 最近訂艙/運輸記錄 -->
+        <!-- 最近訂艙/運輸記錄（加入貨櫃尺寸欄位） -->
         <div class="fleet-card">
             <div class="section-title">📋 最近訂艙/運輸記錄</div>
             <div class="table-container">
@@ -548,8 +549,8 @@
                             <th>時間</th>
                             <th>起點</th>
                             <th>終點</th>
-                            <th>貨櫃數</th>
-                            <th>類型</th>
+                            <th>貨櫃數(櫃)</th>
+                            <th>貨櫃尺寸</th>
                             <th>運輸模式</th>
                             <th>減碳量(kg)</th>
                             <th>節省金額(NTD)</th>
@@ -557,9 +558,9 @@
                         </tr>
                     </thead>
                     <tbody id="recentRecordsBody">
-                        <tr><td colspan="9">載入中...</td></tr>
+                        <tr><td colspan="9">載入中...<\/td><\/tr>
                     </tbody>
-                </table>
+                <\/table>
             </div>
         </div>
 
@@ -612,6 +613,14 @@
             return savings;
         }
         
+        // 新增：獲取貨櫃尺寸
+        function getContainerSize(record) {
+            if (record.container_size) return record.container_size;
+            if (record.cargo_type === 'normal_20') return '20呎';
+            if (record.cargo_type === 'normal_40') return '40呎';
+            return '-';
+        }
+        
         function animateValue(id, tv, s='') { 
             let el=document.getElementById(id); if(!el) return; 
             let sv=parseFloat(el.innerText.replace(/[^0-9.-]/g,''))||0; 
@@ -638,8 +647,8 @@
             if(!filteredData||filteredData.length===0){ 
                 animateValue('totalReduction',0); animateValue('carbonCredit',0); animateValue('totalSavings',0); animateValue('totalContainers',0); 
                 document.getElementById('seaRate').innerText='0%'; 
-                document.getElementById('seaVolumeTotal').innerHTML='0'; document.getElementById('roadVolumeTotal').innerHTML='0'; 
-                document.getElementById('totalVolume').innerHTML='0'; 
+                document.getElementById('seaVolumeTotal').innerHTML='0 櫃'; document.getElementById('roadVolumeTotal').innerHTML='0 櫃'; 
+                document.getElementById('totalVolume').innerHTML='0 櫃'; 
                 document.getElementById('seaBarFill').style.width='0%'; document.getElementById('roadBarFill').style.width='0%'; 
                 document.getElementById('recentRecordsBody').innerHTML='<tr><td colspan="9">無記錄</td></tr>';
                 return; 
@@ -663,9 +672,9 @@
             animateValue('totalContainers',totalContainers); 
             document.getElementById('seaRate').innerText=seaRate+'%';
             
-            document.getElementById('seaVolumeTotal').innerHTML=Math.round(seaContainers).toLocaleString();
-            document.getElementById('roadVolumeTotal').innerHTML=Math.round(roadContainers).toLocaleString();
-            document.getElementById('totalVolume').innerHTML=totalContainers.toLocaleString();
+            document.getElementById('seaVolumeTotal').innerHTML=Math.round(seaContainers).toLocaleString()+' 櫃';
+            document.getElementById('roadVolumeTotal').innerHTML=Math.round(roadContainers).toLocaleString()+' 櫃';
+            document.getElementById('totalVolume').innerHTML=totalContainers.toLocaleString()+' 櫃';
             
             let seaPercent=totalContainers>0?(seaContainers/totalContainers*100):0, roadPercent=100-seaPercent;
             document.getElementById('seaBarFill').style.width=seaPercent+'%';
@@ -692,13 +701,13 @@
             let recent = [...filteredData].reverse().slice(0, 10);
             document.getElementById('recentRecordsBody').innerHTML = recent.map(r => {
                 let savingsAmount = getSavingsAmount(r);
-                let containerTypeText = r.container_type === '20ft' ? '20呎' : (r.container_type === '40ft' ? '40呎' : '-');
+                let containerSize = getContainerSize(r);
                 return `<tr>
                     <td>${new Date(r.date).toLocaleString()}</td>
                     <td>${r.start || '-'}</td>
                     <td>${r.end || '-'}</td>
                     <td>${r.containers || 0}</td>
-                    <td>${containerTypeText}</td>
+                    <td><span class="badge-size">${containerSize}</span></td>
                     <td><span class="${r.best_mode === '海運' ? 'badge-sea' : 'badge-road'}">${r.best_mode || '-'}</span></td>
                     <td>${(r.carbon_improvement || 0).toLocaleString()}</td>
                     <td style="color: #22c55e; font-weight: bold;">NT$ ${savingsAmount.toLocaleString()}</td>
@@ -736,15 +745,9 @@
         function resetFilter(){ document.getElementById('startDate').value=''; document.getElementById('endDate').value=''; filteredData=[...allHistoryData]; updateDashboard(); }
         
         // ==================== 邊際效應分析函數 ====================
-        // 模擬邊際效益曲線：海轉比例與總效益的關係
-        // 採用二次函數模擬邊際效益遞減：效益 = a*x^2 + b*x + c
-        // 最佳比例約在 55%~70% 之間
-        
         function calculateMarginalBenefits(seaRatio) {
-            // 模擬邊際效益函數（二次曲線，開口向下）
-            // 最佳點約在 65% 左右
             let benefit = -0.012 * Math.pow(seaRatio - 65, 2) + 100;
-            let marginal = -0.024 * (seaRatio - 65); // 邊際效益遞減
+            let marginal = -0.024 * (seaRatio - 65);
             return { totalBenefit: Math.max(0, Math.min(100, benefit)), marginal: marginal };
         }
         
@@ -757,7 +760,6 @@
                 return;
             }
             
-            // 根據選擇的期間篩選歷史數據
             const now = new Date();
             let startDate, periodName;
             
@@ -790,7 +792,6 @@
                 } catch(e) { return false; }
             });
             
-            // 計算歷史海轉比例
             let historicalSeaCount = 0;
             let historicalTotalCount = 0;
             let historicalTotalContainers = 0;
@@ -811,7 +812,6 @@
             const historicalSeaVolumeRatio = historicalTotalContainers > 0 ? (historicalSeaContainers / historicalTotalContainers) * 100 : 0;
             const avgSavingsPerContainer = historicalTotalContainers > 0 ? historicalTotalSavings / historicalTotalContainers : 0;
             
-            // 計算邊際效益曲線
             const results = [];
             for (let ratio = 0; ratio <= 100; ratio += 5) {
                 const { totalBenefit, marginal } = calculateMarginalBenefits(ratio);
@@ -824,7 +824,6 @@
                 });
             }
             
-            // 找出最佳比例（效益最高點）
             let optimalRatio = 65;
             let maxBenefit = 0;
             results.forEach(r => {
@@ -838,7 +837,6 @@
             const currentSavings = (avgSavingsPerContainer * targetContainers * (historicalSeaVolumeRatio / 100)).toFixed(0);
             const potentialIncrease = (optimalSavings - currentSavings).toFixed(0);
             
-            // 產生建議文字
             let recommendationText = '';
             let recommendationLevel = '';
             
@@ -853,7 +851,6 @@
                 recommendationLevel = 'optimal';
             }
             
-            // 產生 HTML 顯示結果
             let html = `
                 <div class="recommend-card">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -865,7 +862,7 @@
                         <div style="text-align: center;">
                             <div style="font-size: 0.8rem; color: #94a3b8;">📦 歷史海轉比例</div>
                             <div style="font-size: 1.5rem; font-weight: bold; color: #38bdf8;">${historicalSeaVolumeRatio.toFixed(1)}%</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">(${historicalSeaContainers} / ${historicalTotalContainers})</div>
+                            <div style="font-size: 0.7rem; color: #64748b;">(${historicalSeaContainers} / ${historicalTotalContainers} 櫃)</div>
                         </div>
                         <div style="text-align: center;">
                             <div style="font-size: 0.8rem; color: #94a3b8;">🎯 建議海轉比例</div>
@@ -896,7 +893,6 @@
             
             document.getElementById('marginalAnalysisResult').innerHTML = html;
             
-            // 繪製邊際效益曲線圖
             const ctx = document.getElementById('marginalChartCanvas').getContext('2d');
             if (marginalChart) marginalChart.destroy();
             
@@ -976,14 +972,6 @@
                     }
                 }
             });
-            
-            // 在圖表上標記最佳點
-            if (marginalChart && marginalChart.data && marginalChart.data.labels) {
-                const optimalIndex = results.findIndex(r => r.ratio === optimalRatio);
-                if (optimalIndex !== -1) {
-                    // 可以在圖表上添加註釋（可選）
-                }
-            }
         }
         
         async function loadDashboardData() {
@@ -994,7 +982,7 @@
                 applyDateFilter(); await loadBookingSummary();
                 
                 let ships=await shipsRes.json(); if(!Array.isArray(ships)) ships=ships?[ships]:[];
-                let sh=''; if(ships.length>0){ ships.forEach(s=>{ let u=s.utilization||50, fc=u>85?'#e74c3c':(u>70?'#f39c12':'#22c55e'); sh+=`<div class="route-card"><div class="route-top"><span><strong>🚢 ${s.ship_name||'立昌輪'}</strong> ${s.voyage_no||''}</span><span class="status-green">${u}% 使用率</span></div><div class="progress-line"><div class="progress-fill" style="width:${u}%; background:linear-gradient(90deg,#0ea5e9,${fc});"></div></div><div class="route-bottom"><span>📦 剩餘艙位 ${(s.remaining||0).toLocaleString()} TEU</span><span>📅 ${s.sailing_date||'航行中'}</span></div></div>`; }); } else { sh='<div class="route-card">等待船舶資料同步...</div>'; }
+                let sh=''; if(ships.length>0){ ships.forEach(s=>{ let u=s.utilization||50, fc=u>85?'#e74c3c':(u>70?'#f39c12':'#22c55e'); sh+=`<div class="route-card"><div class="route-top"><span><strong>🚢 ${s.ship_name||'立昌輪'}</strong> ${s.voyage_no||''}</span><span class="status-green">${u}% 使用率</span></div><div class="progress-line"><div class="progress-fill" style="width:${u}%; background:linear-gradient(90deg,#0ea5e9,${fc});"></div></div><div class="route-bottom"><span>📦 剩餘艙位 ${(s.remaining||0).toLocaleString()} 櫃</span><span>📅 ${s.sailing_date||'航行中'}</span></div></div>`; }); } else { sh='<div class="route-card">等待船舶資料同步...</div>'; }
                 document.getElementById('shipsOverview').innerHTML=sh;
             } catch(e){ console.error("載入失敗:",e); }
         }

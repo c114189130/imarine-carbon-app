@@ -46,6 +46,13 @@
             border-radius: 20px;
             font-size: 0.75rem;
         }
+        .badge-size {
+            background: #475569;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
         .stats-summary {
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
@@ -169,7 +176,7 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="totalContainers">0</div>
-                <div class="stat-label">總貨櫃數 (FEU)</div>
+                <div class="stat-label">總貨櫃數 (櫃)</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="totalCarbonReduction">0</div>
@@ -190,7 +197,8 @@
                             <th>時間</th>
                             <th>起點</th>
                             <th>終點</th>
-                            <th>貨櫃數(FEU)</th>
+                            <th>貨櫃數(櫃)</th>
+                            <th>貨櫃尺寸</th>
                             <th>貨物類型</th>
                             <th>運輸模式</th>
                             <th>減碳量(kg)</th>
@@ -199,7 +207,7 @@
                         </tr>
                     </thead>
                     <tbody id="historyBody">
-                        <tr><td colspan="10">載入中...</td></tr>
+                        <tr><td colspan="11">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -215,6 +223,22 @@
     <script>
         // 儲存展開狀態
         let expandedRows = {};
+        
+        // 取得貨櫃尺寸名稱
+        function getContainerSize(record) {
+            if (record.container_size) return record.container_size;
+            if (record.cargo_type === 'normal_20') return '20呎';
+            if (record.cargo_type === 'normal_40') return '40呎';
+            return '標準櫃';
+        }
+        
+        // 取得貨物類型顯示文字
+        function getCargoTypeText(record) {
+            if (record.cargo_type === 'dangerous') return '⚠️ 危險品';
+            if (record.cargo_type === 'normal_20') return '一般(20呎)';
+            if (record.cargo_type === 'normal_40') return '一般(40呎)';
+            return record.cargo_type || '一般';
+        }
         
         function getSavingsAmount(record) {
             let savings = record.savings_amount || 0;
@@ -251,7 +275,7 @@
                 tbody.innerHTML = '';
                 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="10">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="11">暫無歷史記錄，請先進行貨櫃指派或訂艙</td></tr>';
                     return;
                 }
                 
@@ -270,6 +294,9 @@
                         ? '<span class="badge-sea">🚢 海運</span>' 
                         : '<span class="badge-road">🚛 公路</span>';
                     
+                    const containerSize = getContainerSize(record);
+                    const cargoTypeText = getCargoTypeText(record);
+                    
                     const recordId = record.id || Date.now() + Math.random();
                     const savingsAmount = getSavingsAmount(record);
                     
@@ -283,7 +310,8 @@
                         <td>${record.start || '-'}</td>
                         <td>${record.end || '-'}</td>
                         <td>${(record.containers || 0).toLocaleString()}</td>
-                        <td>${record.cargo_type === 'dangerous' ? '⚠️ 危險品' : (record.cargo_type || '一般')}</td>
+                        <td><span class="badge-size">${containerSize}</span></td>
+                        <td>${cargoTypeText}</td>
                         <td>${modeBadge}</td>
                         <td style="color: #27ae60; font-weight: bold;">${(record.carbon_improvement || 0).toLocaleString()}</td>
                         <td style="color: #27ae60; font-weight: bold;">NT$ ${savingsAmount.toLocaleString()}</td>
@@ -304,7 +332,7 @@
                     const distance = record.base_distance || 215;
                     
                     detailRow.innerHTML = `
-                        <td colspan="10">
+                        <td colspan="11">
                             <div class="detail-content">
                                 <div class="detail-grid">
                                     <div class="detail-card-mini">
@@ -327,7 +355,7 @@
                                 <div class="detail-grid">
                                     <div class="detail-card-mini">
                                         <div class="label">📦 貨櫃數量</div>
-                                        <div class="value">${record.containers || 0} FEU</div>
+                                        <div class="value">${record.containers || 0} 櫃 (${containerSize})</div>
                                     </div>
                                     <div class="detail-card-mini">
                                         <div class="label">🗺️ 運輸距離</div>
@@ -397,7 +425,7 @@
                 
             } catch(e) {
                 console.error("載入失敗:", e);
-                document.getElementById('historyBody').innerHTML = '<tr><td colspan="10">載入失敗</td></tr>';
+                document.getElementById('historyBody').innerHTML = '<tr><td colspan="11">載入失敗</td></tr>';
             }
         }
         
